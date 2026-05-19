@@ -1,0 +1,1 @@
+INSERT INTO usuario (id_usuario, nombre_usuario, contrasenia, intentos_fallidos, cuenta_bloqueada, dosfa_activado, id_rol) VALUES (1, 'admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOnC', 0, false, true, 1);

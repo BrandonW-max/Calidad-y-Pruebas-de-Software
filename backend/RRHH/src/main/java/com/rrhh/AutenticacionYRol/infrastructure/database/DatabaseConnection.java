@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.infrastructure.database;
+package com.rrhh.AutenticacionYRol.Infrastructure.database;
 
 public class DatabaseConnection {
 

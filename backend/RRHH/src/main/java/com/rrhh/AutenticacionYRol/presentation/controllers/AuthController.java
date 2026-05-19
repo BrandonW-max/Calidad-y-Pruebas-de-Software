@@ -1,29 +1,53 @@
-package com.rrhh.AutenticacionYRol.presentation.controllers;
+package com.rrhh.AutenticacionYRol.Presentation.controllers;
 
-import com.rrhh.AutenticacionYRol.business.services.AuthService;
-import com.rrhh.AutenticacionYRol.domain.dtos.AuthResponseDTO;
-import com.rrhh.AutenticacionYRol.domain.dtos.LoginRequestDTO;
-import com.rrhh.AutenticacionYRol.domain.dtos.TwoFactorRequestDTO;
-import com.rrhh.AutenticacionYRol.domain.dtos.TwoFactorResponseDTO;
+import com.rrhh.AutenticacionYRol.Application.dto.*;
+import com.rrhh.AutenticacionYRol.Application.services.IAuthService; 
+import com.rrhh.AutenticacionYRol.Presentation.routes.ApiRoutes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
-@CrossOrigin("*")
+@RequestMapping(ApiRoutes.AUTH_BASE) 
+@CrossOrigin("*") 
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    private IAuthService authService; 
 
-    @PostMapping("/login")
-    public AuthResponseDTO login(@RequestBody LoginRequestDTO request) {
-        return authService.login(request);
+    
+    
+    @PostMapping(ApiRoutes.LOGIN)
+    public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginRequestDTO request, HttpServletRequest httpRequest) {
+        
+        String clientIp = httpRequest.getRemoteAddr(); 
+        
+        AuthResponseDTO response = authService.login(request, clientIp);
+        
+        if (!response.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/verify-2fa")
-    public TwoFactorResponseDTO verify(@RequestBody TwoFactorRequestDTO request) {
-        return authService.verify2FA(request);
+    
+    @PostMapping(ApiRoutes.VERIFY_2FA)
+    public ResponseEntity<TwoFactorResponseDTO> verify(@RequestBody TwoFactorRequestDTO request) {
+        TwoFactorResponseDTO response = authService.verify2FA(request);
+        
+        if (!response.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(ApiRoutes.RECOVERY)
+    public ResponseEntity<AuthResponseDTO> recovery(@RequestBody String email) {
+       
+        return ResponseEntity.ok(new AuthResponseDTO(true, "Si el correo está registrado, recibirá instrucciones en breve."));
     }
 }
