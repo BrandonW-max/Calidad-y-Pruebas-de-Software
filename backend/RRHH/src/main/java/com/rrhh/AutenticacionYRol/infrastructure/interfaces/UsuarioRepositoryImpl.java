@@ -4,7 +4,9 @@ import com.rrhh.AutenticacionYRol.Domain.entities.Usuario;
 import com.rrhh.AutenticacionYRol.Domain.repository.IUsuarioRepository;
 
 import com.rrhh.AutenticacionYRol.Infrastructure.mappers.UsuarioMapper;
-import com.rrhh.AutenticacionYRol.Infrastructure.models.UsuarioModel;
+
+import com.rrhh.Shared.persistence.UsuarioModel;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -12,16 +14,40 @@ import org.springframework.stereotype.Component;
 public class UsuarioRepositoryImpl implements IUsuarioRepository {
 
     @Autowired
-    private JpaUsuarioRepository jpaRepository; 
+    private JpaUsuarioRepository jpaRepository;
+
+    @Override
     public Usuario findByUsername(String username) {
-        UsuarioModel model = jpaRepository.findByNombreUsuario(username);
-        return UsuarioMapper.toDomain(model); // Convertimos a Dominio para el Service
+
+        return jpaRepository.findByNombreUsuario(username)
+                .map(UsuarioMapper::toDomain)
+                .orElse(null);
     }
 
     @Override
-    public void save(Usuario usuario) {
-        UsuarioModel model = UsuarioMapper.toModel(usuario); // Convertimos a Modelo para Hibernate
-        jpaRepository.save(model);
+    public Usuario findByNombreUsuarioOrCorreoInst(
+        String nombreUsuario,
+        String correoInst
+    ) {
+
+    return jpaRepository
+            .findByNombreUsuarioOrCorreoInst(
+                    nombreUsuario,
+                    correoInst
+            )
+            .map(UsuarioMapper::toDomain)
+            .orElse(null);
+    }
+
+    @Override
+    public Usuario save(Usuario usuario) {
+
+        UsuarioModel model =
+                UsuarioMapper.toModel(usuario);
+
+        UsuarioModel saved =
+                jpaRepository.save(model);
+
+        return UsuarioMapper.toDomain(saved);
     }
 }
-

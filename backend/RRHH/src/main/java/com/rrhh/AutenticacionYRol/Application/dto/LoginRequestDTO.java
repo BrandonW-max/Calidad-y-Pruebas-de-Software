@@ -4,7 +4,6 @@ public class LoginRequestDTO {
     private String nombreUsuario;
     private String password;
 
-    // Constructor vacío (necesario para Spring/JSON)
     public LoginRequestDTO() {
     }
 
@@ -14,8 +13,7 @@ public class LoginRequestDTO {
         this.password = password;
     }
 
-    // --- GETTERS Y SETTERS ---
-    // Importante: El AuthService usa getNombreUsuario()
+    
     public String getNombreUsuario() {
         return nombreUsuario;
     }

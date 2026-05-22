@@ -6,4 +6,7 @@ public class ApiRoutes {
     public static final String LOGIN = "/login";
     public static final String VERIFY_2FA = "/verify-2fa";
     public static final String RECOVERY = "/recovery";
+    public static final String ENABLE_2FA ="/enable-2fa/{username}";
+    
 }
+

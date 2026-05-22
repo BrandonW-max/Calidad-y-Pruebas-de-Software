@@ -1,13 +1,15 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.interfaces; // Revisa que el package sea igual a tus otros Impl
+package com.rrhh.AutenticacionYRol.Infrastructure.interfaces;
 
 import com.rrhh.AutenticacionYRol.Domain.entities.Historial;
 import com.rrhh.AutenticacionYRol.Domain.repository.IHistorialRepository;
-import com.rrhh.AutenticacionYRol.Infrastructure.database.HistorialModel;
+import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
+import com.rrhh.Shared.persistence.UsuarioModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
 import java.time.LocalDateTime;
 
-@Component // 💡 Esto es lo que le dice a Spring: "Yo soy el bean que buscas"
+@Component
 public class HistorialRepositoryImpl implements IHistorialRepository {
 
     @Autowired
@@ -15,14 +17,29 @@ public class HistorialRepositoryImpl implements IHistorialRepository {
 
     @Override
     public void save(Historial historial) {
-        // Mapeo manual rápido para tu presentación
-        HistorialModel model = new HistorialModel();
-        model.setIdUsuario(historial.getIdUsuario());
+
+        HistorialAuditoriaModel model = new HistorialAuditoriaModel();
+
+        // =========================
+        // USUARIO
+        // =========================
+        UsuarioModel usuario = new UsuarioModel();
+        usuario.setIdUsuario(historial.getIdUsuario());
+
+        model.setUsuario(usuario);
+
+        // =========================
+        // DATOS AUDITORIA
+        // =========================
         model.setAccion(historial.getAccion());
         model.setIpMaquina(historial.getIpMaquina());
         model.setTablaAfectada(historial.getTablaAfectada());
-        model.setFechaCambio(LocalDateTime.now());
-        
+
+        // Registro afectado: en login es el mismo usuario
+        model.setIdRegistroAfectado(historial.getIdUsuario());
+
+        model.setFechaDeCambio(LocalDateTime.now());
+
         jpaRepository.save(model);
     }
 }

@@ -1,5 +1,6 @@
 package com.rrhh.AutenticacionYRol.Presentation.controllers;
 
+import com.rrhh.AutenticacionYRol.Application.RecoveryResponseDTO;
 import com.rrhh.AutenticacionYRol.Application.dto.*;
 import com.rrhh.AutenticacionYRol.Application.services.IAuthService; 
 import com.rrhh.AutenticacionYRol.Presentation.routes.ApiRoutes;
@@ -45,9 +46,47 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(ApiRoutes.RECOVERY)
-    public ResponseEntity<AuthResponseDTO> recovery(@RequestBody String email) {
-       
-        return ResponseEntity.ok(new AuthResponseDTO(true, "Si el correo está registrado, recibirá instrucciones en breve."));
-    }
+            @PostMapping(ApiRoutes.RECOVERY)
+        public ResponseEntity<RecoveryResponseDTO>
+        recovery(
+                @RequestBody RecoveryRequestDTO request
+        ) {
+
+            return ResponseEntity.ok(
+                    new RecoveryResponseDTO(
+                            true,
+                            "Si el correo está registrado, recibirá instrucciones en breve."
+                    )
+            );
+}
+    @GetMapping(ApiRoutes.ENABLE_2FA)
+public ResponseEntity<byte[]> enable2FA(
+        @PathVariable String username
+) throws Exception {
+
+    byte[] qrImage =
+            authService.enable2FA(username);
+
+    return ResponseEntity.ok()
+            .contentType(
+                    org.springframework.http.MediaType.IMAGE_PNG
+            )
+            .header(
+                    "Content-Disposition",
+                    "inline; filename=qr.png"
+            )
+            .header(
+                    "Cache-Control",
+                    "no-cache"
+            )
+            .header(
+                    "Pragma",
+                    "no-cache"
+            )
+            .header(
+                    "Expires",
+                    "0"
+            )
+            .body(qrImage);
+}
 }

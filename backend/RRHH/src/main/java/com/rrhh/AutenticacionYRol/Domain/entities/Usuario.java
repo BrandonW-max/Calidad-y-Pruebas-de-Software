@@ -1,52 +1,29 @@
-
 package com.rrhh.AutenticacionYRol.Domain.entities;
 
 import java.time.LocalDateTime;
 
 public class Usuario {
-    private Long IdUsuario;
+
+    private Long id;
     private String nombreUsuario;
+    private String correoInst;
     private String contrasenia;
     private int intentosFallidos;
     private boolean cuentaBloqueada;
-    private LocalDateTime fechaBloqueo; 
+    private LocalDateTime fechaBloqueo;
     private boolean dosFAActivado;
     private String secret2FA;
-    private String nombreRol; 
+    private String nombreRol;
 
-    
-
-    public boolean puedeIntentarLogin() {
-        if (!cuentaBloqueada) return true;
-
-       
-        if (fechaBloqueo != null && fechaBloqueo.plusMinutes(5).isBefore(LocalDateTime.now())) {
-            resetearIntentos(); 
-            return true;
-        }
-        return false;
-    }
-
-    public void registrarFallo() {
-        this.intentosFallidos++;
-        if (this.intentosFallidos >= 5) {
-            this.cuentaBloqueada = true;
-            this.fechaBloqueo = LocalDateTime.now(); 
-        }
-    }
-
-    public void resetearIntentos() {
-        this.intentosFallidos = 0;
-        this.cuentaBloqueada = false;
-        this.fechaBloqueo = null;
+    public Usuario() {
     }
 
     public Long getId() {
-        return IdUsuario;
+        return id;
     }
 
     public void setId(Long id) {
-        this.IdUsuario = id;
+        this.id = id;
     }
 
     public String getNombreUsuario() {
@@ -55,6 +32,14 @@ public class Usuario {
 
     public void setNombreUsuario(String nombreUsuario) {
         this.nombreUsuario = nombreUsuario;
+    }
+
+    public String getCorreoInst() {
+        return correoInst;
+    }
+
+    public void setCorreoInst(String correoInst) {
+        this.correoInst = correoInst;
     }
 
     public String getContrasenia() {
@@ -101,8 +86,8 @@ public class Usuario {
         return secret2FA;
     }
 
-    public void setSecret2FA(String secret2fa) {
-        secret2FA = secret2fa;
+    public void setSecret2FA(String secret2FA) {
+        this.secret2FA = secret2FA;
     }
 
     public String getNombreRol() {
@@ -113,5 +98,31 @@ public class Usuario {
         this.nombreRol = nombreRol;
     }
 
-    
+    public boolean puedeIntentarLogin() {
+        if (!cuentaBloqueada) {
+            return true;
+        }
+
+        if (fechaBloqueo != null && fechaBloqueo.plusMinutes(5).isBefore(LocalDateTime.now())) {
+            resetearIntentos();
+            return true;
+        }
+
+        return false;
+    }
+
+    public void registrarFallo() {
+        this.intentosFallidos++;
+
+        if (this.intentosFallidos >= 5) {
+            this.cuentaBloqueada = true;
+            this.fechaBloqueo = LocalDateTime.now();
+        }
+    }
+
+    public void resetearIntentos() {
+        this.intentosFallidos = 0;
+        this.cuentaBloqueada = false;
+        this.fechaBloqueo = null;
+    }
 }

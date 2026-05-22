@@ -49,7 +49,7 @@ public class AuthResponseDTO {
     }
 
     public void setRequires2FA(boolean requires2fa) {
-        requires2FA = requires2fa;
+        this.requires2FA = requires2fa;
     }
 
     

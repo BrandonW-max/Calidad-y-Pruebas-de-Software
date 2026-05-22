@@ -18,4 +18,8 @@ public interface IAuthService {
      * @return TwoFactorResponseDTO con el Token JWT y Rol asignado
      */
     TwoFactorResponseDTO verify2FA(TwoFactorRequestDTO dto);
+
+
+    byte[] enable2FA(String username) throws Exception;
+    
 }
