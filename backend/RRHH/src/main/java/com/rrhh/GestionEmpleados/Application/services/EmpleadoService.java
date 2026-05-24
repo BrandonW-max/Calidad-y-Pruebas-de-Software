@@ -1,165 +1,142 @@
 package com.rrhh.GestionEmpleados.Application.services;
 
-import com.rrhh.AutenticacionYRol.Application.services.RolAsignacionService;
-import com.rrhh.AutenticacionYRol.Infrastructure.interfaces.JpaRolRepository;
-import com.rrhh.AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
-
+import com.rrhh.GestionEmpleados.Application.dto.ActualizarEmpleadoRequestDTO;
+import com.rrhh.GestionEmpleados.Application.dto.BuscarEmpleadoResponseDTO;
+import com.rrhh.GestionEmpleados.Application.dto.CambioSalarialRequestDTO;
+import com.rrhh.GestionEmpleados.Application.dto.DesactivarEmpleadoRequestDTO;
 import com.rrhh.GestionEmpleados.Application.dto.EmpleadoResponseDTO;
+import com.rrhh.GestionEmpleados.Application.dto.ReactivarEmpleadoRequestDTO;
+import com.rrhh.GestionEmpleados.Application.dto.RegistrarAscensoRequestDTO;
 import com.rrhh.GestionEmpleados.Application.dto.RegistrarEmpleadoRequestDTO;
-import com.rrhh.GestionEmpleados.Infrastructure.interfaces.JpaContratoRepository;
-import com.rrhh.GestionEmpleados.Infrastructure.interfaces.JpaDepartamentoRepository;
-import com.rrhh.GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
-
-import com.rrhh.Shared.persistence.ContratoModel;
-import com.rrhh.Shared.persistence.DepartamentoModel;
-import com.rrhh.Shared.persistence.EmpleadoModel;
-import com.rrhh.Shared.persistence.RolModel;
-import com.rrhh.Shared.persistence.UsuarioModel;
+import com.rrhh.GestionEmpleados.Application.dto.RegistrarSancionRequestDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class EmpleadoService implements IEmpleadoService {
 
     @Autowired
-    private JpaEmpleadoRepository empleadoRepository;
+    private RegistrarEmpleadoUseCase registrarEmpleadoUseCase;
 
     @Autowired
-    private JpaContratoRepository contratoRepository;
+    private BuscarEmpleadoUseCase buscarEmpleadoUseCase;
 
     @Autowired
-    private JpaDepartamentoRepository departamentoRepository;
+    private ActualizarEmpleadoUseCase actualizarEmpleadoUseCase;
 
     @Autowired
-    private JpaRolRepository rolRepository;
+    private DesactivarEmpleadoUseCase desactivarEmpleadoUseCase;
 
     @Autowired
-    private JpaUsuarioRepository usuarioRepository;
+    private RegistrarSancionUseCase registrarSancionUseCase;
 
     @Autowired
-    private RolAsignacionService rolAsignacionService;
+    private ReactivarEmpleadoUseCase reactivarEmpleadoUseCase;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private RegistrarAscensoUseCase registrarAscensoUseCase;
+
+    @Autowired
+    private CambioSalarialUseCase cambioSalarialUseCase;
 
     @Override
-    public EmpleadoResponseDTO registrarEmpleado(RegistrarEmpleadoRequestDTO dto) {
+    public EmpleadoResponseDTO registrarEmpleado(
+            RegistrarEmpleadoRequestDTO dto
+    ) {
+        return registrarEmpleadoUseCase.ejecutar(dto);
+    }
 
-        // =========================
-        // VALIDAR DUPLICIDAD DNI / CE
-        // =========================
+    @Override
+    public List<BuscarEmpleadoResponseDTO> listarEmpleados() {
+        return buscarEmpleadoUseCase.listar();
+    }
 
-        if (empleadoRepository.existsByNumeroDi(dto.getNumeroDi())) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Ya existe un empleado con ese documento de identidad",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-        }
+    @Override
+    public List<BuscarEmpleadoResponseDTO> buscarEmpleados(
+            String filtro
+    ) {
+        return buscarEmpleadoUseCase.buscarPorFiltro(filtro);
+    }
 
-        // =========================
-        // BUSCAR DEPARTAMENTO
-        // =========================
-
-        DepartamentoModel departamento = departamentoRepository
-                .findById(dto.getIdDpto())
-                .orElseThrow(() -> new RuntimeException("Departamento no encontrado"));
-
-        // =========================
-        // REGISTRAR EMPLEADO
-        // =========================
-
-        EmpleadoModel empleado = new EmpleadoModel();
-
-        empleado.setNombres(dto.getNombres());
-        empleado.setApellidos(dto.getApellidos());
-        empleado.setDocIdentidad(dto.getDocIdentidad());
-        empleado.setNumeroDi(dto.getNumeroDi());
-        empleado.setFechaNac(dto.getFechaNac());
-        empleado.setSexo(dto.getSexo());
-        empleado.setEstadoCivil(dto.getEstadoCivil());
-        empleado.setDireccion(dto.getDireccion());
-        empleado.setCorreo(dto.getCorreo());
-        empleado.setTelefono(dto.getTelefono());
-        empleado.setEstado("ACTIVO");
-
-        EmpleadoModel empleadoGuardado =
-                empleadoRepository.save(empleado);
-
-        // =========================
-        // REGISTRAR CONTRATO
-        // =========================
-
-        ContratoModel contrato = new ContratoModel();
-
-        contrato.setEmpleado(empleadoGuardado);
-        contrato.setDepartamento(departamento);
-        contrato.setCargo(dto.getCargo());
-        contrato.setTipoContrato(dto.getTipoContrato());
-        contrato.setFechaInicio(dto.getFechaInicio());
-        contrato.setFechaFin(dto.getFechaFin());
-        contrato.setSueldo(dto.getSueldo());
-        contrato.setEstado("ACTIVO");
-
-        contratoRepository.save(contrato);
-
-        // =========================
-        // DETERMINAR ROL AUTOMÁTICO
-        // =========================
-
-        String nombreRol = rolAsignacionService.determinarRol(
-                departamento.getNombre(),
-                dto.getCargo()
+    @Override
+    public List<BuscarEmpleadoResponseDTO> buscarEmpleadosAvanzado(
+            String estado,
+            Integer idDpto,
+            String cargo
+    ) {
+        return buscarEmpleadoUseCase.buscarAvanzado(
+                estado,
+                idDpto,
+                cargo
         );
-        System.out.println("==== DEBUG ASIGNACION ROL ====");
-        System.out.println("Departamento recibido: " + departamento.getNombre());
-        System.out.println("Cargo recibido: " + dto.getCargo());
-        System.out.println("Rol calculado: " + nombreRol);
-        System.out.println("==============================");
+    }
 
-        RolModel rol = rolRepository
-                .findByNombreRol(nombreRol)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + nombreRol));
-
-        // =========================
-        // CREAR USUARIO DEL SISTEMA
-        // =========================
-
-        UsuarioModel usuario = new UsuarioModel();
-
-        usuario.setNombreUsuario(dto.getNombreUsuario());
-        usuario.setCorreoInst(dto.getCorreoInst());
-        usuario.setContrasenia(
-                passwordEncoder.encode(dto.getContrasenia())
+    @Override
+    public EmpleadoResponseDTO actualizarEmpleado(
+            Long idEmpleado,
+            ActualizarEmpleadoRequestDTO dto
+    ) {
+        return actualizarEmpleadoUseCase.ejecutar(
+                idEmpleado,
+                dto
         );
+    }
 
-        usuario.setEmpleado(empleadoGuardado);
-        usuario.setRol(rol);
-        usuario.setActivo(true);
-        usuario.setDosfaActivo(false);
+    @Override
+    public EmpleadoResponseDTO desactivarEmpleado(
+            Long idEmpleado,
+            DesactivarEmpleadoRequestDTO dto
+    ) {
+        return desactivarEmpleadoUseCase.ejecutar(
+                idEmpleado,
+                dto
+        );
+    }
 
-        usuarioRepository.save(usuario);
+    @Override
+    public EmpleadoResponseDTO registrarSancion(
+            Long idEmpleado,
+            RegistrarSancionRequestDTO dto
+    ) {
+        return registrarSancionUseCase.ejecutar(
+                idEmpleado,
+                dto
+        );
+    }
 
-        // =========================
-        // RESPUESTA
-        // =========================
+    @Override
+    public EmpleadoResponseDTO reactivarEmpleado(
+            Long idEmpleado,
+            ReactivarEmpleadoRequestDTO dto
+    ) {
+        return reactivarEmpleadoUseCase.ejecutar(
+                idEmpleado,
+                dto
+        );
+    }
 
-        return new EmpleadoResponseDTO(
-                true,
-                "Empleado registrado correctamente",
-                empleadoGuardado.getIdEmpleado(),
-                empleadoGuardado.getNombres() + " " + empleadoGuardado.getApellidos(),
-                contrato.getCargo(),
-                departamento.getNombre(),
-                rol.getNombreRol(),
-                empleadoGuardado.getEstado()
+    @Override
+    public EmpleadoResponseDTO registrarAscenso(
+            Long idEmpleado,
+            RegistrarAscensoRequestDTO dto
+    ) {
+        return registrarAscensoUseCase.ejecutar(
+                idEmpleado,
+                dto
+        );
+    }
+
+    @Override
+    public EmpleadoResponseDTO registrarCambioSalarial(
+            Long idEmpleado,
+            CambioSalarialRequestDTO dto
+    ) {
+        return cambioSalarialUseCase.ejecutar(
+                idEmpleado,
+                dto
         );
     }
 }

@@ -31,8 +31,7 @@ public class RegistrarEmpleadoRequestDTO {
    
     // DATOS DEL USUARIO DEL SISTEMA
     
-    private String nombreUsuario;
-    private String correoInst;
+    
     private String contrasenia;
 
     public RegistrarEmpleadoRequestDTO() {
@@ -166,21 +165,6 @@ public class RegistrarEmpleadoRequestDTO {
         this.idDpto = idDpto;
     }
 
-    public String getNombreUsuario() {
-        return nombreUsuario;
-    }
-
-    public void setNombreUsuario(String nombreUsuario) {
-        this.nombreUsuario = nombreUsuario;
-    }
-
-    public String getCorreoInst() {
-        return correoInst;
-    }
-
-    public void setCorreoInst(String correoInst) {
-        this.correoInst = correoInst;
-    }
 
     public String getContrasenia() {
         return contrasenia;

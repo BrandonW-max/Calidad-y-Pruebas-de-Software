@@ -19,7 +19,7 @@ public class HistorialAuditoriaModel {
     @Column(name = "id_registro_afectado", nullable = false)
     private Long idRegistroAfectado;
 
-    @Column(name = "accion", nullable = false)
+    @Column(name = "accion", nullable = false, length = 70)
     private String accion;
 
     @Column(name = "valor_anterior", columnDefinition = "TEXT")
