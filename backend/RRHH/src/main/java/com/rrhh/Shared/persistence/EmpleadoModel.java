@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "empleado")
@@ -60,12 +61,11 @@ public class EmpleadoModel {
     // RELACIONES
     // =========================
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_dpto", referencedColumnName = "id_dpto")
-    private DepartamentoModel departamento;
-
     @OneToOne(mappedBy = "empleado", fetch = FetchType.LAZY)
     private UsuarioModel usuario;
+
+    @OneToMany(mappedBy = "empleado", fetch = FetchType.LAZY)
+    private List<ContratoModel> contratos;
 
     // =========================
     // CONSTRUCTORES
@@ -90,8 +90,8 @@ public class EmpleadoModel {
             String estado,
             LocalDateTime creadoEl,
             LocalDateTime actualizadoEl,
-            DepartamentoModel departamento,
-            UsuarioModel usuario
+            UsuarioModel usuario,
+            List<ContratoModel> contratos
     ) {
         this.idEmpleado = idEmpleado;
         this.nombres = nombres;
@@ -108,8 +108,8 @@ public class EmpleadoModel {
         this.estado = estado;
         this.creadoEl = creadoEl;
         this.actualizadoEl = actualizadoEl;
-        this.departamento = departamento;
         this.usuario = usuario;
+        this.contratos = contratos;
     }
 
     // =========================
@@ -236,19 +236,19 @@ public class EmpleadoModel {
         this.actualizadoEl = actualizadoEl;
     }
 
-    public DepartamentoModel getDepartamento() {
-        return departamento;
-    }
-
-    public void setDepartamento(DepartamentoModel departamento) {
-        this.departamento = departamento;
-    }
-
     public UsuarioModel getUsuario() {
         return usuario;
     }
 
     public void setUsuario(UsuarioModel usuario) {
         this.usuario = usuario;
+    }
+
+    public List<ContratoModel> getContratos() {
+        return contratos;
+    }
+
+    public void setContratos(List<ContratoModel> contratos) {
+        this.contratos = contratos;
     }
 }

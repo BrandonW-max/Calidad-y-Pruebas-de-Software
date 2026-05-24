@@ -25,9 +25,20 @@ public class RolModel {
     @Column(name = "activo")
     private Boolean activo = true;
 
-    // =========================
-    // CONSTRUCTORES
-    // =========================
+    @PrePersist
+    public void prePersist() {
+        this.creadoEl = LocalDateTime.now();
+        this.actualizadoEl = LocalDateTime.now();
+
+        if (this.activo == null) {
+            this.activo = true;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.actualizadoEl = LocalDateTime.now();
+    }
 
     public RolModel() {
     }
@@ -45,10 +56,6 @@ public class RolModel {
         this.actualizadoEl = actualizadoEl;
         this.activo = activo;
     }
-
-    // =========================
-    // GETTERS Y SETTERS
-    // =========================
 
     public Integer getIdRol() {
         return idRol;

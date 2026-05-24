@@ -1,15 +1,11 @@
 package com.rrhh.AutenticacionYRol.Infrastructure.mappers;
 
 import com.rrhh.AutenticacionYRol.Domain.entities.Usuario;
-
 import com.rrhh.Shared.persistence.UsuarioModel;
-import com.rrhh.Shared.persistence.RolModel;
 
 public class UsuarioMapper {
 
-    // =========================
-    // MODEL -> DOMAIN
-    // =========================
+
     public static Usuario toDomain(UsuarioModel model) {
 
         if (model == null) {
@@ -57,7 +53,6 @@ public class UsuarioMapper {
         // =========================
 
         if (model.getRol() != null) {
-
             domain.setNombreRol(
                     model.getRol().getNombreRol()
             );
@@ -113,21 +108,12 @@ public class UsuarioMapper {
                 domain.getSecret2FA()
         );
 
-        // =========================
-        // ROL
-        // =========================
-
-        RolModel rol = new RolModel();
-
-        rol.setIdRol(1);
-
-        rol.setNombreRol(
-                domain.getNombreRol() != null
-                        ? domain.getNombreRol()
-                        : "RRHH"
-        );
-
-        model.setRol(rol);
+        /*
+         * IMPORTANTE:
+         * No asignamos rol aquí.
+         * Antes tenías rol.setIdRol(1), eso hacía que todos terminaran como RRHH.
+         * El rol se asigna al crear el usuario desde Gestión de Empleados.
+         */
 
         return model;
     }

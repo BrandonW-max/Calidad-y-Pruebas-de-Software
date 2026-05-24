@@ -40,14 +40,29 @@ public class UsuarioRepositoryImpl implements IUsuarioRepository {
     }
 
     @Override
-    public Usuario save(Usuario usuario) {
+public Usuario save(Usuario usuario) {
 
-        UsuarioModel model =
-                UsuarioMapper.toModel(usuario);
+    if (usuario.getId() != null) {
 
-        UsuarioModel saved =
-                jpaRepository.save(model);
+        UsuarioModel model = jpaRepository.findById(usuario.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        model.setIntentosFallidos(usuario.getIntentosFallidos());
+        model.setCuentaBloqueada(usuario.isCuentaBloqueada());
+        model.setFechaBloqueo(usuario.getFechaBloqueo());
+
+        model.setDosfaActivo(usuario.isDosFAActivado());
+        model.setDosfaSecret(usuario.getSecret2FA());
+
+        UsuarioModel saved = jpaRepository.save(model);
 
         return UsuarioMapper.toDomain(saved);
     }
+
+    UsuarioModel model = UsuarioMapper.toModel(usuario);
+
+    UsuarioModel saved = jpaRepository.save(model);
+
+    return UsuarioMapper.toDomain(saved);
+}
 }

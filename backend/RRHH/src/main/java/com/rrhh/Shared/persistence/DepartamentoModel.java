@@ -23,6 +23,11 @@ public class DepartamentoModel {
     @Column(name = "ubicacion", length = 100)
     private String ubicacion;
 
+    // jefe_dpto es una FK hacia empleado.id_empleado
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "jefe_dpto", referencedColumnName = "id_empleado")
+    private EmpleadoModel jefeDpto;
+
     @Column(name = "activo")
     private Boolean activo = true;
 
@@ -32,10 +37,10 @@ public class DepartamentoModel {
     @Column(name = "actualizado_el")
     private LocalDateTime actualizadoEl = LocalDateTime.now();
 
-    // ================= RELACIONES =================
-
+    // Como quitaste id_dpto de empleado,
+    // ahora departamento se relaciona con contrato.
     @OneToMany(mappedBy = "departamento", fetch = FetchType.LAZY)
-    private List<EmpleadoModel> empleados;
+    private List<ContratoModel> contratos;
 
     // ================= CONSTRUCTORES =================
 
@@ -47,19 +52,21 @@ public class DepartamentoModel {
             String nombre,
             String codDpto,
             String ubicacion,
+            EmpleadoModel jefeDpto,
             Boolean activo,
             LocalDateTime creadoEl,
             LocalDateTime actualizadoEl,
-            List<EmpleadoModel> empleados
+            List<ContratoModel> contratos
     ) {
         this.idDpto = idDpto;
         this.nombre = nombre;
         this.codDpto = codDpto;
         this.ubicacion = ubicacion;
+        this.jefeDpto = jefeDpto;
         this.activo = activo;
         this.creadoEl = creadoEl;
         this.actualizadoEl = actualizadoEl;
-        this.empleados = empleados;
+        this.contratos = contratos;
     }
 
     // ================= GETTERS Y SETTERS =================
@@ -96,6 +103,14 @@ public class DepartamentoModel {
         this.ubicacion = ubicacion;
     }
 
+    public EmpleadoModel getJefeDpto() {
+        return jefeDpto;
+    }
+
+    public void setJefeDpto(EmpleadoModel jefeDpto) {
+        this.jefeDpto = jefeDpto;
+    }
+
     public Boolean getActivo() {
         return activo;
     }
@@ -120,11 +135,11 @@ public class DepartamentoModel {
         this.actualizadoEl = actualizadoEl;
     }
 
-    public List<EmpleadoModel> getEmpleados() {
-        return empleados;
+    public List<ContratoModel> getContratos() {
+        return contratos;
     }
 
-    public void setEmpleados(List<EmpleadoModel> empleados) {
-        this.empleados = empleados;
+    public void setContratos(List<ContratoModel> contratos) {
+        this.contratos = contratos;
     }
 }
