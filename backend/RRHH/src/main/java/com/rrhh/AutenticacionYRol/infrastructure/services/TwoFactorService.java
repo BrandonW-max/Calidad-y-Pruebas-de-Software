@@ -1,6 +1,8 @@
 package com.rrhh.AutenticacionYRol.Infrastructure.services;
 
 import java.io.ByteArrayOutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.stereotype.Service;
 
@@ -38,14 +40,25 @@ public class TwoFactorService {
             String secret
     ) {
 
-        return "otpauth://totp/RRHH:"
-                + username
-                + "?secret="
-                + secret
-                + "&issuer=RRHH_SYSTEM";
+        String issuer = "RRHH_SYSTEM";
+
+        String issuerEncoded = URLEncoder
+                .encode(issuer, StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        String usernameEncoded = URLEncoder
+                .encode(username, StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        return "otpauth://totp/"
+                + issuerEncoded + ":" + usernameEncoded
+                + "?secret=" + secret
+                + "&issuer=" + issuerEncoded
+                + "&algorithm=SHA1"
+                + "&digits=6"
+                + "&period=30";
     }
 
-    // GENERAR IMAGEN QR
     public byte[] generarQRImagen(
             String qrText
     ) throws Exception {

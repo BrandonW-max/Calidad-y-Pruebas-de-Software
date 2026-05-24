@@ -5,7 +5,9 @@ import com.rrhh.Shared.persistence.UsuarioModel;
 
 public class UsuarioMapper {
 
-
+    // =========================
+    // MODEL -> DOMAIN
+    // =========================
     public static Usuario toDomain(UsuarioModel model) {
 
         if (model == null) {
@@ -48,10 +50,13 @@ public class UsuarioMapper {
                 model.getDosfaSecret()
         );
 
+        domain.setActivo(
+                model.getActivo()
+        );
+
         // =========================
         // ROL
         // =========================
-
         if (model.getRol() != null) {
             domain.setNombreRol(
                     model.getRol().getNombreRol()
@@ -108,10 +113,14 @@ public class UsuarioMapper {
                 domain.getSecret2FA()
         );
 
+        model.setActivo(
+                domain.isActivo()
+        );
+
         /*
          * IMPORTANTE:
          * No asignamos rol aquí.
-         * Antes tenías rol.setIdRol(1), eso hacía que todos terminaran como RRHH.
+         * Antes se asignaba idRol = 1 y eso hacía que todos terminaran como RRHH.
          * El rol se asigna al crear el usuario desde Gestión de Empleados.
          */
 

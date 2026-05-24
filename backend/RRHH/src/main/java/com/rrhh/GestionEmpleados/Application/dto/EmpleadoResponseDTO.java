@@ -6,6 +6,8 @@ public class EmpleadoResponseDTO {
     private String message;
     private Long idEmpleado;
     private String nombreCompleto;
+    private String nombreUsuario;
+    private String correoInstitucional;
     private String cargo;
     private String departamento;
     private String rolAsignado;
@@ -19,6 +21,8 @@ public class EmpleadoResponseDTO {
             String message,
             Long idEmpleado,
             String nombreCompleto,
+            String nombreUsuario,
+            String correoInstitucional,
             String cargo,
             String departamento,
             String rolAsignado,
@@ -28,10 +32,13 @@ public class EmpleadoResponseDTO {
         this.message = message;
         this.idEmpleado = idEmpleado;
         this.nombreCompleto = nombreCompleto;
+        this.nombreUsuario =nombreUsuario;
+        this.correoInstitucional =correoInstitucional;
         this.cargo = cargo;
         this.departamento = departamento;
         this.rolAsignado = rolAsignado;
         this.estado = estado;
+        
     }
 
     public boolean isSuccess() {
@@ -66,6 +73,22 @@ public class EmpleadoResponseDTO {
         this.nombreCompleto = nombreCompleto;
     }
 
+    public String getNombreUsuario() {
+        return nombreUsuario;
+    }
+
+    public void setNombreUsuario(String nombreUsuario) {
+        this.nombreUsuario = nombreUsuario;
+    }
+
+    public String getCorreoInstitucional() {
+        return correoInstitucional;
+    }
+
+    public void setCorreoInstitucional(String correoInstitucional) {
+        this.correoInstitucional = correoInstitucional;
+    }
+
     public String getCargo() {
         return cargo;
     }
@@ -98,3 +121,6 @@ public class EmpleadoResponseDTO {
         this.estado = estado;
     }
 }
+
+
+   

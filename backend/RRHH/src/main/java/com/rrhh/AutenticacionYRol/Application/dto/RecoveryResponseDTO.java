@@ -1,10 +1,12 @@
-package com.rrhh.AutenticacionYRol.Application;
+package com.rrhh.AutenticacionYRol.Application.dto;
 
 public class RecoveryResponseDTO {
 
     private boolean success;
-
     private String message;
+
+    public RecoveryResponseDTO() {
+    }
 
     public RecoveryResponseDTO(
             boolean success,
@@ -29,5 +31,4 @@ public class RecoveryResponseDTO {
     public void setMessage(String message) {
         this.message = message;
     }
-    
 }

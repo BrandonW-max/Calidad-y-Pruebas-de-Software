@@ -40,11 +40,27 @@ public class AuthService implements IAuthService {
                 );
 
         if (user == null) {
-            return new AuthResponseDTO(false, "Credenciales inválidas");
+            return new AuthResponseDTO(
+                    false,
+                    "Credenciales inválidas"
+            );
+        }
+
+        // =========================
+        // VALIDAR USUARIO ACTIVO
+        // =========================
+        if (!user.isActivo()) {
+            return new AuthResponseDTO(
+                    false,
+                    "Usuario inactivo o desvinculado. No tiene acceso al sistema."
+            );
         }
 
         if (!user.puedeIntentarLogin()) {
-            return new AuthResponseDTO(false, "Cuenta bloqueada por 5 minutos");
+            return new AuthResponseDTO(
+                    false,
+                    "Cuenta bloqueada por 5 minutos"
+            );
         }
 
         if (passwordEncoder.matches(dto.getPassword(), user.getContrasenia())) {
@@ -87,7 +103,10 @@ public class AuthService implements IAuthService {
                             ? "Cuenta bloqueada"
                             : "Contraseña incorrecta";
 
-            return new AuthResponseDTO(false, msg);
+            return new AuthResponseDTO(
+                    false,
+                    msg
+            );
         }
     }
 
@@ -95,7 +114,8 @@ public class AuthService implements IAuthService {
     public TwoFactorResponseDTO verify2FA(TwoFactorRequestDTO dto) {
 
         Usuario user =
-                usuarioRepository.findByUsername(
+                usuarioRepository.findByNombreUsuarioOrCorreoInst(
+                        dto.getUsername(),
                         dto.getUsername()
                 );
 
@@ -103,6 +123,18 @@ public class AuthService implements IAuthService {
             return new TwoFactorResponseDTO(
                     false,
                     "Usuario no encontrado",
+                    null,
+                    null
+            );
+        }
+
+        // =========================
+        // VALIDAR USUARIO ACTIVO
+        // =========================
+        if (!user.isActivo()) {
+            return new TwoFactorResponseDTO(
+                    false,
+                    "Usuario inactivo o desvinculado. No tiene acceso al sistema.",
                     null,
                     null
             );
@@ -135,7 +167,8 @@ public class AuthService implements IAuthService {
         String token =
                 jwtConfig.generarToken(
                         user.getNombreUsuario(),
-                        user.getNombreRol()
+                        user.getNombreRol(),
+                        user.getId()
                 );
 
         return new TwoFactorResponseDTO(
@@ -150,10 +183,22 @@ public class AuthService implements IAuthService {
     public byte[] enable2FA(String username) throws Exception {
 
         Usuario user =
-                usuarioRepository.findByUsername(username);
+                usuarioRepository.findByNombreUsuarioOrCorreoInst(
+                        username,
+                        username
+                );
 
         if (user == null) {
             throw new RuntimeException("Usuario no encontrado");
+        }
+
+        // =========================
+        // VALIDAR USUARIO ACTIVO
+        // =========================
+        if (!user.isActivo()) {
+            throw new RuntimeException(
+                    "Usuario inactivo o desvinculado. No puede activar 2FA."
+            );
         }
 
         String secret =

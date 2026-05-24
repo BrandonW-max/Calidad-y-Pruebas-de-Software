@@ -45,9 +45,6 @@ public class EmpleadoModel {
     @Column(name = "telefono", length = 15)
     private String telefono;
 
-    @Column(name = "sancion", columnDefinition = "TEXT")
-    private String sancion;
-
     @Column(name = "estado", nullable = false, length = 30)
     private String estado = "ACTIVO";
 
@@ -63,6 +60,9 @@ public class EmpleadoModel {
 
     @OneToOne(mappedBy = "empleado", fetch = FetchType.LAZY)
     private UsuarioModel usuario;
+
+    @OneToMany(mappedBy = "empleado", fetch = FetchType.LAZY)
+    private List<SancionModel> sanciones;
 
     @OneToMany(mappedBy = "empleado", fetch = FetchType.LAZY)
     private List<ContratoModel> contratos;
@@ -86,12 +86,12 @@ public class EmpleadoModel {
             String direccion,
             String correo,
             String telefono,
-            String sancion,
             String estado,
             LocalDateTime creadoEl,
             LocalDateTime actualizadoEl,
             UsuarioModel usuario,
-            List<ContratoModel> contratos
+            List<ContratoModel> contratos,
+            List<SancionModel> sanciones
     ) {
         this.idEmpleado = idEmpleado;
         this.nombres = nombres;
@@ -104,12 +104,12 @@ public class EmpleadoModel {
         this.direccion = direccion;
         this.correo = correo;
         this.telefono = telefono;
-        this.sancion = sancion;
         this.estado = estado;
         this.creadoEl = creadoEl;
         this.actualizadoEl = actualizadoEl;
         this.usuario = usuario;
         this.contratos = contratos;
+        this.sanciones = sanciones;
     }
 
     // =========================
@@ -204,14 +204,6 @@ public class EmpleadoModel {
         this.telefono = telefono;
     }
 
-    public String getSancion() {
-        return sancion;
-    }
-
-    public void setSancion(String sancion) {
-        this.sancion = sancion;
-    }
-
     public String getEstado() {
         return estado;
     }
@@ -250,5 +242,13 @@ public class EmpleadoModel {
 
     public void setContratos(List<ContratoModel> contratos) {
         this.contratos = contratos;
+    }
+
+    public List<SancionModel> getSanciones() {
+        return sanciones;
+    }
+
+    public void setSanciones(List<SancionModel> sanciones) {
+        this.sanciones = sanciones;
     }
 }

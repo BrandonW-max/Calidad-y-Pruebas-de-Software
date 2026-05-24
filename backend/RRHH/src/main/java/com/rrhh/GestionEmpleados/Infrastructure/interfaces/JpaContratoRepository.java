@@ -1,6 +1,7 @@
 package com.rrhh.GestionEmpleados.Infrastructure.interfaces;
 
 import com.rrhh.Shared.persistence.ContratoModel;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

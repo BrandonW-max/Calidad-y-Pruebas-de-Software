@@ -15,6 +15,9 @@ public class Usuario {
     private String secret2FA;
     private String nombreRol;
 
+    // NUEVO: para bloquear login cuando el empleado fue desvinculado
+    private Boolean activo = true;
+
     public Usuario() {
     }
 
@@ -96,6 +99,18 @@ public class Usuario {
 
     public void setNombreRol(String nombreRol) {
         this.nombreRol = nombreRol;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
+    public boolean isActivo() {
+        return activo != null && activo;
     }
 
     public boolean puedeIntentarLogin() {
