@@ -27,7 +27,6 @@ public class NominaService implements INominaService {
 
     // Tasas configurables
     private static final BigDecimal TASA_HORA_EXTRA_1_5 = new BigDecimal("1.5");
-    private static final BigDecimal TASA_HORA_EXTRA_2_0 = new BigDecimal("2.0");
     private static final int MINUTOS_EN_HORA = 60;
     private static final int HORAS_JORNADA_DIARIA = 8;
 
