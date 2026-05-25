@@ -1,4 +1,4 @@
--- =========================
+a-- =========================
 -- ROLES BASE
 -- =========================
 
@@ -169,3 +169,18 @@ CROSS JOIN (VALUES
     ('2026-01-14', '08:00:00', '17:00:00', 0, 0)
 ) AS v(fecha, hora_entrada, hora_salida, minutos_tardanza, minutos_extra)
 WHERE e.numero_di = '00000001';
+
+
+-- =========================
+-- FAMILIA ADMIN RRHH (para bonificación familiar en nómina)
+-- =========================
+
+INSERT INTO familia_info(nombres, parentesco, numero_di, fecha_nacimiento, id_empleado, activo)
+SELECT 'Maria RRHH', 'HIJO', '11111111', '2018-03-15', e.id_empleado, true
+FROM empleado e WHERE e.numero_di = '00000001'
+ON CONFLICT (numero_di) DO NOTHING;
+
+INSERT INTO familia_info(nombres, parentesco, numero_di, fecha_nacimiento, id_empleado, activo)
+SELECT 'Carlos RRHH', 'HIJO', '22222222', '2020-07-22', e.id_empleado, true
+FROM empleado e WHERE e.numero_di = '00000001'
+ON CONFLICT (numero_di) DO NOTHING;
