@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.config;
+package com.rrhh.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

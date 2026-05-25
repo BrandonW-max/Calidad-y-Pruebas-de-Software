@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.config;
+package com.rrhh.config;
 
 public class AuthenticatedUser {
 

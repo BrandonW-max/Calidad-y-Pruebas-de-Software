@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.config;
+package com.rrhh.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

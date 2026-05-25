@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.config;
+package com.rrhh.config;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
