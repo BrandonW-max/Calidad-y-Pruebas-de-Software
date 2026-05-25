@@ -150,3 +150,22 @@ WHERE e.numero_di = '00000001'
       WHERE u.nombre_usuario = 'admin.rrhh'
          OR u.correo_inst = 'admin.rrhh@hospitalsangabriel.com'
   );
+
+
+INSERT INTO registro_asistencia (fecha, hora_entrada, hora_salida, minutos_tardanza, minutos_extra, id_empleado)
+SELECT 
+    v.fecha, v.hora_entrada, v.hora_salida, v.minutos_tardanza, v.minutos_extra, e.id_empleado
+FROM empleado e
+CROSS JOIN (VALUES
+    ('2026-01-02'::date, '08:00:00'::time, '17:00:00'::time, 0, 30),
+    ('2026-01-03', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-05', '08:05:00', '17:00:00', 5, 0),
+    ('2026-01-06', '08:00:00', '18:30:00', 0, 90),
+    ('2026-01-07', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-08', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-09', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-12', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-13', '08:00:00', '17:00:00', 0, 0),
+    ('2026-01-14', '08:00:00', '17:00:00', 0, 0)
+) AS v(fecha, hora_entrada, hora_salida, minutos_tardanza, minutos_extra)
+WHERE e.numero_di = '00000001';
