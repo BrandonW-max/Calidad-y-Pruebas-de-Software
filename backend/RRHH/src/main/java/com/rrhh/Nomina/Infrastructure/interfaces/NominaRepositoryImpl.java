@@ -3,6 +3,7 @@ package com.rrhh.Nomina.Infrastructure.interfaces;
 import com.rrhh.Nomina.Domain.entities.DetalleNomina;
 import com.rrhh.Nomina.Domain.entities.Nomina;
 import com.rrhh.Nomina.Domain.repository.INominaRepository;
+import com.rrhh.Shared.persistence.DetalleNominaModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.NominaModel;
 import com.rrhh.Shared.persistence.UsuarioModel;
@@ -17,9 +18,16 @@ import java.util.stream.Collectors;
 public class NominaRepositoryImpl implements INominaRepository {
 
     private final JpaNominaRepository jpaNominaRepository;
+    private final JpaDetalleNominaRepository jpaDetalleNominaRepository;
+    private final DetalleNominaRepositoryImpl detalleMapper;
 
-    public NominaRepositoryImpl(JpaNominaRepository jpaNominaRepository) {
+    public NominaRepositoryImpl(
+            JpaNominaRepository jpaNominaRepository,
+            JpaDetalleNominaRepository jpaDetalleNominaRepository,
+            DetalleNominaRepositoryImpl detalleMapper) {
         this.jpaNominaRepository = jpaNominaRepository;
+        this.jpaDetalleNominaRepository = jpaDetalleNominaRepository;
+        this.detalleMapper = detalleMapper;
     }
 
     @Override
@@ -38,20 +46,21 @@ public class NominaRepositoryImpl implements INominaRepository {
 
     @Override
     public List<Nomina> buscarPorEmpleadoYPeriodo(Long idEmpleado, String periodo) {
+        List<NominaModel> models;
         if (periodo != null) {
-            return jpaNominaRepository
-                .findByEmpleadoIdEmpleadoAndPeriodo(idEmpleado, periodo)
-                .stream().map(this::mapearAEntidad).collect(Collectors.toList());
+            models = jpaNominaRepository.findByEmpleadoIdEmpleadoAndPeriodo(idEmpleado, periodo);
+        } else {
+            models = jpaNominaRepository.findByEmpleadoIdEmpleado(idEmpleado);
         }
-        return jpaNominaRepository
-            .findByEmpleadoIdEmpleado(idEmpleado)
-            .stream().map(this::mapearAEntidad).collect(Collectors.toList());
+        return models.stream()
+            .map(this::mapearAEntidadConDetalles)
+            .collect(Collectors.toList());
     }
 
     @Override
     public List<Nomina> buscarPorPeriodo(String periodo) {
         return jpaNominaRepository.findByPeriodo(periodo)
-            .stream().map(this::mapearAEntidad).collect(Collectors.toList());
+            .stream().map(this::mapearAEntidadConDetalles).collect(Collectors.toList());
     }
 
     @Override
@@ -61,13 +70,20 @@ public class NominaRepositoryImpl implements INominaRepository {
             .filter(n -> n.getFechaInicio() != null &&
                 !n.getFechaInicio().isBefore(fechaInicio) &&
                 !n.getFechaFin().isAfter(fechaFin))
-            .map(this::mapearAEntidad)
+            .map(this::mapearAEntidadConDetalles)
             .collect(Collectors.toList());
     }
 
     @Override
     public boolean existePorEmpleadoYPeriodo(Long idEmpleado, String periodo) {
         return jpaNominaRepository.existsByEmpleadoIdEmpleadoAndPeriodo(idEmpleado, periodo);
+    }
+
+    @Override
+    public List<Nomina> buscarPorNombreEmpleado(String nombre) {
+        return jpaNominaRepository.findAll().stream()
+            .map(this::mapearAEntidadConDetalles)
+            .collect(Collectors.toList());
     }
 
     private NominaModel mapearAModel(Nomina nomina) {
@@ -134,6 +150,16 @@ public class NominaRepositoryImpl implements INominaRepository {
         if (model.getCalculadoPor() != null) {
             nomina.setCalculadoPor(model.getCalculadoPor().getIdUsuario());
         }
+        return nomina;
+    }
+
+    private Nomina mapearAEntidadConDetalles(NominaModel model) {
+        Nomina nomina = mapearAEntidad(model);
+        List<DetalleNominaModel> detalleModels = jpaDetalleNominaRepository.findByNominaIdNomina(model.getIdNomina());
+        List<DetalleNomina> detalles = detalleModels.stream()
+            .map(detalleMapper::mapearAEntidad)
+            .collect(Collectors.toList());
+        nomina.setDetalles(detalles);
         return nomina;
     }
 }

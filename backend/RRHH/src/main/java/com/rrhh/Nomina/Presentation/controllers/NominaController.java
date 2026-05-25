@@ -61,6 +61,16 @@ public class NominaController {
         return ResponseEntity.ok(nominaService.buscarPorEmpleado(idEmpleado));
     }
 
+    @GetMapping(NominaApiRoutes.POR_NOMBRE)
+    @PreAuthorize("hasRole('RRHH')")
+    public ResponseEntity<?> buscarPorNombre(@RequestParam String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            return ResponseEntity.badRequest().body("El parámetro 'nombre' es obligatorio.");
+        }
+        List<NominaResponseDTO> resultados = nominaService.buscarPorNombreEmpleado(nombre);
+        return ResponseEntity.ok(resultados);
+    }
+
     private Long obtenerIdUsuario(Authentication authentication) {
         try {
             return Long.parseLong(authentication.getName());

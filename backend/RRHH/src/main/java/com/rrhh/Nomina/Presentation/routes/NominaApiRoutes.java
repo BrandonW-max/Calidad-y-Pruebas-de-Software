@@ -10,4 +10,5 @@ public class NominaApiRoutes {
     public static final String BUSCAR_ID  = BASE + "/{id}";
     public static final String POR_PERIODO = BASE + "/periodo/{periodo}";
     public static final String POR_EMPLEADO = BASE + "/empleado/{idEmpleado}";
+    public static final String POR_NOMBRE = BASE + "/buscar";
 }

@@ -225,6 +225,35 @@ public class NominaService implements INominaService {
             .collect(Collectors.toList());
     }
 
+    @Override
+    public List<NominaResponseDTO> buscarPorNombreEmpleado(String nombre) {
+        String filtro = nombre.toLowerCase().trim();
+        List<EmpleadoModel> empleadosCoincidentes = jpaEmpleadoRepository.findAll().stream()
+            .filter(e -> {
+                String nombreCompleto = (e.getNombres() + " " + e.getApellidos()).toLowerCase();
+                return nombreCompleto.contains(filtro);
+            })
+            .collect(Collectors.toList());
+
+        List<Long> idsEmpleados = empleadosCoincidentes.stream()
+            .map(EmpleadoModel::getIdEmpleado)
+            .collect(Collectors.toList());
+
+        if (idsEmpleados.isEmpty()) {
+            return List.of();
+        }
+
+        return nominaRepository.buscarPorNombreEmpleado(nombre).stream()
+            .filter(n -> idsEmpleados.contains(n.getIdEmpleado()))
+            .map(n -> {
+                EmpleadoModel emp = empleadosCoincidentes.stream()
+                    .filter(e -> e.getIdEmpleado().equals(n.getIdEmpleado()))
+                    .findFirst().orElse(null);
+                return mapearAResponse(n, emp);
+            })
+            .collect(Collectors.toList());
+    }
+
     // ================================
     // MÉTODOS PRIVADOS
     // ================================
@@ -343,6 +372,25 @@ public class NominaService implements INominaService {
         dto.setSueldoBruto(nomina.getSueldoBruto());
         dto.setSueldoNeto(nomina.getSueldoNeto());
         dto.setEstadoPago(nomina.getEstadoPago());
+
+        if (nomina.getDetalles() != null) {
+            List<DetalleNominaResponseDTO> detallesDTO = nomina.getDetalles().stream()
+                .map(d -> {
+                    DetalleNominaResponseDTO detalleDTO = new DetalleNominaResponseDTO();
+                    detalleDTO.setIdDetalle(d.getIdDetalle());
+                    detalleDTO.setFecha(d.getFecha());
+                    detalleDTO.setHorasTrabajadas(d.getHorasTrabajadas());
+                    detalleDTO.setMinutosTardanza(d.getMinutosTardanza());
+                    detalleDTO.setMinutosExtra(d.getMinutosExtra());
+                    detalleDTO.setMontoHoraExtra(d.getMontoHoraExtra());
+                    detalleDTO.setDescuentoTardanza(d.getDescuentoTardanza());
+                    detalleDTO.setObservacion(d.getObservacion());
+                    return detalleDTO;
+                })
+                .collect(Collectors.toList());
+            dto.setDetalles(detallesDTO);
+        }
+
         return dto;
     }
 }

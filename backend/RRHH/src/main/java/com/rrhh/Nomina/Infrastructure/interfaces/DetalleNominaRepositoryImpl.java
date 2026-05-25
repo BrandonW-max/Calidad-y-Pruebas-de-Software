@@ -68,7 +68,7 @@ public class DetalleNominaRepositoryImpl implements IDetalleNominaRepository {
         return model;
     }
 
-    private DetalleNomina mapearAEntidad(DetalleNominaModel model) {
+    public DetalleNomina mapearAEntidad(DetalleNominaModel model) {
         DetalleNomina detalle = new DetalleNomina();
         detalle.setIdDetalle(model.getIdDetalle());
         detalle.setFecha(model.getFecha());

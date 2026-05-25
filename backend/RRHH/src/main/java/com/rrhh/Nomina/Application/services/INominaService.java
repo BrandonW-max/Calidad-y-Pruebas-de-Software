@@ -14,4 +14,6 @@ public interface INominaService {
     List<NominaResponseDTO> buscarPorPeriodo(String periodo);
 
     List<NominaResponseDTO> buscarPorEmpleado(Long idEmpleado);
+
+    List<NominaResponseDTO> buscarPorNombreEmpleado(String nombre);
 }

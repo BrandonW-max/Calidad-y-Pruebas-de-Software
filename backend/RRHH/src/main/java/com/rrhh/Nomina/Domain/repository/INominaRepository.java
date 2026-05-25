@@ -19,4 +19,6 @@ public interface INominaRepository {
     List<Nomina> buscarPorEmpleadoYRango(Long idEmpleado, LocalDate fechaInicio, LocalDate fechaFin);
 
     boolean existePorEmpleadoYPeriodo(Long idEmpleado, String periodo);
+
+    List<Nomina> buscarPorNombreEmpleado(String nombre);
 }
