@@ -1,0 +1,12 @@
+package com.rrhh.RegistroAsistencia.Infrastructure.interfaces;
+
+import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+public interface JpaRegistroAsistenciaNominaRepository extends JpaRepository<RegistroAsistenciaModel, Integer> {
+
+    Optional<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoAndFecha(Integer idEmpleado, LocalDate fecha);
+}

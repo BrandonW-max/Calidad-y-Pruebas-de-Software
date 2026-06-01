@@ -1,6 +1,6 @@
 package com.rrhh.GestionEmpleados.Infrastructure.interfaces;
 
-import com.rrhh.AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
+import com.rrhh.AutenticacionYRol.infrastructure.interfaces.JpaUsuarioRepository;
 import com.rrhh.GestionEmpleados.Domain.entities.UsuarioGestion;
 import com.rrhh.GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 import com.rrhh.GestionEmpleados.Infrastructure.mappers.UsuarioGestionMapper;

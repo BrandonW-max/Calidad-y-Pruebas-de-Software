@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.interfaces;
+package com.rrhh.AutenticacionYRol.infrastructure.interfaces;
 
 import com.rrhh.Shared.persistence.UsuarioModel;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -6,7 +6,8 @@ import com.rrhh.AutenticacionYRol.Domain.entities.Usuario;
 import com.rrhh.AutenticacionYRol.Domain.repository.IHistorialRepository;
 import com.rrhh.AutenticacionYRol.Domain.repository.IUsuarioRepository;
 import com.rrhh.config.JwtConfig;
-import com.rrhh.AutenticacionYRol.Infrastructure.services.TwoFactorService;
+import com.rrhh.AutenticacionYRol.infrastructure.services.TwoFactorService;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;

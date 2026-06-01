@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.Infrastructure.mappers;
+package com.rrhh.AutenticacionYRol.infrastructure.mappers;
 
 import com.rrhh.AutenticacionYRol.Domain.entities.Usuario;
 import com.rrhh.Shared.persistence.UsuarioModel;

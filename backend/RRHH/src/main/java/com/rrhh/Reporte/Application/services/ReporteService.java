@@ -99,7 +99,7 @@ public class ReporteService implements IReporteService {
             fila.put("horaSalida", r.getHoraSalida());
             fila.put("minutosTardanza", r.getMinutosTardanza());
             fila.put("minutosExtra", r.getMinutosExtra());
-            fila.put("estado", r.getEstadoAsistencia());
+            fila.put("estado", r.getEstado());
             return fila;
         }).collect(Collectors.toList());
 
