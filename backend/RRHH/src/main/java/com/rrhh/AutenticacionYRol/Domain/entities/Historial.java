@@ -1,8 +1,9 @@
 package com.rrhh.AutenticacionYRol.Domain.entities;
 
+import com.rrhh.Shared.prototype.Prototype;
 import java.time.LocalDateTime;
 
-public class Historial {
+public class Historial implements Prototype<Historial> {
 
     private Long idAuditoria;
     private Long idUsuario;
@@ -117,5 +118,20 @@ public class Historial {
 
     public void setValorNuevo(String valorNuevo) {
         this.valorNuevo = valorNuevo;
+    }
+
+    @Override
+    public Historial clonePrototype() {
+        Historial copia = new Historial();
+        copia.setIdAuditoria(this.idAuditoria);
+        copia.setIdUsuario(this.idUsuario);
+        copia.setIdRegistroAfectado(this.idRegistroAfectado);
+        copia.setAccion(this.accion);
+        copia.setTablaAfectada(this.tablaAfectada);
+        copia.setIpMaquina(this.ipMaquina);
+        copia.setFechaCambio(this.fechaCambio);
+        copia.setValorAnterior(this.valorAnterior);
+        copia.setValorNuevo(this.valorNuevo);
+        return copia;
     }
 }
