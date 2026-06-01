@@ -78,17 +78,18 @@ public class SolicitudService implements ISolicitudService {
         }
 
         // 7. Registrar solicitud
-        Solicitud solicitud = new Solicitud();
-        solicitud.setTipoSolicitud(request.getTipoSolicitud());
-        solicitud.setFechaInicio(request.getFechaInicio());
-        solicitud.setFechaFin(request.getFechaFin());
-        solicitud.setDiasSolicitados(diasSolicitados);
-        solicitud.setMotivo(request.getMotivo());
-        solicitud.setArchivoAdjunto(request.getArchivoAdjunto());
-        solicitud.setEstado("PENDIENTE");
-        solicitud.setIdEmpleado(idEmpleado);
-        solicitud.setCreadoEl(LocalDateTime.now());
-        solicitud.setActualizadoEl(LocalDateTime.now());
+        Solicitud solicitud = Solicitud.builder()
+            .tipoSolicitud(request.getTipoSolicitud())
+            .fechaInicio(request.getFechaInicio())
+            .fechaFin(request.getFechaFin())
+            .diasSolicitados(diasSolicitados)
+            .motivo(request.getMotivo())
+            .archivoAdjunto(request.getArchivoAdjunto())
+            .estado("PENDIENTE")
+            .idEmpleado(idEmpleado)
+            .creadoEl(LocalDateTime.now())
+            .actualizadoEl(LocalDateTime.now())
+            .build();
 
         Solicitud guardada = solicitudRepository.guardar(solicitud);
         return mapearAResponse(guardada, empleado);
