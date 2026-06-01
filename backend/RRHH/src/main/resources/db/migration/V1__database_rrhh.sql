@@ -177,8 +177,6 @@ CREATE TABLE registro_asistencia (
 	
 	creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
-	
 );
 
 CREATE TABLE nomina (
@@ -215,7 +213,7 @@ CREATE TABLE nomina (
     creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-que
+
 CREATE TABLE detalle_nomina (
     id_detalle SERIAL PRIMARY KEY,
     id_nomina INT NOT NULL REFERENCES nomina(id_nomina) ON DELETE CASCADE,
