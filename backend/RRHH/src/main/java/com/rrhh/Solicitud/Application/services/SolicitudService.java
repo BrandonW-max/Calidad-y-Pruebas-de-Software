@@ -188,6 +188,31 @@ public class SolicitudService implements ISolicitudService {
         return mapearAResponse(solicitud, empleado);
     }
 
+    @Override
+    @Transactional
+    public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idEmpleado) {
+        Solicitud original = solicitudRepository.buscarPorId(idSolicitud)
+            .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+
+        Solicitud clon = original.clonePrototype();
+
+        clon.setIdSolicitud(null);
+        clon.setEstado("PENDIENTE");
+        clon.setRespuesta(null);
+        clon.setObservacionRrhh(null);
+        clon.setFechaRevision(null);
+        clon.setFechaDecision(null);
+        clon.setRevisadoPor(null);
+        clon.setAprobadoPor(null);
+        clon.setIdEmpleado(idEmpleado);
+        clon.setCreadoEl(LocalDateTime.now());
+        clon.setActualizadoEl(LocalDateTime.now());
+
+        Solicitud guardada = solicitudRepository.guardar(clon);
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(idEmpleado).orElse(null);
+        return mapearAResponse(guardada, empleado);
+    }
+
     // ================================
     // MÉTODOS PRIVADOS
     // ================================

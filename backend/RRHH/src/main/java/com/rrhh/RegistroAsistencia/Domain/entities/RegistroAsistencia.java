@@ -22,6 +22,7 @@ public class RegistroAsistencia {
     private LocalDateTime creadoEl = LocalDateTime.now();
     private LocalDateTime actualizadoEl = LocalDateTime.now();
     private Empleado empleado;
+    private Horario horario;
 
     public RegistroAsistencia() {
     }
@@ -128,5 +129,13 @@ public class RegistroAsistencia {
 
     public void setEmpleado(Empleado empleado) {
         this.empleado = empleado;
+    }
+
+    public Horario getHorario() {
+        return horario;
+    }
+
+    public void setHorario(Horario horario) {
+        this.horario = horario;
     }
 }

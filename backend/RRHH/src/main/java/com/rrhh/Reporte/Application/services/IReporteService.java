@@ -2,6 +2,9 @@ package com.rrhh.Reporte.Application.services;
 
 import com.rrhh.Reporte.Application.dto.*;
 
+import java.util.List;
+import java.util.Map;
+
 public interface IReporteService {
 
     ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario);
@@ -11,4 +14,7 @@ public interface IReporteService {
     ReporteResponseDTO generarReporteNomina(FiltroNominaDTO filtro, Long idUsuario);
 
     ReporteResponseDTO generarReporteSolicitudes(FiltroSolicitudDTO filtro, Long idUsuario);
+
+    byte[] exportarReporte(String tipo, String formato, List<Map<String, Object>> datos,
+                           String[] headers, String[] keys);
 }

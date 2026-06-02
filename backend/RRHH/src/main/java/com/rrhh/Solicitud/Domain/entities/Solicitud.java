@@ -1,9 +1,13 @@
 package com.rrhh.Solicitud.Domain.entities;
 
 import com.rrhh.Shared.prototype.Prototype;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Builder
+@AllArgsConstructor
 public class Solicitud implements Prototype<Solicitud> {
 
     private Integer idSolicitud;

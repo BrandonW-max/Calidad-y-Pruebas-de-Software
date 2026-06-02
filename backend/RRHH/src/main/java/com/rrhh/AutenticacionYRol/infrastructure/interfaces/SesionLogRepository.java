@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.infrastructure.interfaces;
+package com.rrhh.AutenticacionYRol.Infrastructure.interfaces;
 
 public class SesionLogRepository {
 

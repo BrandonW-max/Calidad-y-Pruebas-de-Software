@@ -1,6 +1,6 @@
 package com.rrhh.GestionEmpleados.Infrastructure.interfaces;
 
-import com.rrhh.AutenticacionYRol.infrastructure.interfaces.JpaRolRepository;
+import com.rrhh.AutenticacionYRol.Infrastructure.interfaces.JpaRolRepository;
 import com.rrhh.GestionEmpleados.Domain.entities.Rol;
 import com.rrhh.GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.GestionEmpleados.Infrastructure.mappers.RolGestionMapper;

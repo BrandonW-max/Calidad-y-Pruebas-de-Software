@@ -1,8 +1,11 @@
 package com.rrhh.Shared.prototype;
 
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.Map;
 
+@Component
 public class PrototypeRegistry {
 
     private final Map<String, Prototype<?>> prototypes = new HashMap<>();

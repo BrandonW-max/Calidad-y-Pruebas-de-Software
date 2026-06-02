@@ -1,8 +1,10 @@
 package com.rrhh.RegistroAsistencia.Infrastructure.factory;
 
 import com.rrhh.GestionEmpleados.Domain.entities.Empleado;
+import com.rrhh.RegistroAsistencia.Domain.entities.Horario;
 import com.rrhh.RegistroAsistencia.Domain.entities.RegistroAsistencia;
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import com.rrhh.Shared.persistence.HorarioModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 
 public final class RegistroAsistenciaFactory {
@@ -39,6 +41,15 @@ public final class RegistroAsistenciaFactory {
             model.setEmpleado(empleadoModel);
         }
 
+        if (dominio.getHorario() != null && dominio.getHorario().getIdHorario() != null) {
+            HorarioModel horarioModel = new HorarioModel();
+            horarioModel.setIdHorario(dominio.getHorario().getIdHorario());
+            horarioModel.setNombreTurno(dominio.getHorario().getNombreTurno());
+            horarioModel.setHoraEntrada(dominio.getHorario().getHoraEntrada());
+            horarioModel.setHoraSalida(dominio.getHorario().getHoraSalida());
+            model.setHorario(horarioModel);
+        }
+
         return model;
     }
 
@@ -68,6 +79,15 @@ public final class RegistroAsistenciaFactory {
             empleado.setNombres(model.getEmpleado().getNombres());
             empleado.setApellidos(model.getEmpleado().getApellidos());
             dominio.setEmpleado(empleado);
+        }
+
+        if (model.getHorario() != null) {
+            Horario horario = new Horario();
+            horario.setIdHorario(model.getHorario().getIdHorario());
+            horario.setNombreTurno(model.getHorario().getNombreTurno());
+            horario.setHoraEntrada(model.getHorario().getHoraEntrada());
+            horario.setHoraSalida(model.getHorario().getHoraSalida());
+            dominio.setHorario(horario);
         }
 
         return dominio;

@@ -85,4 +85,18 @@ public class SolicitudController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PostMapping(SolicitudApiRoutes.CLONAR)
+    @PreAuthorize("hasRole('EMPLEADO')")
+    public ResponseEntity<?> clonar(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        try {
+            Long idEmpleado = Long.parseLong(authentication.getName());
+            SolicitudResponseDTO response = solicitudService.clonarSolicitud(id, idEmpleado);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

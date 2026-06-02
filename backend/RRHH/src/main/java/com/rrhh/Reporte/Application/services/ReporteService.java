@@ -8,6 +8,7 @@ import com.rrhh.Reporte.Infrastructure.interfaces.JpaReporteEmpleadoRepository;
 import com.rrhh.Reporte.Infrastructure.interfaces.JpaReporteAsistenciaRepository;
 import com.rrhh.Reporte.Infrastructure.interfaces.JpaReporteNominaRepository;
 import com.rrhh.Reporte.Infrastructure.interfaces.JpaReporteSolicitudRepository;
+import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.*;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +19,20 @@ import java.util.stream.Collectors;
 @Service
 public class ReporteService implements IReporteService {
 
+    private static final Map<String, String> FACTORY_BY_TIPO = Map.of(
+        "EMPLEADOS", "gestionEmpleadosExportFactory",
+        "ASISTENCIA", "registroAsistenciaExportFactory",
+        "NOMINA", "nominaExportFactory",
+        "SOLICITUDES", "solicitudExportFactory"
+    );
+
     private final IReporteGeneradoRepository reporteGeneradoRepository;
     private final JpaReporteEmpleadoRepository jpaEmpleadoRepository;
     private final JpaReporteAsistenciaRepository jpaAsistenciaRepository;
     private final JpaReporteNominaRepository jpaNominaRepository;
     private final JpaReporteSolicitudRepository jpaSolicitudRepository;
     private final ObjectMapper objectMapper;
+    private final Map<String, ExportAbstractFactory> exportFactories;
 
     public ReporteService(
             IReporteGeneradoRepository reporteGeneradoRepository,
@@ -31,13 +40,15 @@ public class ReporteService implements IReporteService {
             JpaReporteAsistenciaRepository jpaAsistenciaRepository,
             JpaReporteNominaRepository jpaNominaRepository,
             JpaReporteSolicitudRepository jpaSolicitudRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            Map<String, ExportAbstractFactory> exportFactories) {
         this.reporteGeneradoRepository = reporteGeneradoRepository;
         this.jpaEmpleadoRepository = jpaEmpleadoRepository;
         this.jpaAsistenciaRepository = jpaAsistenciaRepository;
         this.jpaNominaRepository = jpaNominaRepository;
         this.jpaSolicitudRepository = jpaSolicitudRepository;
         this.objectMapper = objectMapper;
+        this.exportFactories = exportFactories;
     }
 
     @Override
@@ -213,12 +224,19 @@ public class ReporteService implements IReporteService {
     private ReporteResponseDTO guardarYRetornar(
             String tipo, Object filtro,
             List<Map<String, Object>> datos, Long idUsuario) {
+        return guardarYRetornar(tipo, filtro, datos, idUsuario, null);
+    }
+
+    private ReporteResponseDTO guardarYRetornar(
+            String tipo, Object filtro,
+            List<Map<String, Object>> datos, Long idUsuario, String formato) {
 
         // Guardar registro del reporte
         ReporteGenerado reporte = new ReporteGenerado();
         reporte.setTipoReporte(tipo);
         reporte.setTotalRegistros(datos.size());
         reporte.setGeneradoPor(idUsuario);
+        reporte.setFormatoExportacion(formato);
         reporte.setCreadoEl(LocalDateTime.now());
         try {
             reporte.setFiltrosAplicados(objectMapper.writeValueAsString(filtro));
@@ -235,5 +253,26 @@ public class ReporteService implements IReporteService {
         response.setGeneradoEl(guardado.getCreadoEl());
         response.setDatos(datos);
         return response;
+    }
+
+    @Override
+    public byte[] exportarReporte(String tipo, String formato,
+                                   List<Map<String, Object>> datos,
+                                   String[] headers, String[] keys) {
+        String factoryBeanName = FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory");
+        ExportAbstractFactory factory = exportFactories.get(factoryBeanName);
+        if (factory == null) {
+            throw new IllegalArgumentException("No existe fabrica de exportacion para: " + tipo);
+        }
+
+        String titulo = "Reporte de " + tipo;
+
+        if ("PDF".equalsIgnoreCase(formato)) {
+            return factory.createPDFExporter().export(titulo, datos, headers, keys);
+        }
+        if ("EXCEL".equalsIgnoreCase(formato)) {
+            return factory.createExcelExporter().export(titulo, datos, headers, keys);
+        }
+        throw new IllegalArgumentException("Formato no soportado: " + formato + ". Use PDF o EXCEL.");
     }
 }

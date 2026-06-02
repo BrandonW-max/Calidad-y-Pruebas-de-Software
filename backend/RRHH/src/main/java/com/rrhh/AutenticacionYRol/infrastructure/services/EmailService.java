@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.infrastructure.services;
+package com.rrhh.AutenticacionYRol.Infrastructure.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;

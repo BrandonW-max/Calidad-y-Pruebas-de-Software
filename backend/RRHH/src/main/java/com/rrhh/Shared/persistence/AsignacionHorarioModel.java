@@ -44,4 +44,6 @@ public class AsignacionHorarioModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_horario")
     private HorarioModel horario;
+
+    
 }

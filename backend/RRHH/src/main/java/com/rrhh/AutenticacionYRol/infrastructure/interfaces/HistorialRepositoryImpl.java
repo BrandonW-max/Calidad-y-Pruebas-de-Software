@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.infrastructure.interfaces;
+package com.rrhh.AutenticacionYRol.Infrastructure.interfaces;
 
 import com.rrhh.AutenticacionYRol.Domain.entities.Historial;
 import com.rrhh.AutenticacionYRol.Domain.repository.IHistorialRepository;

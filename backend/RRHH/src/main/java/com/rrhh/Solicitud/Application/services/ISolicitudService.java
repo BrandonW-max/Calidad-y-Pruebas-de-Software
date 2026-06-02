@@ -20,4 +20,6 @@ public interface ISolicitudService {
     List<SolicitudResponseDTO> listarPorEmpleado(Long idEmpleado);
 
     SolicitudResponseDTO buscarPorId(Integer idSolicitud);
+
+    SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idEmpleado);
 }

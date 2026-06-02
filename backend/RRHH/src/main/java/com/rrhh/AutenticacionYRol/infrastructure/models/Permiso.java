@@ -1,4 +1,4 @@
-package com.rrhh.AutenticacionYRol.infrastructure.models;
+package com.rrhh.AutenticacionYRol.Infrastructure.models;
 
 public class Permiso {
 

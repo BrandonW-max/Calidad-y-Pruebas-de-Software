@@ -1,9 +1,9 @@
-package com.rrhh.AutenticacionYRol.infrastructure.interfaces;
+package com.rrhh.AutenticacionYRol.Infrastructure.interfaces;
 
 import com.rrhh.AutenticacionYRol.Domain.entities.Usuario;
 import com.rrhh.AutenticacionYRol.Domain.repository.IUsuarioRepository;
 
-import com.rrhh.AutenticacionYRol.infrastructure.mappers.UsuarioMapper;
+import com.rrhh.AutenticacionYRol.Infrastructure.mappers.UsuarioMapper;
 
 import com.rrhh.Shared.persistence.UsuarioModel;
 
