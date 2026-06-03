@@ -13,7 +13,7 @@ public interface JpaReporteAsistenciaRepository extends JpaRepository<RegistroAs
     @Query("SELECT r FROM RegistroAsistenciaModel r " +
            "JOIN ContratoModel c ON c.empleado = r.empleado AND c.estado = 'ACTIVO' " +
            "WHERE (:idEmpleado IS NULL OR r.empleado.idEmpleado = :idEmpleado) AND " +
-           "(:area IS NULL OR c.nombreDepartamento = :area) AND " +
+                       "(:area IS NULL OR c.departamento.nombre = :area) AND " +
            "(:fechaInicio IS NULL OR r.fecha >= :fechaInicio) AND " +
            "(:fechaFin IS NULL OR r.fecha <= :fechaFin)")
     List<RegistroAsistenciaModel> buscarConFiltros(

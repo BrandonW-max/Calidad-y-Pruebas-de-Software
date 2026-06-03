@@ -10,7 +10,7 @@ public class NotificacionEnvioModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_notificacion")
-    private Long idNotificacion;
+    private Integer idNotificacion;
 
     @Column(name = "id_nomina", nullable = false)
     private Integer idNomina;
@@ -38,8 +38,8 @@ public class NotificacionEnvioModel {
 
     public NotificacionEnvioModel() {}
 
-    public Long getIdNotificacion() { return idNotificacion; }
-    public void setIdNotificacion(Long idNotificacion) { this.idNotificacion = idNotificacion; }
+    public Integer getIdNotificacion() { return idNotificacion; }
+    public void setIdNotificacion(Integer idNotificacion) { this.idNotificacion = idNotificacion; }
 
     public Integer getIdNomina() { return idNomina; }
     public void setIdNomina(Integer idNomina) { this.idNomina = idNomina; }

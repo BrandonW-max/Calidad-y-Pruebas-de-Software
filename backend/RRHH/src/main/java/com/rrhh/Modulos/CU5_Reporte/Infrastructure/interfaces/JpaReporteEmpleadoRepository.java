@@ -12,7 +12,7 @@ public interface JpaReporteEmpleadoRepository extends JpaRepository<EmpleadoMode
     @Query("SELECT e FROM EmpleadoModel e " +
            "LEFT JOIN ContratoModel c ON c.empleado = e AND c.estado = 'ACTIVO' " +
            "WHERE (:estado IS NULL OR e.estado = :estado) AND " +
-           "(:area IS NULL OR c.nombreDepartamento = :area) AND " +
+                       "(:area IS NULL OR c.departamento.nombre = :area) AND " +
            "(:cargo IS NULL OR c.cargo = :cargo) AND " +
            "(:tipoContrato IS NULL OR c.tipoContrato = :tipoContrato) AND " +
            "(:idEmpleado IS NULL OR e.idEmpleado = :idEmpleado)")

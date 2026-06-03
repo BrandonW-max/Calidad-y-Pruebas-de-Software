@@ -13,7 +13,7 @@ public interface JpaReporteSolicitudRepository extends JpaRepository<SolicitudMo
     @Query("SELECT s FROM SolicitudModel s " +
            "JOIN ContratoModel c ON c.empleado = s.empleado AND c.estado = 'ACTIVO' " +
            "WHERE (:idEmpleado IS NULL OR s.empleado.idEmpleado = :idEmpleado) AND " +
-           "(:area IS NULL OR c.nombreDepartamento = :area) AND " +
+                       "(:area IS NULL OR c.departamento.nombre = :area) AND " +
            "(:tipoSolicitud IS NULL OR s.tipoSolicitud = :tipoSolicitud) AND " +
            "(:estado IS NULL OR s.estado = :estado) AND " +
            "(:fechaInicio IS NULL OR s.fechaInicio >= :fechaInicio) AND " +

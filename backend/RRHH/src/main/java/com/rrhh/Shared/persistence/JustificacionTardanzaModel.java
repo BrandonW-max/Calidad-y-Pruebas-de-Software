@@ -10,7 +10,7 @@ public class JustificacionTardanzaModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_justificacion")
-    private Long idJustificacion;
+    private Integer idJustificacion;
 
     @Column(name = "id_registro_asistencia", nullable = false)
     private Integer idRegistroAsistencia;
@@ -41,8 +41,8 @@ public class JustificacionTardanzaModel {
 
     public JustificacionTardanzaModel() {}
 
-    public Long getIdJustificacion() { return idJustificacion; }
-    public void setIdJustificacion(Long idJustificacion) { this.idJustificacion = idJustificacion; }
+    public Integer getIdJustificacion() { return idJustificacion; }
+    public void setIdJustificacion(Integer idJustificacion) { this.idJustificacion = idJustificacion; }
 
     public Integer getIdRegistroAsistencia() { return idRegistroAsistencia; }
     public void setIdRegistroAsistencia(Integer idRegistroAsistencia) { this.idRegistroAsistencia = idRegistroAsistencia; }

@@ -14,7 +14,7 @@ public interface JpaReporteNominaRepository extends JpaRepository<NominaModel, I
     @Query("SELECT n FROM NominaModel n " +
            "JOIN ContratoModel c ON c.empleado = n.empleado AND c.estado = 'ACTIVO' " +
            "WHERE (:idEmpleado IS NULL OR n.empleado.idEmpleado = :idEmpleado) AND " +
-           "(:area IS NULL OR c.nombreDepartamento = :area) AND " +
+                       "(:area IS NULL OR c.departamento.nombre = :area) AND " +
            "(:fechaInicio IS NULL OR n.fechaInicio >= :fechaInicio) AND " +
            "(:fechaFin IS NULL OR n.fechaFin <= :fechaFin) AND " +
            "(:salarioMin IS NULL OR n.sueldoNeto >= :salarioMin) AND " +
