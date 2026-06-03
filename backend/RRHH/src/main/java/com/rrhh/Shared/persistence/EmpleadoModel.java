@@ -48,6 +48,12 @@ public class EmpleadoModel {
     @Column(name = "estado", nullable = false, length = 30)
     private String estado = "ACTIVO";
 
+    @Column(name = "huella_template", columnDefinition = "TEXT")
+    private String huellaTemplate;
+
+    @Column(name = "saldo_vacaciones")
+    private Integer saldoVacaciones = 30;
+
     @Column(name = "creado_el", updatable = false)
     private LocalDateTime creadoEl = LocalDateTime.now();
 
@@ -210,6 +216,22 @@ public class EmpleadoModel {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getHuellaTemplate() {
+        return huellaTemplate;
+    }
+
+    public void setHuellaTemplate(String huellaTemplate) {
+        this.huellaTemplate = huellaTemplate;
+    }
+
+    public Integer getSaldoVacaciones() {
+        return saldoVacaciones;
+    }
+
+    public void setSaldoVacaciones(Integer saldoVacaciones) {
+        this.saldoVacaciones = saldoVacaciones;
     }
 
     public LocalDateTime getCreadoEl() {

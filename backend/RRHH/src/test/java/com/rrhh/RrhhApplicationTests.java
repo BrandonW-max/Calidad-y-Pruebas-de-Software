@@ -8,10 +8,5 @@ class RrhhApplicationTests {
 
     @Test
     void contextLoads() {
-    	
-    	
     }
-    
-    
-
 }

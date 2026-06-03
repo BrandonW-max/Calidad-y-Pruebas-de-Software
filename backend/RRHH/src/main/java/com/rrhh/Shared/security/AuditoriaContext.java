@@ -1,6 +1,6 @@
 package com.rrhh.Shared.security;
 
-import com.rrhh.config.AuthenticatedUser;
+import com.rrhh.config.security.AuthenticatedUser;
 
 import jakarta.servlet.http.HttpServletRequest;
 

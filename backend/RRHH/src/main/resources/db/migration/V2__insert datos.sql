@@ -184,3 +184,15 @@ INSERT INTO familia_info(nombres, parentesco, numero_di, fecha_nacimiento, id_em
 SELECT 'Carlos RRHH', 'HIJO', '22222222', '2020-07-22', e.id_empleado, true
 FROM empleado e WHERE e.numero_di = '00000001'
 ON CONFLICT (numero_di) DO NOTHING;
+
+-- =========================
+-- FERIADOS
+-- =========================
+
+INSERT INTO feriado (fecha, descripcion) VALUES
+    ('2026-01-01', 'Año Nuevo'),
+    ('2026-05-01', 'Día del Trabajo'),
+    ('2026-07-28', 'Fiestas Patrias'),
+    ('2026-07-29', 'Fiestas Patrias'),
+    ('2026-12-25', 'Navidad')
+ON CONFLICT (fecha) DO NOTHING;

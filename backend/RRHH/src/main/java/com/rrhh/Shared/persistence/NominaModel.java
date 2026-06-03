@@ -81,6 +81,12 @@ public class NominaModel {
     @Column(name = "estado_pago", length = 20)
     private String estadoPago = "CALCULADA";
 
+    @Column(name = "version")
+    private Integer version = 1;
+
+    @Column(name = "nomina_anterior_id")
+    private Integer nominaAnteriorId;
+
     @Column(name = "creado_el", updatable = false)
     private LocalDateTime creadoEl = LocalDateTime.now();
 

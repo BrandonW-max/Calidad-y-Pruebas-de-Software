@@ -14,6 +14,9 @@ public class SancionModel {
     @Column(name = "id_sancion")
     private Long idSancion;
 
+    @Column(name = "codigo", unique = true, length = 30)
+    private String codigo;
+
     @Column(name = "motivo", nullable = false, length = 150)
     private String motivo;
 
@@ -106,6 +109,14 @@ public class SancionModel {
 
     public void setIdSancion(Long idSancion) {
         this.idSancion = idSancion;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
 
     public String getMotivo() {

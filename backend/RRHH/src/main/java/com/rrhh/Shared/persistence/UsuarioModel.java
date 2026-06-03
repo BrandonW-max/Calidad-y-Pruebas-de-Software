@@ -37,6 +37,15 @@ public class UsuarioModel {
     @Column(name = "dosfa_secret", length = 255)
     private String dosfaSecret;
 
+    @Column(name = "intentos_falla_2fa")
+    private Integer intentosFalla2fa = 0;
+
+    @Column(name = "bloqueo_2fa_hasta")
+    private LocalDateTime bloqueo2faHasta;
+
+    @Column(name = "token_invalido_desde")
+    private LocalDateTime tokenInvalidoDesde;
+
     @Column(name = "activo")
     private Boolean activo = true;
 
@@ -76,6 +85,8 @@ public class UsuarioModel {
             Boolean dosfaActivo,
             String dosfaSecret,
             Boolean activo,
+            Integer intentosFalla2fa,
+            LocalDateTime bloqueo2faHasta,
             LocalDateTime creadoEl,
             LocalDateTime actualizadoEl,
             RolModel rol,
@@ -91,6 +102,8 @@ public class UsuarioModel {
         this.dosfaActivo = dosfaActivo;
         this.dosfaSecret = dosfaSecret;
         this.activo = activo;
+        this.intentosFalla2fa = intentosFalla2fa;
+        this.bloqueo2faHasta = bloqueo2faHasta;
         this.creadoEl = creadoEl;
         this.actualizadoEl = actualizadoEl;
         this.rol = rol;
@@ -171,6 +184,30 @@ public class UsuarioModel {
 
     public void setDosfaSecret(String dosfaSecret) {
         this.dosfaSecret = dosfaSecret;
+    }
+
+    public Integer getIntentosFalla2fa() {
+        return intentosFalla2fa;
+    }
+
+    public void setIntentosFalla2fa(Integer intentosFalla2fa) {
+        this.intentosFalla2fa = intentosFalla2fa;
+    }
+
+    public LocalDateTime getBloqueo2faHasta() {
+        return bloqueo2faHasta;
+    }
+
+    public void setBloqueo2faHasta(LocalDateTime bloqueo2faHasta) {
+        this.bloqueo2faHasta = bloqueo2faHasta;
+    }
+
+    public LocalDateTime getTokenInvalidoDesde() {
+        return tokenInvalidoDesde;
+    }
+
+    public void setTokenInvalidoDesde(LocalDateTime tokenInvalidoDesde) {
+        this.tokenInvalidoDesde = tokenInvalidoDesde;
     }
 
     public Boolean getActivo() {
