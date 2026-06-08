@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
+import { login } from "../services/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [show2FA, setShow2FA] = useState(false);
-  const [rol, setRol] = useState("");
-  const [resetTwoFAKey, setResetTwoFAKey] = useState(0); // 👈 NUEVO
+  const [resetTwoFAKey, setResetTwoFAKey] = useState(0);
 
   const navigate = useNavigate();
 
@@ -19,32 +19,21 @@ export default function Login() {
     setMensaje("");
 
     try {
-      const res = await fetch("http://localhost:8080/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-
-      const data = await res.json();
-
-      console.log("LOGIN RESPONSE:", data);
+      const data = await login(username, password);
 
       if (!data.success) {
-        setMensaje(data.message || "Error en login");
+        setMensaje(data.message || "Credenciales inválidas, intente nuevamente");
         return;
       }
 
-      if (data.require2FA) {
-        setRol(data.rol);
-        setResetTwoFAKey(prev => prev + 1); // 🔑 fuerza remontaje del modal
+      if (data.requires2FA) {
+        setResetTwoFAKey((prev) => prev + 1);
         setShow2FA(true);
         return;
       }
 
       redirectByRole(data.rol);
-
-    } catch (error) {
-      console.error("Error login:", error);
+    } catch (err) {
       setMensaje("Error de conexión con el servidor");
     }
   };
@@ -66,24 +55,20 @@ export default function Login() {
 
       <div className="center-panel">
         <h2>Iniciar Sesión</h2>
-
         <form onSubmit={handleLogin}>
           <input
             placeholder="Usuario"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-
           <input
             type="password"
             placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
           <button type="submit">Entrar</button>
         </form>
-
         {mensaje && <p className="error">{mensaje}</p>}
       </div>
 
@@ -91,8 +76,9 @@ export default function Login() {
         <TwoFA
           key={resetTwoFAKey}
           open={show2FA}
+          username={username}
           onClose={() => setShow2FA(false)}
-          onSuccess={() => {
+          onSuccess={(rol) => {
             setShow2FA(false);
             redirectByRole(rol);
           }}

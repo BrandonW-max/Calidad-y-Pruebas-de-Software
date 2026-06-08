@@ -1,14 +1,80 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/Dashboard.css";
+import { generarReporte } from "../services/api";
+
+const TIPOS = [
+  { key: "empleados",   label: "Empleados",   icon: "👥" },
+  { key: "asistencia",  label: "Asistencia",  icon: "📋" },
+  { key: "nomina",      label: "Nómina",       icon: "💰" },
+  { key: "solicitudes", label: "Solicitudes",  icon: "📅" },
+];
+
+const FILTROS_INICIALES = {
+  empleados:   { area: "", cargo: "", tipoContrato: "", estado: "", nivelJerarquico: "", empleado: "" },
+  asistencia:  { fechaInicio: "", fechaFin: "", area: "", empleado: "" },
+  nomina:      { fechaInicio: "", fechaFin: "", area: "", empleado: "", tipoPago: "", rangoSalarial: "" },
+  solicitudes: { fechaInicio: "", fechaFin: "", area: "", empleado: "", tipoSolicitud: "", estado: "" },
+};
 
 export default function GenerarReportes() {
+  const [tipoActivo, setTipoActivo] = useState("empleados");
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+  const [resultado, setResultado] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [error, setError] = useState("");
+
+  const f = filtros[tipoActivo];
+  const setF = (campo, valor) =>
+    setFiltros({ ...filtros, [tipoActivo]: { ...f, [campo]: valor } });
+
+  const handleGenerar = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMensaje("");
+    setResultado(null);
+    try {
+      const res = await generarReporte(tipoActivo, f, null);
+      const data = await res.json();
+      setResultado(data);
+      setMensaje("Reporte generado correctamente");
+    } catch {
+      setError("No se encontraron datos para los filtros seleccionados");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportar = async (formato) => {
+    setMensaje("");
+    try {
+      const res = await generarReporte(tipoActivo, f, formato);
+      const blob = await res.blob();
+      const ext = formato === "PDF" ? "pdf" : formato === "XLSX" ? "xlsx" : "csv";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte_${tipoActivo}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setMensaje("Error al exportar el reporte");
+    }
+  };
+
+  const limpiar = () => {
+    setFiltros(FILTROS_INICIALES);
+    setResultado(null);
+    setMensaje("");
+    setError("");
+  };
+
   return (
     <div className="dashboard">
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2>Panel RRHH</h2>
-          <p>Recursos Humanos</p>
-        </div>
+        <div className="sidebar-header"><h2>Panel RRHH</h2><p>Recursos Humanos</p></div>
         <nav className="sidebar-nav">
           <Link to="/rrhh">🏠 Inicio</Link>
           <Link to="/rrhh/empleados">👥 Gestión de Empleados</Link>
@@ -16,312 +82,186 @@ export default function GenerarReportes() {
           <Link to="/rrhh/nomina">💰 Cálculo de Nómina</Link>
           <Link to="/rrhh/solicitudes">📅 Solicitudes</Link>
           <Link to="/rrhh/reportes" className="active">📊 Reportes</Link>
-          <div className="nav-logout">
-            <Link to="/">🚪 Cerrar Sesión</Link>
-          </div>
+          <div className="nav-logout"><Link to="/">🚪 Cerrar Sesión</Link></div>
         </nav>
       </aside>
 
       <main className="main-content">
         <header className="main-header">
           <h1>Generar Reportes</h1>
-          <span>ECU-06 — Consulta y Exportación de Información</span>
+          <span>ECU-06</span>
         </header>
 
-        {/* ── SELECCIÓN DE TIPO ── */}
+        {mensaje && <div className="alert alert-success">{mensaje}</div>}
+        {error   && <div className="alert alert-warning">{error}</div>}
+
+        {/* ── TIPO DE REPORTE ── */}
         <div className="section-card">
           <h2>Seleccione el Tipo de Reporte</h2>
           <div className="cards-grid">
-            <div className="card">
-              <div className="card-icon">👥</div>
-              <h3>Reporte de Empleados</h3>
-              <p>Listado y datos del personal</p>
-            </div>
-            <div className="card">
-              <div className="card-icon">📋</div>
-              <h3>Reporte de Asistencia</h3>
-              <p>Registros, tardanzas y justificaciones</p>
-            </div>
-            <div className="card">
-              <div className="card-icon">💰</div>
-              <h3>Reporte de Nómina</h3>
-              <p>Detalle de pagos y descuentos</p>
-            </div>
-            <div className="card">
-              <div className="card-icon">📅</div>
-              <h3>Reporte de Solicitudes</h3>
-              <p>Permisos, vacaciones y estados</p>
-            </div>
+            {TIPOS.map((t) => (
+              <div
+                key={t.key}
+                className="card"
+                style={{ border: tipoActivo === t.key ? "2px solid #0d6efd" : "2px solid transparent" }}
+                onClick={() => { setTipoActivo(t.key); setResultado(null); setMensaje(""); setError(""); }}
+              >
+                <div className="card-icon">{t.icon}</div>
+                <h3>Reporte de {t.label}</h3>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* ── FILTROS REPORTE EMPLEADOS ── */}
+        {/* ── FILTROS ── */}
         <div className="section-card">
-          <h2>Filtros — Reporte de Empleados</h2>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Área</label>
-              <select>
-                <option value="">Todas</option>
-                <option>Administración</option>
-                <option>Operaciones</option>
-                <option>Sistemas</option>
-              </select>
+          <h2>Filtros — Reporte de {TIPOS.find((t) => t.key === tipoActivo)?.label}</h2>
+          <form onSubmit={handleGenerar}>
+            <div className="form-grid">
+              {/* Fechas (asistencia, nomina, solicitudes) */}
+              {["asistencia", "nomina", "solicitudes"].includes(tipoActivo) && (
+                <>
+                  <div className="form-group">
+                    <label>Fecha Inicio</label>
+                    <input type="date" value={f.fechaInicio} onChange={(e) => setF("fechaInicio", e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Fecha Fin</label>
+                    <input type="date" value={f.fechaFin} onChange={(e) => setF("fechaFin", e.target.value)} />
+                  </div>
+                </>
+              )}
+
+              {/* Área (todos) */}
+              <div className="form-group">
+                <label>Área</label>
+                <input placeholder="Todas" value={f.area} onChange={(e) => setF("area", e.target.value)} />
+              </div>
+
+              {/* Empleado (todos) */}
+              <div className="form-group">
+                <label>Empleado (nombre o DNI)</label>
+                <input placeholder="Todos" value={f.empleado} onChange={(e) => setF("empleado", e.target.value)} />
+              </div>
+
+              {/* Cargo (empleados) */}
+              {tipoActivo === "empleados" && (
+                <>
+                  <div className="form-group">
+                    <label>Cargo</label>
+                    <input value={f.cargo} onChange={(e) => setF("cargo", e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Tipo Contrato</label>
+                    <select value={f.tipoContrato} onChange={(e) => setF("tipoContrato", e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="PLAZO_FIJO">Plazo fijo</option>
+                      <option value="INDEFINIDO">Indefinido</option>
+                      <option value="SERVICIOS">Por servicio</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Estado</label>
+                    <select value={f.estado} onChange={(e) => setF("estado", e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="ACTIVO">Activo</option>
+                      <option value="INACTIVO">Inactivo</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Tipo pago + rango salarial (nomina) */}
+              {tipoActivo === "nomina" && (
+                <>
+                  <div className="form-group">
+                    <label>Tipo de Pago</label>
+                    <select value={f.tipoPago} onChange={(e) => setF("tipoPago", e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="MENSUAL">Mensual</option>
+                      <option value="QUINCENAL">Quincenal</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Rango Salarial</label>
+                    <input placeholder="Ej: 1000-4000" value={f.rangoSalarial} onChange={(e) => setF("rangoSalarial", e.target.value)} />
+                  </div>
+                </>
+              )}
+
+              {/* Tipo + estado solicitud */}
+              {tipoActivo === "solicitudes" && (
+                <>
+                  <div className="form-group">
+                    <label>Tipo de Solicitud</label>
+                    <select value={f.tipoSolicitud} onChange={(e) => setF("tipoSolicitud", e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="VACACIONES">Vacaciones</option>
+                      <option value="PERMISO_PERSONAL">Permiso personal</option>
+                      <option value="PERMISO_MEDICO">Permiso médico</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Estado</label>
+                    <select value={f.estado} onChange={(e) => setF("estado", e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="PENDIENTE">Pendiente</option>
+                      <option value="APROBADA">Aprobada</option>
+                      <option value="RECHAZADA">Rechazada</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="form-group">
-              <label>Cargo</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Analista</option>
-                <option>Técnico</option>
-                <option>Supervisor</option>
-              </select>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? "Generando..." : "Generar Reporte"}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={limpiar}>Limpiar Filtros</button>
             </div>
-            <div className="form-group">
-              <label>Tipo de Contrato</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Plazo fijo</option>
-                <option>Indefinido</option>
-                <option>Por servicio</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Estado</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Activo</option>
-                <option>Inactivo</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Nivel Jerárquico</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Operativo</option>
-                <option>Mando medio</option>
-                <option>Directivo</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Empleado específico</label>
-              <input type="text" placeholder="Nombre o DNI" />
-            </div>
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-primary">Generar Reporte</button>
-            <button className="btn btn-secondary">Limpiar Filtros</button>
-          </div>
+          </form>
         </div>
 
-        {/* ── FILTROS REPORTE ASISTENCIA ── */}
-        <div className="section-card">
-          <h2>Filtros — Reporte de Asistencia</h2>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Fecha Inicio</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Fecha Fin</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Área</label>
-              <select>
-                <option value="">Todas</option>
-                <option>Administración</option>
-                <option>Operaciones</option>
-                <option>Sistemas</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Empleado</label>
-              <input type="text" placeholder="Nombre o DNI" />
-            </div>
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-primary">Generar Reporte</button>
-            <button className="btn btn-secondary">Limpiar Filtros</button>
-          </div>
-        </div>
-
-        {/* ── FILTROS REPORTE NÓMINA ── */}
-        <div className="section-card">
-          <h2>Filtros — Reporte de Nómina</h2>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Fecha Inicio</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Fecha Fin</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Área</label>
-              <select>
-                <option value="">Todas</option>
-                <option>Administración</option>
-                <option>Operaciones</option>
-                <option>Sistemas</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Empleado</label>
-              <input type="text" placeholder="Nombre o DNI" />
-            </div>
-            <div className="form-group">
-              <label>Tipo de Pago</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Mensual</option>
-                <option>Quincenal</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Rango Salarial</label>
-              <select>
-                <option value="">Todos</option>
-                <option>S/ 0 – 2,000</option>
-                <option>S/ 2,001 – 4,000</option>
-                <option>S/ 4,001+</option>
-              </select>
+        {/* ── RESULTADO ── */}
+        {resultado && (
+          <div className="section-card">
+            <h2>Resultado del Reporte</h2>
+            {resultado.resumen && (
+              <div className="stats-row">
+                {Object.entries(resultado.resumen).map(([k, v]) => (
+                  <div className="stat-box" key={k}>
+                    <div className="stat-value">{v}</div>
+                    <div className="stat-label">{k}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {resultado.datos && resultado.datos.length > 0 && (
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>{Object.keys(resultado.datos[0]).map((col) => <th key={col}>{col}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {resultado.datos.map((fila, i) => (
+                      <tr key={i}>
+                        {Object.values(fila).map((val, j) => <td key={j}>{val ?? "—"}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <hr className="divider" />
+            <h2>Exportar</h2>
+            <div className="form-actions">
+              <button className="btn btn-danger" onClick={() => handleExportar("PDF")}>📄 PDF</button>
+              <button className="btn btn-success" onClick={() => handleExportar("XLSX")}>📊 Excel</button>
+              <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 CSV</button>
             </div>
           </div>
-          <div className="form-actions">
-            <button className="btn btn-primary">Generar Reporte</button>
-            <button className="btn btn-secondary">Limpiar Filtros</button>
-          </div>
-        </div>
-
-        {/* ── FILTROS REPORTE SOLICITUDES ── */}
-        <div className="section-card">
-          <h2>Filtros — Reporte de Solicitudes</h2>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Fecha Inicio</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Fecha Fin</label>
-              <input type="date" />
-            </div>
-            <div className="form-group">
-              <label>Área</label>
-              <select>
-                <option value="">Todas</option>
-                <option>Administración</option>
-                <option>Operaciones</option>
-                <option>Sistemas</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Empleado</label>
-              <input type="text" placeholder="Nombre o DNI" />
-            </div>
-            <div className="form-group">
-              <label>Tipo de Solicitud</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Vacaciones</option>
-                <option>Permiso personal</option>
-                <option>Permiso médico</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Estado</label>
-              <select>
-                <option value="">Todos</option>
-                <option>Pendiente</option>
-                <option>Aprobada</option>
-                <option>Rechazada</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-primary">Generar Reporte</button>
-            <button className="btn btn-secondary">Limpiar Filtros</button>
-          </div>
-        </div>
-
-        {/* ── RESULTADO DEL REPORTE ── */}
-        <div className="section-card">
-          <h2>Resultado del Reporte</h2>
-
-          <div className="stats-row">
-            <div className="stat-box">
-              <div className="stat-value">48</div>
-              <div className="stat-label">Total Registros</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">45</div>
-              <div className="stat-label">Activos</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">3</div>
-              <div className="stat-label">Inactivos</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">4.2 años</div>
-              <div className="stat-label">Antigüedad Prom.</div>
-            </div>
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>DNI</th>
-                  <th>Apellidos y Nombres</th>
-                  <th>Área</th>
-                  <th>Cargo</th>
-                  <th>Contrato</th>
-                  <th>Estado</th>
-                  <th>Antigüedad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>12345678</td>
-                  <td>García López, Juan</td>
-                  <td>Sistemas</td>
-                  <td>Analista</td>
-                  <td>Indefinido</td>
-                  <td><span className="badge badge-success">Activo</span></td>
-                  <td>3 años 2 meses</td>
-                </tr>
-                <tr>
-                  <td>87654321</td>
-                  <td>Ramírez Torres, Ana</td>
-                  <td>Administración</td>
-                  <td>Supervisora</td>
-                  <td>Indefinido</td>
-                  <td><span className="badge badge-success">Activo</span></td>
-                  <td>6 años 8 meses</td>
-                </tr>
-                <tr>
-                  <td>11223344</td>
-                  <td>Flores Mendoza, Carlos</td>
-                  <td>Operaciones</td>
-                  <td>Técnico</td>
-                  <td>Plazo fijo</td>
-                  <td><span className="badge badge-danger">Inactivo</span></td>
-                  <td>1 año 0 meses</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <hr className="divider" />
-
-          <h2>Exportar Reporte</h2>
-          <div className="form-actions">
-            <button className="btn btn-danger">📄 Exportar PDF</button>
-            <button className="btn btn-success">📊 Exportar Excel</button>
-            <button className="btn btn-secondary">📑 Exportar CSV</button>
-          </div>
-        </div>
+        )}
       </main>
     </div>
   );

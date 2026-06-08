@@ -1,26 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import "../styles/TwoFA.css";
+import { verify2FA, saveSession } from "../services/api";
 
-export default function TwoFA({ open, onClose, onSuccess }) {
-  const [code, setCode] = useState(["", "", "", ""]);
+export default function TwoFA({ open, username, onClose, onSuccess }) {
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [time, setTime] = useState(300);
   const [intentos, setIntentos] = useState(5);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const intervalRef = useRef(null);
   const inputRefs = useRef([]);
 
-  // ✅ Focus al primer input cuando se abre
   useEffect(() => {
-    if (open) {
-      inputRefs.current[0]?.focus();
-    }
+    if (open) inputRefs.current[0]?.focus();
   }, [open]);
 
-  // TIMER
   useEffect(() => {
     if (!open) return;
-
     intervalRef.current = setInterval(() => {
       setTime((prev) => {
         if (prev <= 1) {
@@ -31,43 +28,55 @@ export default function TwoFA({ open, onClose, onSuccess }) {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(intervalRef.current);
   }, [open, onClose]);
 
-  // CAMBIO DE INPUT + auto-next
   const handleChange = (value, index) => {
     if (!/^[0-9]?$/.test(value)) return;
-
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  };
 
-    if (value && index < 3) {
-      inputRefs.current[index + 1]?.focus();
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
     }
   };
 
-  const verify = () => {
+  const verify = async () => {
     const finalCode = code.join("");
-
-    if (finalCode.length < 4) {
-      setError("Ingresa el código completo");
+    if (finalCode.length < 6) {
+      setError("Ingresa el código completo de 6 dígitos");
       return;
     }
 
-    if (finalCode === "1234") {
-      onSuccess("FAKE_TOKEN");
-      onClose();
-    } else {
-      const newIntentos = intentos - 1;
-      setIntentos(newIntentos);
-      setError("Código incorrecto");
+    setLoading(true);
+    setError("");
 
-      if (newIntentos <= 0) {
-        setError("Bloqueado por demasiados intentos");
+    try {
+      const data = await verify2FA(username, finalCode);
+
+      if (data.success) {
+        saveSession(data.token, data.rol, username);
+        onSuccess(data.rol);
         onClose();
+      } else {
+        const nuevosIntentos = intentos - 1;
+        setIntentos(nuevosIntentos);
+        setError(data.message || "El token de sesión es incorrecto");
+        setCode(["", "", "", "", "", ""]);
+        inputRefs.current[0]?.focus();
+        if (nuevosIntentos <= 0) {
+          setError("Cuenta bloqueada por demasiados intentos");
+          setTimeout(onClose, 2000);
+        }
       }
+    } catch {
+      setError("Error de conexión con el servidor");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,7 +87,7 @@ export default function TwoFA({ open, onClose, onSuccess }) {
       <div className="twofa-content">
         <h2>Verificación 2FA</h2>
         <p className="twofa-subtitle">
-          Ingresa el código de 4 dígitos enviado a tu dispositivo
+          Ingresa el código de 6 dígitos de Google Authenticator
         </p>
 
         <div className="twofa-code-box">
@@ -89,6 +98,7 @@ export default function TwoFA({ open, onClose, onSuccess }) {
               maxLength="1"
               value={c}
               onChange={(e) => handleChange(e.target.value, i)}
+              onKeyDown={(e) => handleKeyDown(e, i)}
             />
           ))}
         </div>
@@ -105,10 +115,10 @@ export default function TwoFA({ open, onClose, onSuccess }) {
 
         <button
           onClick={verify}
-          disabled={code.some((c) => c === "")}
+          disabled={code.some((c) => c === "") || loading}
           className="twofa-button"
         >
-          Verificar
+          {loading ? "Verificando..." : "Verificar"}
         </button>
       </div>
     </div>

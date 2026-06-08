@@ -1,14 +1,75 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/Dashboard.css";
+import { calcularNomina, enviarComprobante, descargarComprobante } from "../services/api";
 
 export default function CalculoNomina() {
+  const [params, setParams] = useState({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" });
+  const [nominas, setNominas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [error, setError] = useState("");
+
+  const totales = nominas.reduce(
+    (acc, n) => ({
+      bruto: acc.bruto + parseFloat(n.sueldoBruto ?? 0),
+      neto: acc.neto + parseFloat(n.sueldoNeto ?? 0),
+      descuentos: acc.descuentos + parseFloat(n.descuentoTardanzas ?? 0) + parseFloat(n.descuentoLey ?? 0),
+    }),
+    { bruto: 0, neto: 0, descuentos: 0 }
+  );
+
+  const handleCalcular = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMensaje("");
+    setNominas([]);
+    try {
+      const dto = {
+        fechaInicio: params.fechaInicio,
+        fechaFin: params.fechaFin,
+        idEmpleado: params.idEmpleado ? parseInt(params.idEmpleado) : null,
+        idDepartamento: params.idDepartamento ? parseInt(params.idDepartamento) : null,
+      };
+      const data = await calcularNomina(dto);
+      setNominas(Array.isArray(data) ? data : [data]);
+      setMensaje("Nómina calculada correctamente");
+    } catch (err) {
+      setError("Error al calcular la nómina. Verifique los registros de asistencia.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnviarComprobante = async (id) => {
+    try {
+      await enviarComprobante(id);
+      setMensaje(`Comprobante enviado al correo del empleado`);
+    } catch {
+      setMensaje("Error al enviar el comprobante");
+    }
+  };
+
+  const handleDescargar = async (id) => {
+    try {
+      const res = await descargarComprobante(id);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `comprobante_${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setMensaje("Error al descargar el comprobante");
+    }
+  };
+
   return (
     <div className="dashboard">
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2>Panel RRHH</h2>
-          <p>Recursos Humanos</p>
-        </div>
+        <div className="sidebar-header"><h2>Panel RRHH</h2><p>Recursos Humanos</p></div>
         <nav className="sidebar-nav">
           <Link to="/rrhh">🏠 Inicio</Link>
           <Link to="/rrhh/empleados">👥 Gestión de Empleados</Link>
@@ -16,200 +77,119 @@ export default function CalculoNomina() {
           <Link to="/rrhh/nomina" className="active">💰 Cálculo de Nómina</Link>
           <Link to="/rrhh/solicitudes">📅 Solicitudes</Link>
           <Link to="/rrhh/reportes">📊 Reportes</Link>
-          <div className="nav-logout">
-            <Link to="/">🚪 Cerrar Sesión</Link>
-          </div>
+          <div className="nav-logout"><Link to="/">🚪 Cerrar Sesión</Link></div>
         </nav>
       </aside>
 
       <main className="main-content">
         <header className="main-header">
           <h1>Cálculo de Nómina</h1>
-          <span>ECU-04 — Procesamiento de Remuneraciones</span>
+          <span>ECU-04</span>
         </header>
 
-        {/* ── SELECCIÓN DE PERIODO ── */}
+        {mensaje && <div className="alert alert-success">{mensaje}</div>}
+        {error   && <div className="alert alert-warning">{error}</div>}
+
+        {/* ── PARÁMETROS ── */}
         <div className="section-card">
           <h2>Parámetros de Cálculo</h2>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Fecha Inicio *</label>
-              <input type="date" />
+          <form onSubmit={handleCalcular}>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Fecha Inicio *</label>
+                <input type="date" value={params.fechaInicio}
+                  onChange={(e) => setParams({ ...params, fechaInicio: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>Fecha Fin *</label>
+                <input type="date" value={params.fechaFin}
+                  onChange={(e) => setParams({ ...params, fechaFin: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>ID Departamento (opcional)</label>
+                <input type="number" placeholder="Todos" value={params.idDepartamento}
+                  onChange={(e) => setParams({ ...params, idDepartamento: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>ID Empleado (opcional)</label>
+                <input type="number" placeholder="Todos" value={params.idEmpleado}
+                  onChange={(e) => setParams({ ...params, idEmpleado: e.target.value })} />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Fecha Fin *</label>
-              <input type="date" />
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? "Calculando..." : "Calcular Nómina"}
+              </button>
+              <button type="button" className="btn btn-secondary"
+                onClick={() => { setParams({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" }); setNominas([]); setMensaje(""); setError(""); }}>
+                Limpiar
+              </button>
             </div>
-            <div className="form-group">
-              <label>Filtrar por Área</label>
-              <select>
-                <option value="">Todos los empleados activos</option>
-                <option>Administración</option>
-                <option>Operaciones</option>
-                <option>Sistemas</option>
-              </select>
+          </form>
+        </div>
+
+        {/* ── RESUMEN ── */}
+        {nominas.length > 0 && (
+          <>
+            <div className="stats-row">
+              <div className="stat-box">
+                <div className="stat-value">{nominas.length}</div>
+                <div className="stat-label">Empleados Procesados</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-value">S/ {totales.bruto.toFixed(2)}</div>
+                <div className="stat-label">Total Bruto</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-value">S/ {totales.descuentos.toFixed(2)}</div>
+                <div className="stat-label">Total Descuentos</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-value">S/ {totales.neto.toFixed(2)}</div>
+                <div className="stat-label">Total Neto</div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Filtrar por Empleado</label>
-              <select>
-                <option value="">Todos</option>
-                <option>García López, Juan</option>
-                <option>Ramírez Torres, Ana</option>
-              </select>
+
+            <div className="section-card">
+              <h2>Detalle de Nómina — {params.fechaInicio} al {params.fechaFin}</h2>
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Empleado</th><th>Período</th><th>Sueldo Base</th>
+                      <th>H. Extra</th><th>Bonificaciones</th><th>Descuentos</th>
+                      <th>Bruto</th><th>Neto</th><th>Estado</th><th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nominas.map((n) => {
+                      const bonif = (parseFloat(n.bonifFamiliar ?? 0) + parseFloat(n.bonifTurnoNocturno ?? 0) +
+                        parseFloat(n.bonifGuardia ?? 0) + parseFloat(n.bonifRiesgo ?? 0) + parseFloat(n.bonifCargo ?? 0)).toFixed(2);
+                      const desc = (parseFloat(n.descuentoTardanzas ?? 0) + parseFloat(n.descuentoLey ?? 0)).toFixed(2);
+                      return (
+                        <tr key={n.idNomina}>
+                          <td>{n.nombreEmpleado}</td>
+                          <td>{n.periodo}</td>
+                          <td>S/ {parseFloat(n.sueldoBase ?? 0).toFixed(2)}</td>
+                          <td>{n.totalHorasExtra ?? 0}h</td>
+                          <td>S/ {bonif}</td>
+                          <td>S/ {desc}</td>
+                          <td>S/ {parseFloat(n.sueldoBruto ?? 0).toFixed(2)}</td>
+                          <td><strong>S/ {parseFloat(n.sueldoNeto ?? 0).toFixed(2)}</strong></td>
+                          <td><span className="badge badge-info">{n.estadoPago ?? "Calculada"}</span></td>
+                          <td>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleDescargar(n.idNomina)}>PDF</button>{" "}
+                            <button className="btn btn-info btn-sm" onClick={() => handleEnviarComprobante(n.idNomina)}>Email</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-primary">Calcular Nómina</button>
-            <button className="btn btn-secondary">Limpiar</button>
-          </div>
-        </div>
-
-        {/* ── RESUMEN NÓMINA ── */}
-        <div className="stats-row">
-          <div className="stat-box">
-            <div className="stat-value">45</div>
-            <div className="stat-label">Empleados Procesados</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-value">S/ 158,400</div>
-            <div className="stat-label">Total Bruto</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-value">S/ 3,200</div>
-            <div className="stat-label">Total Descuentos</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-value">S/ 155,200</div>
-            <div className="stat-label">Total Neto a Pagar</div>
-          </div>
-        </div>
-
-        {/* ── DETALLE NÓMINA ── */}
-        <div className="section-card">
-          <h2>Detalle de Nómina — Junio 2026</h2>
-          <div className="toolbar">
-            <input type="text" placeholder="Buscar empleado..." />
-            <select>
-              <option value="">Estado nómina</option>
-              <option>Calculada</option>
-              <option>Disponible</option>
-            </select>
-            <button className="btn btn-secondary">Filtrar</button>
-            <span className="badge badge-info" style={{ padding: "6px 14px" }}>
-              Estado: Calculada
-            </span>
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Empleado</th>
-                  <th>Sueldo Base</th>
-                  <th>Horas Trabajadas</th>
-                  <th>Horas Extra</th>
-                  <th>Bonificaciones</th>
-                  <th>Descuentos</th>
-                  <th>Salario Bruto</th>
-                  <th>Salario Neto</th>
-                  <th>Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>García López, Juan</td>
-                  <td>S/ 3,500.00</td>
-                  <td>176h</td>
-                  <td>4h</td>
-                  <td>S/ 200.00</td>
-                  <td>S/ 30.00</td>
-                  <td>S/ 3,790.00</td>
-                  <td>S/ 3,760.00</td>
-                  <td><button className="btn btn-secondary btn-sm">Ver</button></td>
-                </tr>
-                <tr>
-                  <td>Ramírez Torres, Ana</td>
-                  <td>S/ 4,200.00</td>
-                  <td>174h</td>
-                  <td>0h</td>
-                  <td>S/ 350.00</td>
-                  <td>S/ 60.00</td>
-                  <td>S/ 4,550.00</td>
-                  <td>S/ 4,490.00</td>
-                  <td><button className="btn btn-secondary btn-sm">Ver</button></td>
-                </tr>
-                <tr>
-                  <td>Flores Mendoza, Carlos</td>
-                  <td>S/ 2,800.00</td>
-                  <td>180h</td>
-                  <td>10h</td>
-                  <td>S/ 150.00</td>
-                  <td>S/ 0.00</td>
-                  <td>S/ 3,100.00</td>
-                  <td>S/ 3,100.00</td>
-                  <td><button className="btn btn-secondary btn-sm">Ver</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ── DESGLOSE BONIFICACIONES ── */}
-        <div className="section-card">
-          <h2>Conceptos de Bonificación Aplicados</h2>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tipo de Bonificación</th>
-                  <th>Descripción</th>
-                  <th>Empleados con Beneficio</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Bonificación Familiar</td>
-                  <td>Dinero extra por tener hijos a cargo</td>
-                  <td>12</td>
-                </tr>
-                <tr>
-                  <td>Turno Nocturno</td>
-                  <td>Pago adicional por trabajar de noche</td>
-                  <td>8</td>
-                </tr>
-                <tr>
-                  <td>Guardia</td>
-                  <td>Extra por disponibilidad en emergencias</td>
-                  <td>5</td>
-                </tr>
-                <tr>
-                  <td>Riesgo Hospitalario</td>
-                  <td>Pago por trabajar en zonas de riesgo</td>
-                  <td>4</td>
-                </tr>
-                <tr>
-                  <td>Cargo / Productividad</td>
-                  <td>Extra por puesto o desempeño destacado</td>
-                  <td>10</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ── ACCIONES FINALES ── */}
-        <div className="section-card">
-          <h2>Acciones de Nómina</h2>
-          <div className="alert alert-success">
-            ✅ La nómina ha sido calculada correctamente. Puede proceder a generar los comprobantes.
-          </div>
-          <div className="form-actions">
-            <button className="btn btn-success">Aprobar y Cerrar Nómina</button>
-            <button className="btn btn-primary">Generar Comprobantes PDF</button>
-            <button className="btn btn-info">Exportar a Excel</button>
-            <button className="btn btn-secondary">Recalcular</button>
-          </div>
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
