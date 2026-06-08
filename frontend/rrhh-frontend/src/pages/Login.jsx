@@ -3,49 +3,34 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
+import { login } from "../services/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [mensaje, setMensaje] = useState("");
-  const [show2FA, setShow2FA] = useState(false);
-  const [rol, setRol] = useState("");
-  const [resetTwoFAKey, setResetTwoFAKey] = useState(0); // 👈 NUEVO
+  const [mensaje, setMensaje]   = useState("");
+  const [show2FA, setShow2FA]   = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setMensaje("");
-
     try {
-      const res = await fetch("http://localhost:8080/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-
-      const data = await res.json();
-
-      console.log("LOGIN RESPONSE:", data);
-
+      const data = await login(username, password);
       if (!data.success) {
-        setMensaje(data.message || "Error en login");
+        setMensaje(data.message || "Credenciales inválidas. Intente nuevamente.");
         return;
       }
-
-      if (data.require2FA) {
-        setRol(data.rol);
-        setResetTwoFAKey(prev => prev + 1); // 🔑 fuerza remontaje del modal
+      if (data.requires2FA) {
+        setResetKey((prev) => prev + 1);
         setShow2FA(true);
         return;
       }
-
       redirectByRole(data.rol);
-
-    } catch (error) {
-      console.error("Error login:", error);
-      setMensaje("Error de conexión con el servidor");
+    } catch {
+      setMensaje("Error de conexión con el servidor. Verifique que el servicio esté disponible.");
     }
   };
 
@@ -53,46 +38,75 @@ export default function Login() {
     if (role === "GERENCIA") navigate("/gerencia");
     else if (role === "RRHH") navigate("/rrhh");
     else if (role === "EMPLEADO") navigate("/empleado");
-    else setMensaje("Rol no válido");
+    else setMensaje("Rol de usuario no reconocido.");
   };
 
   return (
-    <div className="container">
-      <div className="left-panel">
-        <img src={logo} className="logo-img" />
-        <p className="secure">Sistema seguro RRHH</p>
-        <p className="roles">Empleado | RRHH | Gerencia</p>
-      </div>
+    <div className="login-page">
+      <div className="login-card">
+        {/* ── PANEL IZQUIERDO ── */}
+        <div className="login-left">
+          <img src={logo} className="logo-img" alt="Logo del sistema" />
+          <p className="login-tagline">Sistema de Gestión de Recursos Humanos</p>
+          <p className="login-roles">Empleado · RRHH · Gerencia</p>
+          <div className="login-features">
+            <div className="login-feature">🔒 Autenticación segura con verificación 2FA</div>
+            <div className="login-feature">👥 Control de acceso por roles</div>
+            <div className="login-feature">🖐️ Asistencia biométrica integrada</div>
+            <div className="login-feature">📊 Reportes y nómina en tiempo real</div>
+          </div>
+        </div>
 
-      <div className="center-panel">
-        <h2>Iniciar Sesión</h2>
+        {/* ── PANEL DERECHO ── */}
+        <div className="login-right">
+          <h2>Iniciar Sesión</h2>
+          <p className="login-subtitle">Ingrese sus credenciales para acceder al sistema</p>
 
-        <form onSubmit={handleLogin}>
-          <input
-            placeholder="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+          <form className="login-form" onSubmit={handleLogin}>
+            <div className="login-field">
+              <label>Usuario o correo</label>
+              <input
+                type="text"
+                placeholder="Ingrese su usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </div>
+            <div className="login-field">
+              <label>Contraseña</label>
+              <input
+                type="password"
+                placeholder="Ingrese su contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <button type="submit" className="login-btn">Entrar al Sistema</button>
+          </form>
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          {mensaje && (
+            <div className="login-error">
+              ⚠️ {mensaje}
+            </div>
+          )}
 
-          <button type="submit">Entrar</button>
-        </form>
-
-        {mensaje && <p className="error">{mensaje}</p>}
+          <p className="login-security">
+            🔐 Conexión cifrada — Sus datos están protegidos
+          </p>
+        </div>
       </div>
 
       {show2FA && (
         <TwoFA
-          key={resetTwoFAKey}
+          key={resetKey}
           open={show2FA}
+          username={username}
           onClose={() => setShow2FA(false)}
-          onSuccess={() => {
+          onSuccess={(rol) => {
             setShow2FA(false);
             redirectByRole(rol);
           }}
