@@ -1,28 +1,21 @@
 package com.rrhh.Shared.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
 public class ConfiguracionSistema {
 
-    private static volatile ConfiguracionSistema instance;
-
+    @Value("${sistema.nombre-empresa:SAN GABRIEL S.A.C.}")
     private String nombreEmpresa;
+
+    @Value("${sistema.max-intentos-login:5}")
     private int maxIntentosLogin;
+
+    @Value("${sistema.zona-horaria:America/Lima}")
     private String zonaHoraria;
 
-    private ConfiguracionSistema() {
-        this.nombreEmpresa = "SAN GABRIEL S.A.C.";
-        this.maxIntentosLogin = 5;
-        this.zonaHoraria = "America/Lima";
-    }
-
-    public static ConfiguracionSistema getInstance() {
-        if (instance == null) {
-            synchronized (ConfiguracionSistema.class) {
-                if (instance == null) {
-                    instance = new ConfiguracionSistema();
-                }
-            }
-        }
-        return instance;
+    public ConfiguracionSistema() {
     }
 
     public String getNombreEmpresa() { return nombreEmpresa; }

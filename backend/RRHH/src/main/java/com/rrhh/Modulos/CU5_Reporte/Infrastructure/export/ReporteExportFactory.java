@@ -12,8 +12,15 @@ import org.springframework.stereotype.Component;
 @Component("reporteExportFactory")
 public class ReporteExportFactory implements ExportAbstractFactory {
 
-    // Este factory es genérico para exportar cualquier reporte ya generado
-    // Los headers/keys vienen del ReporteService y se pasan dinámicamente
+    @Override
+    public String[] getHeaders() {
+        return new String[]{};
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{};
+    }
 
     @Override
     public PDFExporter createPDFExporter() {

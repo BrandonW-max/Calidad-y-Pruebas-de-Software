@@ -7,7 +7,7 @@ import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RevisionRrhhRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.SolicitudResponseDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Domain.entities.Solicitud;
 import com.rrhh.Modulos.CU6_Solicitud.Domain.repository.ISolicitudRepository;
-import com.rrhh.Modulos.CU6_Solicitud.Application.factory.SolicitudFactory;
+import com.rrhh.Modulos.CU6_Solicitud.Application.factory.ISolicitudFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -28,12 +28,12 @@ public class SolicitudService implements ISolicitudService {
     private EntityManager em;
 
     private final ISolicitudRepository solicitudRepository;
-    private final SolicitudFactory solicitudFactory;
+    private final ISolicitudFactory solicitudFactory;
     private final com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository;
 
     public SolicitudService(
             ISolicitudRepository solicitudRepository,
-            SolicitudFactory solicitudFactory,
+            ISolicitudFactory solicitudFactory,
             com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository) {
         this.solicitudRepository = solicitudRepository;
         this.solicitudFactory = solicitudFactory;

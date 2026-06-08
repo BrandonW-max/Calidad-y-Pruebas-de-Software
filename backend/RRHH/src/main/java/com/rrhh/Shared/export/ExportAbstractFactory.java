@@ -8,4 +8,6 @@ public interface ExportAbstractFactory {
     PDFExporter createPDFExporter();
     ExcelExporter createExcelExporter();
     CSVExporter createCSVExporter();
+    String[] getHeaders();
+    String[] getKeys();
 }

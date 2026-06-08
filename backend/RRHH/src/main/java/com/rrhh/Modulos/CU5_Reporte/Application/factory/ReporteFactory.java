@@ -4,8 +4,9 @@ import com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ReporteFactory {
+public class ReporteFactory implements IReporteFactory {
 
+    @Override
     public ReporteGenerado crearReporteBase() {
         return ReporteGenerado.builder()
                 .totalRegistros(0)

@@ -4,8 +4,9 @@ import com.rrhh.Modulos.CU6_Solicitud.Domain.entities.Solicitud;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SolicitudFactory {
+public class SolicitudFactory implements ISolicitudFactory {
 
+    @Override
     public Solicitud crearSolicitudVacaciones(String motivo, String archivoAdjunto) {
         Solicitud solicitud = new Solicitud();
         solicitud.setTipoSolicitud("VACACIONES");
@@ -15,6 +16,7 @@ public class SolicitudFactory {
         return solicitud;
     }
 
+    @Override
     public Solicitud crearSolicitudPermiso(String tipo, String motivo) {
         Solicitud solicitud = new Solicitud();
         solicitud.setTipoSolicitud(tipo);

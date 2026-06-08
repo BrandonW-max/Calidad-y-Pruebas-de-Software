@@ -6,8 +6,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
-public class RegistroAsistenciaFactory {
+public class RegistroAsistenciaFactory implements IRegistroAsistenciaAppFactory {
 
+    @Override
     public RegistroAsistencia crearAsistenciaPuntual() {
         return RegistroAsistencia.builder()
                 .estado("PUNTUAL")

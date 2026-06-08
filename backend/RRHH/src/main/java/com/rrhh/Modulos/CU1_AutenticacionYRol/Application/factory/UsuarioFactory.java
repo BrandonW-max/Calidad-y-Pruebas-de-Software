@@ -4,8 +4,9 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.entities.Usuario;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UsuarioFactory {
+public class UsuarioFactory implements IUsuarioFactory {
 
+    @Override
     public Usuario crearUsuarioEmpleado(String nombreUsuario, String correoInst, String contrasenia,
                                          Boolean activo, Boolean dosfaActivo) {
         return Usuario.builder()
@@ -18,6 +19,7 @@ public class UsuarioFactory {
                 .build();
     }
 
+    @Override
     public Usuario crearUsuarioRrhh(String nombreUsuario, String correoInst, String contrasenia) {
         return Usuario.builder()
                 .nombreUsuario(nombreUsuario)

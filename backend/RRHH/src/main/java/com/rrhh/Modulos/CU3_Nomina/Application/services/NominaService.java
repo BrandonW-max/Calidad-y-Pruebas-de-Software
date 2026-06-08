@@ -1,6 +1,6 @@
 package com.rrhh.Modulos.CU3_Nomina.Application.services;
 
-import com.rrhh.Modulos.CU3_Nomina.Application.factory.NominaFactory;
+import com.rrhh.Modulos.CU3_Nomina.Application.factory.INominaFactory;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.DetalleNominaResponseDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
@@ -10,7 +10,7 @@ import com.rrhh.Modulos.CU3_Nomina.Domain.repository.IDetalleNominaRepository;
 import com.rrhh.Modulos.CU3_Nomina.Domain.repository.INominaRepository;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.entities.Historial;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialRepository;
-import com.rrhh.Shared.export.pdf.implementations.GenericPDFExporter;
+import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.ContratoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.FamiliaInfoModel;
@@ -62,7 +62,8 @@ public class NominaService implements INominaService {
     private final INominaRepository nominaRepository;
     private final IDetalleNominaRepository detalleNominaRepository;
     private final IHistorialRepository historialRepository;
-    private final NominaFactory nominaFactory;
+    private final INominaFactory nominaFactory;
+    private final Map<String, ExportAbstractFactory> exportFactories;
 
     private final com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository;
     private final com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository;
@@ -73,7 +74,8 @@ public class NominaService implements INominaService {
             INominaRepository nominaRepository,
             IDetalleNominaRepository detalleNominaRepository,
             IHistorialRepository historialRepository,
-            NominaFactory nominaFactory,
+            INominaFactory nominaFactory,
+            Map<String, ExportAbstractFactory> exportFactories,
             com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository,
             com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository,
             com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaContratoRepository jpaContratoRepository,
@@ -82,6 +84,7 @@ public class NominaService implements INominaService {
         this.detalleNominaRepository = detalleNominaRepository;
         this.historialRepository = historialRepository;
         this.nominaFactory = nominaFactory;
+        this.exportFactories = exportFactories;
         this.jpaEmpleadoRepository = jpaEmpleadoRepository;
         this.jpaRegistroAsistenciaRepository = jpaRegistroAsistenciaRepository;
         this.jpaContratoRepository = jpaContratoRepository;
@@ -371,8 +374,12 @@ public class NominaService implements INominaService {
         List<String> headers = new ArrayList<>(fila.keySet());
         String[] headerArray = headers.toArray(new String[0]);
         String[] keyArray = headers.toArray(new String[0]);
-        GenericPDFExporter exporter = new GenericPDFExporter();
-        return exporter.export("Comprobante de Nomina", datos, headerArray, keyArray);
+
+        ExportAbstractFactory factory = exportFactories.get("nominaExportFactory");
+        if (factory == null) {
+            throw new IllegalStateException("Fabrica de exportacion de nomina no encontrada.");
+        }
+        return factory.createPDFExporter().export("Comprobante de Nomina", datos, headerArray, keyArray);
     }
 
     private List<EmpleadoModel> obtenerEmpleadosActivos(CalcularNominaRequestDTO request) {

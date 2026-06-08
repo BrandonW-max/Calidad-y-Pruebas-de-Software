@@ -14,7 +14,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.rrhh.Shared.security.HashFactory;
+import com.rrhh.Shared.security.HashService;
 
 @Service
 public class AuthService implements IAuthService {
@@ -32,7 +32,7 @@ public class AuthService implements IAuthService {
     private IHistorialRepository historialRepository;
 
     @Autowired
-    private HashFactory hashFactory;
+    private HashService hashService;
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO dto, String ip) {
@@ -46,7 +46,7 @@ public class AuthService implements IAuthService {
         if (user == null) {
             return new AuthResponseDTO(
                     false,
-                    "Credenciales inválidas"
+                    "Credenciales invalidas"
             );
         }
 
@@ -67,7 +67,7 @@ public class AuthService implements IAuthService {
             );
         }
 
-        if (hashFactory.verificar(dto.getPassword(), user.getContrasenia())) {
+        if (hashService.verificar(dto.getPassword(), user.getContrasenia())) {
 
             user.resetearIntentos();
             usuarioRepository.save(user);
@@ -106,7 +106,7 @@ public class AuthService implements IAuthService {
             String msg =
                     user.isCuentaBloqueada()
                             ? "Cuenta bloqueada"
-                            : "Contraseña incorrecta";
+                            : "Contrasenia incorrecta";
 
             return new AuthResponseDTO(
                     false,
@@ -174,7 +174,7 @@ public class AuthService implements IAuthService {
             usuarioRepository.save(user);
             return new TwoFactorResponseDTO(
                     false,
-                    "Código incorrecto. Intentos restantes: " + (5 - user.getIntentosFalla2fa()),
+                    "Codigo incorrecto. Intentos restantes: " + (5 - user.getIntentosFalla2fa()),
                     null,
                     null
             );

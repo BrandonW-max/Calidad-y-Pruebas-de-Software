@@ -7,8 +7,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Component
-public class ContratoFactory {
+public class ContratoFactory implements IContratoFactory {
 
+    @Override
     public Contrato crearIndefinido(Long idEmpleado, Integer idDpto, String nombreDepartamento,
                                      String cargo, LocalDate fechaInicio, LocalDate fechaFin,
                                      BigDecimal sueldo) {
@@ -25,6 +26,7 @@ public class ContratoFactory {
                 .build();
     }
 
+    @Override
     public Contrato crearPracticas(Long idEmpleado, Integer idDpto, String nombreDepartamento,
                                     String cargo, LocalDate fechaInicio, LocalDate fechaFin,
                                     BigDecimal sueldo) {

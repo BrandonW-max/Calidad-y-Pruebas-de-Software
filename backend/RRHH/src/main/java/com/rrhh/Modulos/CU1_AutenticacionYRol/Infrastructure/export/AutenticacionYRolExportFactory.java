@@ -12,8 +12,15 @@ import org.springframework.stereotype.Component;
 @Component("autenticacionYRolExportFactory")
 public class AutenticacionYRolExportFactory implements ExportAbstractFactory {
 
-    public static final String[] HEADERS = {"ID Usuario", "Nombre Usuario", "Correo Inst.", "Rol", "Activo", "2FA", "Intentos Fallidos"};
-    public static final String[] KEYS = {"idUsuario", "nombreUsuario", "correoInst", "nombreRol", "activo", "dosFA", "intentosFallidos"};
+    @Override
+    public String[] getHeaders() {
+        return new String[]{"ID Usuario", "Nombre Usuario", "Correo Inst.", "Rol", "Activo", "2FA", "Intentos Fallidos"};
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{"idUsuario", "nombreUsuario", "correoInst", "nombreRol", "activo", "dosFA", "intentosFallidos"};
+    }
 
     @Override
     public PDFExporter createPDFExporter() {

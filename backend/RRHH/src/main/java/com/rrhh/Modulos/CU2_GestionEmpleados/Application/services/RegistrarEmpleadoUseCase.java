@@ -17,13 +17,13 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import com.rrhh.Modulos.CU2_GestionEmpleados.Application.factory.ContratoFactory;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Application.factory.IContratoFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.rrhh.Shared.security.HashFactory;
+import com.rrhh.Shared.security.HashService;
 
 @Service
 public class RegistrarEmpleadoUseCase {
@@ -50,13 +50,13 @@ public class RegistrarEmpleadoUseCase {
     private RolAsignacionService rolAsignacionService;
 
     @Autowired
-    private HashFactory hashFactory;
+    private HashService hashService;
 
     @Autowired
     private AuditoriaEmpleadoService auditoriaEmpleadoService;
 
     @Autowired
-    private ContratoFactory contratoFactory;
+    private IContratoFactory contratoFactory;
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(RegistrarEmpleadoRequestDTO dto) {
@@ -140,7 +140,7 @@ public class RegistrarEmpleadoUseCase {
 
         usuario.setNombreUsuario(nombreUsuarioGenerado);
         usuario.setCorreoInst(correoInstitucionalGenerado);
-        usuario.setContrasenia(hashFactory.encriptar(dto.getContrasenia()));
+        usuario.setContrasenia(hashService.encriptar(dto.getContrasenia()));
         usuario.setActivo(true);
         usuario.setDosfaActivo(false);
         usuario.setIdEmpleado(empleadoGuardado.getIdEmpleado());

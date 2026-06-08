@@ -1,12 +1,8 @@
 package com.rrhh.Modulos.CU5_Reporte.Presentation.controllers;
 
-import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.export.GestionEmpleadosExportFactory;
-import com.rrhh.Modulos.CU3_Nomina.Infrastructure.export.NominaExportFactory;
-import com.rrhh.Modulos.CU4_RegistroAsistencia.Infrastructure.export.RegistroAsistenciaExportFactory;
 import com.rrhh.Modulos.CU5_Reporte.Application.dto.*;
 import com.rrhh.Modulos.CU5_Reporte.Application.services.IReporteService;
 import com.rrhh.Modulos.CU5_Reporte.Presentation.routes.ReporteApiRoutes;
-import com.rrhh.Modulos.CU6_Solicitud.Infrastructure.export.SolicitudExportFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +30,7 @@ public class ReporteController {
             ReporteResponseDTO dto = reporteService.generarReporteEmpleados(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("EMPLEADOS", formato,
-                        dto.getDatos(), GestionEmpleadosExportFactory.HEADERS,
-                        GestionEmpleadosExportFactory.KEYS);
+                        dto.getDatos());
                 return buildFileResponse(archivo, "reporte_empleados", formato);
             }
             return ResponseEntity.ok(dto);
@@ -55,8 +50,7 @@ public class ReporteController {
             ReporteResponseDTO dto = reporteService.generarReporteAsistencia(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("ASISTENCIA", formato,
-                        dto.getDatos(), RegistroAsistenciaExportFactory.HEADERS,
-                        RegistroAsistenciaExportFactory.KEYS);
+                        dto.getDatos());
                 return buildFileResponse(archivo, "reporte_asistencia", formato);
             }
             return ResponseEntity.ok(dto);
@@ -76,8 +70,7 @@ public class ReporteController {
             ReporteResponseDTO dto = reporteService.generarReporteNomina(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("NOMINA", formato,
-                        dto.getDatos(), NominaExportFactory.HEADERS,
-                        NominaExportFactory.KEYS);
+                        dto.getDatos());
                 return buildFileResponse(archivo, "reporte_nomina", formato);
             }
             return ResponseEntity.ok(dto);
@@ -97,8 +90,7 @@ public class ReporteController {
             ReporteResponseDTO dto = reporteService.generarReporteSolicitudes(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("SOLICITUDES", formato,
-                        dto.getDatos(), SolicitudExportFactory.HEADERS,
-                        SolicitudExportFactory.KEYS);
+                        dto.getDatos());
                 return buildFileResponse(archivo, "reporte_solicitudes", formato);
             }
             return ResponseEntity.ok(dto);

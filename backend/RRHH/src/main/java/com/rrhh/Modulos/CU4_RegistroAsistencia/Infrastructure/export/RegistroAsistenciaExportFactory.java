@@ -12,8 +12,15 @@ import org.springframework.stereotype.Component;
 @Component("registroAsistenciaExportFactory")
 public class RegistroAsistenciaExportFactory implements ExportAbstractFactory {
 
-    public static final String[] HEADERS = {"Empleado", "Fecha", "Hora Entrada", "Hora Salida", "Min. Tardanza", "Min. Extra", "Estado"};
-    public static final String[] KEYS = {"empleado", "fecha", "horaEntrada", "horaSalida", "minutosTardanza", "minutosExtra", "estado"};
+    @Override
+    public String[] getHeaders() {
+        return new String[]{"Empleado", "Fecha", "Hora Entrada", "Hora Salida", "Min. Tardanza", "Min. Extra", "Estado"};
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{"empleado", "fecha", "horaEntrada", "horaSalida", "minutosTardanza", "minutosExtra", "estado"};
+    }
 
     @Override
     public PDFExporter createPDFExporter() {

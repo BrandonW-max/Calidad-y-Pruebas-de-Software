@@ -6,14 +6,13 @@ import com.rrhh.Modulos.CU4_RegistroAsistencia.Domain.entities.RegistroAsistenci
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HorarioModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
+import org.springframework.stereotype.Component;
 
-public final class RegistroAsistenciaFactory {
+@Component
+public class RegistroAsistenciaMapper implements IRegistroAsistenciaMapper {
 
-    private RegistroAsistenciaFactory() {
-        // Factory utility class
-    }
-
-    public static RegistroAsistenciaModel crearModeloDesdeDominio(RegistroAsistencia dominio) {
+    @Override
+    public RegistroAsistenciaModel crearModeloDesdeDominio(RegistroAsistencia dominio) {
         if (dominio == null) {
             return null;
         }
@@ -53,7 +52,8 @@ public final class RegistroAsistenciaFactory {
         return model;
     }
 
-    public static RegistroAsistencia crearDominioDesdeModelo(RegistroAsistenciaModel model) {
+    @Override
+    public RegistroAsistencia crearDominioDesdeModelo(RegistroAsistenciaModel model) {
         if (model == null) {
             return null;
         }

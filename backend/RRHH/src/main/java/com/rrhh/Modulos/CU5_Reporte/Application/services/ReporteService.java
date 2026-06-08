@@ -8,7 +8,7 @@ import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteEmpleado
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteAsistenciaRepository;
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteNominaRepository;
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteSolicitudRepository;
-import com.rrhh.Modulos.CU5_Reporte.Application.factory.ReporteFactory;
+import com.rrhh.Modulos.CU5_Reporte.Application.factory.IReporteFactory;
 import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.*;
 import org.springframework.stereotype.Service;
@@ -34,7 +34,7 @@ public class ReporteService implements IReporteService {
     private final JpaReporteSolicitudRepository jpaSolicitudRepository;
     private final ObjectMapper objectMapper;
     private final Map<String, ExportAbstractFactory> exportFactories;
-    private final ReporteFactory reporteFactory;
+    private final IReporteFactory reporteFactory;
 
     public ReporteService(
             IReporteGeneradoRepository reporteGeneradoRepository,
@@ -44,7 +44,7 @@ public class ReporteService implements IReporteService {
             JpaReporteSolicitudRepository jpaSolicitudRepository,
             ObjectMapper objectMapper,
             Map<String, ExportAbstractFactory> exportFactories,
-            ReporteFactory reporteFactory) {
+            IReporteFactory reporteFactory) {
         this.reporteGeneradoRepository = reporteGeneradoRepository;
         this.jpaEmpleadoRepository = jpaEmpleadoRepository;
         this.jpaAsistenciaRepository = jpaAsistenciaRepository;
@@ -58,10 +58,8 @@ public class ReporteService implements IReporteService {
     @Override
     public ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario) {
 
-        // Validar filtros
         validarFiltroEmpleado(filtro);
 
-        // Consultar BD
         List<EmpleadoModel> empleados = jpaEmpleadoRepository.buscarConFiltros(
             filtro.getEstado(),
             filtro.getArea(),
@@ -76,7 +74,6 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("EMPLEADOS", empleados.size());
 
-        // Mapear datos
         List<Map<String, Object>> datos = empleados.stream().map(e -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("id", e.getIdEmpleado());
@@ -94,10 +91,8 @@ public class ReporteService implements IReporteService {
     @Override
     public ReporteResponseDTO generarReporteAsistencia(FiltroAsistenciaDTO filtro, Long idUsuario) {
 
-        // Validar filtros
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
-        // Consultar BD
         List<RegistroAsistenciaModel> registros = jpaAsistenciaRepository.buscarConFiltros(
             filtro.getIdEmpleado(),
             filtro.getArea(),
@@ -111,7 +106,6 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("ASISTENCIA", registros.size());
 
-        // Mapear datos
         List<Map<String, Object>> datos = registros.stream().map(r -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("empleado", r.getEmpleado() != null ?
@@ -131,10 +125,8 @@ public class ReporteService implements IReporteService {
     @Override
     public ReporteResponseDTO generarReporteNomina(FiltroNominaDTO filtro, Long idUsuario) {
 
-        // Validar filtros
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
-        // Consultar BD
         List<NominaModel> nominas = jpaNominaRepository.buscarConFiltros(
             filtro.getIdEmpleado(),
             filtro.getArea(),
@@ -150,7 +142,6 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("NOMINA", nominas.size());
 
-        // Mapear datos
         List<Map<String, Object>> datos = nominas.stream().map(n -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("empleado", n.getEmpleado() != null ?
@@ -172,10 +163,8 @@ public class ReporteService implements IReporteService {
     @Override
     public ReporteResponseDTO generarReporteSolicitudes(FiltroSolicitudDTO filtro, Long idUsuario) {
 
-        // Validar filtros
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
-        // Consultar BD
         List<SolicitudModel> solicitudes = jpaSolicitudRepository.buscarConFiltros(
             filtro.getIdEmpleado(),
             filtro.getArea(),
@@ -191,7 +180,6 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("SOLICITUDES", solicitudes.size());
 
-        // Mapear datos
         List<Map<String, Object>> datos = solicitudes.stream().map(s -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("empleado", s.getEmpleado() != null ?
@@ -209,13 +197,13 @@ public class ReporteService implements IReporteService {
     }
 
     // ================================
-    // MÉTODOS PRIVADOS
+    // METODOS PRIVADOS
     // ================================
 
     private void validarFiltroEmpleado(FiltroEmpleadoDTO filtro) {
         if (filtro == null) {
             throw new IllegalArgumentException(
-                "Los filtros ingresados no son válidos, verifique la información."
+                "Los filtros ingresados no son validos, verifique la informacion."
             );
         }
     }
@@ -223,7 +211,7 @@ public class ReporteService implements IReporteService {
     private void validarFiltroFechas(java.time.LocalDate inicio, java.time.LocalDate fin) {
         if (inicio != null && fin != null && inicio.isAfter(fin)) {
             throw new IllegalArgumentException(
-                "Los filtros ingresados no son válidos, verifique la información."
+                "Los filtros ingresados no son validos, verifique la informacion."
             );
         }
     }
@@ -255,7 +243,6 @@ public class ReporteService implements IReporteService {
             String tipo, Object filtro,
             List<Map<String, Object>> datos, Long idUsuario, String formato) {
 
-        // Guardar registro del reporte
         ReporteGenerado reporte = reporteFactory.crearReporteBase();
         reporte.setTipoReporte(tipo);
         reporte.setTotalRegistros(datos.size());
@@ -269,7 +256,6 @@ public class ReporteService implements IReporteService {
         }
         ReporteGenerado guardado = reporteGeneradoRepository.guardar(reporte);
 
-        // Construir response
         ReporteResponseDTO response = new ReporteResponseDTO();
         response.setIdReporte(guardado.getIdReporte());
         response.setTipoReporte(tipo);
@@ -281,8 +267,7 @@ public class ReporteService implements IReporteService {
 
     @Override
     public byte[] exportarReporte(String tipo, String formato,
-                                   List<Map<String, Object>> datos,
-                                   String[] headers, String[] keys) {
+                                   List<Map<String, Object>> datos) {
         String factoryBeanName = FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory");
         ExportAbstractFactory factory = exportFactories.get(factoryBeanName);
         if (factory == null) {
@@ -292,13 +277,13 @@ public class ReporteService implements IReporteService {
         String titulo = "Reporte de " + tipo;
 
         if ("PDF".equalsIgnoreCase(formato)) {
-            return factory.createPDFExporter().export(titulo, datos, headers, keys);
+            return factory.createPDFExporter().export(titulo, datos, factory.getHeaders(), factory.getKeys());
         }
         if ("EXCEL".equalsIgnoreCase(formato)) {
-            return factory.createExcelExporter().export(titulo, datos, headers, keys);
+            return factory.createExcelExporter().export(titulo, datos, factory.getHeaders(), factory.getKeys());
         }
         if ("CSV".equalsIgnoreCase(formato)) {
-            return factory.createCSVExporter().export(titulo, datos, headers, keys);
+            return factory.createCSVExporter().export(titulo, datos, factory.getHeaders(), factory.getKeys());
         }
         throw new IllegalArgumentException("Formato no soportado: " + formato + ". Use PDF, EXCEL o CSV.");
     }
