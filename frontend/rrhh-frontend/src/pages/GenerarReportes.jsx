@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import { generarReporte } from "../services/api";
 
 const TIPOS = [
-  { key: "empleados",   label: "Empleados",   icon: "👥" },
-  { key: "asistencia",  label: "Asistencia",  icon: "📋" },
-  { key: "nomina",      label: "Nómina",       icon: "💰" },
-  { key: "solicitudes", label: "Solicitudes",  icon: "📅" },
+  { key: "empleados",   label: "Empleados",  icon: "👥", desc: "Estado del personal, antigüedad y contratos" },
+  { key: "asistencia",  label: "Asistencia", icon: "📋", desc: "Registros de entrada/salida, tardanzas y horas" },
+  { key: "nomina",      label: "Nómina",     icon: "💰", desc: "Sueldos, bonificaciones y descuentos del período" },
+  { key: "solicitudes", label: "Solicitudes", icon: "📅", desc: "Permisos y vacaciones aprobados/rechazados" },
 ];
 
 const FILTROS_INICIALES = {
@@ -19,15 +19,16 @@ const FILTROS_INICIALES = {
 
 export default function GenerarReportes() {
   const [tipoActivo, setTipoActivo] = useState("empleados");
-  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-  const [resultado, setResultado] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState("");
-  const [error, setError] = useState("");
+  const [filtros, setFiltros]       = useState(FILTROS_INICIALES);
+  const [resultado, setResultado]   = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [mensaje, setMensaje]       = useState("");
+  const [error, setError]           = useState("");
 
-  const f = filtros[tipoActivo];
-  const setF = (campo, valor) =>
-    setFiltros({ ...filtros, [tipoActivo]: { ...f, [campo]: valor } });
+  const f    = filtros[tipoActivo];
+  const setF = (campo, valor) => setFiltros({ ...filtros, [tipoActivo]: { ...f, [campo]: valor } });
+
+  const tipoInfo = TIPOS.find((t) => t.key === tipoActivo);
 
   const handleGenerar = async (e) => {
     e.preventDefault();
@@ -36,12 +37,12 @@ export default function GenerarReportes() {
     setMensaje("");
     setResultado(null);
     try {
-      const res = await generarReporte(tipoActivo, f, null);
+      const res  = await generarReporte(tipoActivo, f, null);
       const data = await res.json();
       setResultado(data);
       setMensaje("Reporte generado correctamente");
     } catch {
-      setError("No se encontraron datos para los filtros seleccionados");
+      setError("No se encontraron datos para los filtros seleccionados. Verifique los criterios e intente nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -50,17 +51,17 @@ export default function GenerarReportes() {
   const handleExportar = async (formato) => {
     setMensaje("");
     try {
-      const res = await generarReporte(tipoActivo, f, formato);
+      const res  = await generarReporte(tipoActivo, f, formato);
       const blob = await res.blob();
-      const ext = formato === "PDF" ? "pdf" : formato === "XLSX" ? "xlsx" : "csv";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const ext  = formato === "PDF" ? "pdf" : formato === "XLSX" ? "xlsx" : "csv";
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
       a.download = `reporte_${tipoActivo}_${new Date().toISOString().slice(0, 10)}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setMensaje("Error al exportar el reporte");
+      setMensaje("Error al exportar el reporte. Intente nuevamente.");
     }
   };
 
@@ -71,43 +72,38 @@ export default function GenerarReportes() {
     setError("");
   };
 
+  const tieneFechas = ["asistencia", "nomina", "solicitudes"].includes(tipoActivo);
+
   return (
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-header"><h2>Panel RRHH</h2><p>Recursos Humanos</p></div>
-        <nav className="sidebar-nav">
-          <Link to="/rrhh">🏠 Inicio</Link>
-          <Link to="/rrhh/empleados">👥 Gestión de Empleados</Link>
-          <Link to="/rrhh/asistencia">📋 Control de Asistencia</Link>
-          <Link to="/rrhh/nomina">💰 Cálculo de Nómina</Link>
-          <Link to="/rrhh/solicitudes">📅 Solicitudes</Link>
-          <Link to="/rrhh/reportes" className="active">📊 Reportes</Link>
-          <div className="nav-logout"><Link to="/">🚪 Cerrar Sesión</Link></div>
-        </nav>
-      </aside>
+      <Sidebar rol="RRHH" />
 
       <main className="main-content">
-        <header className="main-header">
-          <h1>Generar Reportes</h1>
-          <span>ECU-06</span>
+        <header className="main-header header-rrhh">
+          <div className="header-left">
+            <span className="page-breadcrumb">RRHH / Generar Reportes</span>
+            <h1>Generar Reportes</h1>
+          </div>
+          <span className="role-pill role-pill-rrhh">ECU-06</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
-        {error   && <div className="alert alert-warning">{error}</div>}
+        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        {/* ── TIPO DE REPORTE ── */}
+        {/* ── SELECCIÓN DE TIPO ── */}
         <div className="section-card">
-          <h2>Seleccione el Tipo de Reporte</h2>
+          <h2>📊 Seleccione el Tipo de Reporte</h2>
           <div className="cards-grid">
             {TIPOS.map((t) => (
               <div
                 key={t.key}
                 className="card"
-                style={{ border: tipoActivo === t.key ? "2px solid #0d6efd" : "2px solid transparent" }}
+                style={tipoActivo === t.key ? { borderColor: "#2563eb", boxShadow: "0 0 0 3px rgba(37,99,235,0.15)" } : {}}
                 onClick={() => { setTipoActivo(t.key); setResultado(null); setMensaje(""); setError(""); }}
               >
-                <div className="card-icon">{t.icon}</div>
+                <span className="card-icon">{t.icon}</span>
                 <h3>Reporte de {t.label}</h3>
+                <p>{t.desc}</p>
               </div>
             ))}
           </div>
@@ -115,11 +111,16 @@ export default function GenerarReportes() {
 
         {/* ── FILTROS ── */}
         <div className="section-card">
-          <h2>Filtros — Reporte de {TIPOS.find((t) => t.key === tipoActivo)?.label}</h2>
+          <h2>
+            {tipoInfo?.icon} Filtros — Reporte de {tipoInfo?.label}
+          </h2>
+          <div className="alert alert-info">
+            Los campos de filtro son opcionales. Deje en blanco para incluir todos los registros.
+          </div>
           <form onSubmit={handleGenerar}>
             <div className="form-grid">
-              {/* Fechas (asistencia, nomina, solicitudes) */}
-              {["asistencia", "nomina", "solicitudes"].includes(tipoActivo) && (
+
+              {tieneFechas && (
                 <>
                   <div className="form-group">
                     <label>Fecha Inicio</label>
@@ -132,27 +133,24 @@ export default function GenerarReportes() {
                 </>
               )}
 
-              {/* Área (todos) */}
               <div className="form-group">
-                <label>Área</label>
-                <input placeholder="Todas" value={f.area} onChange={(e) => setF("area", e.target.value)} />
+                <label>Área / Departamento</label>
+                <input placeholder="Todas las áreas" value={f.area} onChange={(e) => setF("area", e.target.value)} />
               </div>
 
-              {/* Empleado (todos) */}
               <div className="form-group">
                 <label>Empleado (nombre o DNI)</label>
-                <input placeholder="Todos" value={f.empleado} onChange={(e) => setF("empleado", e.target.value)} />
+                <input placeholder="Todos los empleados" value={f.empleado} onChange={(e) => setF("empleado", e.target.value)} />
               </div>
 
-              {/* Cargo (empleados) */}
               {tipoActivo === "empleados" && (
                 <>
                   <div className="form-group">
                     <label>Cargo</label>
-                    <input value={f.cargo} onChange={(e) => setF("cargo", e.target.value)} />
+                    <input placeholder="Todos los cargos" value={f.cargo} onChange={(e) => setF("cargo", e.target.value)} />
                   </div>
                   <div className="form-group">
-                    <label>Tipo Contrato</label>
+                    <label>Tipo de Contrato</label>
                     <select value={f.tipoContrato} onChange={(e) => setF("tipoContrato", e.target.value)}>
                       <option value="">Todos</option>
                       <option value="PLAZO_FIJO">Plazo fijo</option>
@@ -161,7 +159,7 @@ export default function GenerarReportes() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Estado</label>
+                    <label>Estado del Empleado</label>
                     <select value={f.estado} onChange={(e) => setF("estado", e.target.value)}>
                       <option value="">Todos</option>
                       <option value="ACTIVO">Activo</option>
@@ -171,7 +169,6 @@ export default function GenerarReportes() {
                 </>
               )}
 
-              {/* Tipo pago + rango salarial (nomina) */}
               {tipoActivo === "nomina" && (
                 <>
                   <div className="form-group">
@@ -189,7 +186,6 @@ export default function GenerarReportes() {
                 </>
               )}
 
-              {/* Tipo + estado solicitud */}
               {tipoActivo === "solicitudes" && (
                 <>
                   <div className="form-group">
@@ -202,7 +198,7 @@ export default function GenerarReportes() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Estado</label>
+                    <label>Estado de la Solicitud</label>
                     <select value={f.estado} onChange={(e) => setF("estado", e.target.value)}>
                       <option value="">Todos</option>
                       <option value="PENDIENTE">Pendiente</option>
@@ -216,9 +212,11 @@ export default function GenerarReportes() {
 
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "Generando..." : "Generar Reporte"}
+                {loading ? "⏳ Generando..." : "📊 Generar Reporte"}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={limpiar}>Limpiar Filtros</button>
+              <button type="button" className="btn btn-secondary" onClick={limpiar}>
+                Limpiar Filtros
+              </button>
             </div>
           </form>
         </div>
@@ -226,18 +224,22 @@ export default function GenerarReportes() {
         {/* ── RESULTADO ── */}
         {resultado && (
           <div className="section-card">
-            <h2>Resultado del Reporte</h2>
+            <h2>📋 Resultado del Reporte — {tipoInfo?.label}</h2>
+
             {resultado.resumen && (
-              <div className="stats-row">
+              <div className="stats-row" style={{ marginBottom: "20px" }}>
                 {Object.entries(resultado.resumen).map(([k, v]) => (
-                  <div className="stat-box" key={k}>
-                    <div className="stat-value">{v}</div>
-                    <div className="stat-label">{k}</div>
+                  <div className="stat-box accent-blue" key={k}>
+                    <div className="stat-info">
+                      <div className="stat-value">{v}</div>
+                      <div className="stat-label">{k}</div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
-            {resultado.datos && resultado.datos.length > 0 && (
+
+            {resultado.datos && resultado.datos.length > 0 ? (
               <div className="table-wrapper">
                 <table>
                   <thead>
@@ -252,13 +254,28 @@ export default function GenerarReportes() {
                   </tbody>
                 </table>
               </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">🔍</div>
+                <p>No hay datos para mostrar con los filtros seleccionados</p>
+              </div>
             )}
+
             <hr className="divider" />
-            <h2>Exportar</h2>
+            <h2>⬇️ Exportar Reporte</h2>
+            <div className="alert alert-info" style={{ marginBottom: "14px" }}>
+              Seleccione el formato de exportación. El archivo se descargará automáticamente.
+            </div>
             <div className="form-actions">
-              <button className="btn btn-danger" onClick={() => handleExportar("PDF")}>📄 PDF</button>
-              <button className="btn btn-success" onClick={() => handleExportar("XLSX")}>📊 Excel</button>
-              <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 CSV</button>
+              <button className="btn btn-danger" onClick={() => handleExportar("PDF")}>
+                📄 Exportar PDF
+              </button>
+              <button className="btn btn-success" onClick={() => handleExportar("XLSX")}>
+                📊 Exportar Excel
+              </button>
+              <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>
+                📑 Exportar CSV
+              </button>
             </div>
           </div>
         )}

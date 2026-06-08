@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import { calcularNomina, enviarComprobante, descargarComprobante } from "../services/api";
 
 export default function CalculoNomina() {
   const [params, setParams] = useState({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" });
-  const [nominas, setNominas] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState("");
-  const [error, setError] = useState("");
+  const [nominas, setNominas]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [mensaje, setMensaje]   = useState("");
+  const [error, setError]       = useState("");
 
   const totales = nominas.reduce(
     (acc, n) => ({
-      bruto: acc.bruto + parseFloat(n.sueldoBruto ?? 0),
-      neto: acc.neto + parseFloat(n.sueldoNeto ?? 0),
+      bruto:      acc.bruto      + parseFloat(n.sueldoBruto ?? 0),
+      neto:       acc.neto       + parseFloat(n.sueldoNeto ?? 0),
       descuentos: acc.descuentos + parseFloat(n.descuentoTardanzas ?? 0) + parseFloat(n.descuentoLey ?? 0),
     }),
     { bruto: 0, neto: 0, descuentos: 0 }
@@ -27,16 +27,16 @@ export default function CalculoNomina() {
     setNominas([]);
     try {
       const dto = {
-        fechaInicio: params.fechaInicio,
-        fechaFin: params.fechaFin,
-        idEmpleado: params.idEmpleado ? parseInt(params.idEmpleado) : null,
+        fechaInicio:   params.fechaInicio,
+        fechaFin:      params.fechaFin,
+        idEmpleado:    params.idEmpleado    ? parseInt(params.idEmpleado)    : null,
         idDepartamento: params.idDepartamento ? parseInt(params.idDepartamento) : null,
       };
       const data = await calcularNomina(dto);
       setNominas(Array.isArray(data) ? data : [data]);
-      setMensaje("Nómina calculada correctamente");
-    } catch (err) {
-      setError("Error al calcular la nómina. Verifique los registros de asistencia.");
+      setMensaje("Nómina calculada correctamente. Revise el detalle a continuación.");
+    } catch {
+      setError("Error al calcular la nómina. Verifique que los registros de asistencia estén completos y sin inconsistencias.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function CalculoNomina() {
   const handleEnviarComprobante = async (id) => {
     try {
       await enviarComprobante(id);
-      setMensaje(`Comprobante enviado al correo del empleado`);
+      setMensaje("Comprobante enviado al correo del empleado correctamente");
     } catch {
       setMensaje("Error al enviar el comprobante");
     }
@@ -55,9 +55,9 @@ export default function CalculoNomina() {
     try {
       const res = await descargarComprobante(id);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
       a.download = `comprobante_${id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
@@ -66,62 +66,80 @@ export default function CalculoNomina() {
     }
   };
 
+  const limpiar = () => {
+    setParams({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" });
+    setNominas([]);
+    setMensaje("");
+    setError("");
+  };
+
   return (
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-header"><h2>Panel RRHH</h2><p>Recursos Humanos</p></div>
-        <nav className="sidebar-nav">
-          <Link to="/rrhh">🏠 Inicio</Link>
-          <Link to="/rrhh/empleados">👥 Gestión de Empleados</Link>
-          <Link to="/rrhh/asistencia">📋 Control de Asistencia</Link>
-          <Link to="/rrhh/nomina" className="active">💰 Cálculo de Nómina</Link>
-          <Link to="/rrhh/solicitudes">📅 Solicitudes</Link>
-          <Link to="/rrhh/reportes">📊 Reportes</Link>
-          <div className="nav-logout"><Link to="/">🚪 Cerrar Sesión</Link></div>
-        </nav>
-      </aside>
+      <Sidebar rol="RRHH" />
 
       <main className="main-content">
-        <header className="main-header">
-          <h1>Cálculo de Nómina</h1>
-          <span>ECU-04</span>
+        <header className="main-header header-rrhh">
+          <div className="header-left">
+            <span className="page-breadcrumb">RRHH / Cálculo de Nómina</span>
+            <h1>Cálculo de Nómina</h1>
+          </div>
+          <span className="role-pill role-pill-rrhh">ECU-04</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
-        {error   && <div className="alert alert-warning">{error}</div>}
+        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         {/* ── PARÁMETROS ── */}
         <div className="section-card">
-          <h2>Parámetros de Cálculo</h2>
+          <h2>⚙️ Parámetros de Cálculo</h2>
+          <div className="alert alert-info">
+            Seleccione el período y, opcionalmente, filtre por departamento o empleado específico.
+            El sistema validará la integridad de los registros de asistencia antes de calcular.
+          </div>
           <form onSubmit={handleCalcular}>
             <div className="form-grid">
               <div className="form-group">
                 <label>Fecha Inicio *</label>
-                <input type="date" value={params.fechaInicio}
-                  onChange={(e) => setParams({ ...params, fechaInicio: e.target.value })} required />
+                <input
+                  type="date"
+                  value={params.fechaInicio}
+                  onChange={(e) => setParams({ ...params, fechaInicio: e.target.value })}
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>Fecha Fin *</label>
-                <input type="date" value={params.fechaFin}
-                  onChange={(e) => setParams({ ...params, fechaFin: e.target.value })} required />
+                <input
+                  type="date"
+                  value={params.fechaFin}
+                  onChange={(e) => setParams({ ...params, fechaFin: e.target.value })}
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>ID Departamento (opcional)</label>
-                <input type="number" placeholder="Todos" value={params.idDepartamento}
-                  onChange={(e) => setParams({ ...params, idDepartamento: e.target.value })} />
+                <input
+                  type="number"
+                  placeholder="Todos los departamentos"
+                  value={params.idDepartamento}
+                  onChange={(e) => setParams({ ...params, idDepartamento: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label>ID Empleado (opcional)</label>
-                <input type="number" placeholder="Todos" value={params.idEmpleado}
-                  onChange={(e) => setParams({ ...params, idEmpleado: e.target.value })} />
+                <input
+                  type="number"
+                  placeholder="Todos los empleados activos"
+                  value={params.idEmpleado}
+                  onChange={(e) => setParams({ ...params, idEmpleado: e.target.value })}
+                />
               </div>
             </div>
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "Calculando..." : "Calcular Nómina"}
+                {loading ? "⏳ Calculando..." : "💰 Calcular Nómina"}
               </button>
-              <button type="button" className="btn btn-secondary"
-                onClick={() => { setParams({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" }); setNominas([]); setMensaje(""); setError(""); }}>
+              <button type="button" className="btn btn-secondary" onClick={limpiar}>
                 Limpiar
               </button>
             </div>
@@ -132,60 +150,101 @@ export default function CalculoNomina() {
         {nominas.length > 0 && (
           <>
             <div className="stats-row">
-              <div className="stat-box">
-                <div className="stat-value">{nominas.length}</div>
-                <div className="stat-label">Empleados Procesados</div>
+              <div className="stat-box accent-blue">
+                <div className="stat-icon">👥</div>
+                <div className="stat-info">
+                  <div className="stat-value">{nominas.length}</div>
+                  <div className="stat-label">Empleados Procesados</div>
+                </div>
               </div>
-              <div className="stat-box">
-                <div className="stat-value">S/ {totales.bruto.toFixed(2)}</div>
-                <div className="stat-label">Total Bruto</div>
+              <div className="stat-box accent-green">
+                <div className="stat-icon">💵</div>
+                <div className="stat-info">
+                  <div className="stat-value">S/ {totales.bruto.toFixed(2)}</div>
+                  <div className="stat-label">Total Bruto</div>
+                </div>
               </div>
-              <div className="stat-box">
-                <div className="stat-value">S/ {totales.descuentos.toFixed(2)}</div>
-                <div className="stat-label">Total Descuentos</div>
+              <div className="stat-box accent-red">
+                <div className="stat-icon">➖</div>
+                <div className="stat-info">
+                  <div className="stat-value">S/ {totales.descuentos.toFixed(2)}</div>
+                  <div className="stat-label">Total Descuentos</div>
+                </div>
               </div>
-              <div className="stat-box">
-                <div className="stat-value">S/ {totales.neto.toFixed(2)}</div>
-                <div className="stat-label">Total Neto</div>
+              <div className="stat-box accent-teal">
+                <div className="stat-icon">💰</div>
+                <div className="stat-info">
+                  <div className="stat-value">S/ {totales.neto.toFixed(2)}</div>
+                  <div className="stat-label">Total Neto a Pagar</div>
+                </div>
               </div>
             </div>
 
             <div className="section-card">
-              <h2>Detalle de Nómina — {params.fechaInicio} al {params.fechaFin}</h2>
+              <h2>📄 Detalle de Nómina — {params.fechaInicio} al {params.fechaFin}</h2>
               <div className="table-wrapper">
                 <table>
                   <thead>
                     <tr>
-                      <th>Empleado</th><th>Período</th><th>Sueldo Base</th>
-                      <th>H. Extra</th><th>Bonificaciones</th><th>Descuentos</th>
-                      <th>Bruto</th><th>Neto</th><th>Estado</th><th>Acciones</th>
+                      <th>Empleado</th>
+                      <th>Período</th>
+                      <th>Sueldo Base</th>
+                      <th>H. Extra</th>
+                      <th>Bonificaciones</th>
+                      <th>Descuentos</th>
+                      <th>Bruto</th>
+                      <th>Neto</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {nominas.map((n) => {
-                      const bonif = (parseFloat(n.bonifFamiliar ?? 0) + parseFloat(n.bonifTurnoNocturno ?? 0) +
-                        parseFloat(n.bonifGuardia ?? 0) + parseFloat(n.bonifRiesgo ?? 0) + parseFloat(n.bonifCargo ?? 0)).toFixed(2);
-                      const desc = (parseFloat(n.descuentoTardanzas ?? 0) + parseFloat(n.descuentoLey ?? 0)).toFixed(2);
+                      const bonif = (
+                        parseFloat(n.bonifFamiliar      ?? 0) +
+                        parseFloat(n.bonifTurnoNocturno ?? 0) +
+                        parseFloat(n.bonifGuardia       ?? 0) +
+                        parseFloat(n.bonifRiesgo        ?? 0) +
+                        parseFloat(n.bonifCargo         ?? 0)
+                      ).toFixed(2);
+                      const desc = (
+                        parseFloat(n.descuentoTardanzas ?? 0) +
+                        parseFloat(n.descuentoLey       ?? 0)
+                      ).toFixed(2);
                       return (
                         <tr key={n.idNomina}>
-                          <td>{n.nombreEmpleado}</td>
+                          <td><strong>{n.nombreEmpleado}</strong></td>
                           <td>{n.periodo}</td>
                           <td>S/ {parseFloat(n.sueldoBase ?? 0).toFixed(2)}</td>
                           <td>{n.totalHorasExtra ?? 0}h</td>
                           <td>S/ {bonif}</td>
-                          <td>S/ {desc}</td>
+                          <td style={{ color: "#ef4444" }}>- S/ {desc}</td>
                           <td>S/ {parseFloat(n.sueldoBruto ?? 0).toFixed(2)}</td>
-                          <td><strong>S/ {parseFloat(n.sueldoNeto ?? 0).toFixed(2)}</strong></td>
-                          <td><span className="badge badge-info">{n.estadoPago ?? "Calculada"}</span></td>
+                          <td><strong style={{ color: "#10b981" }}>S/ {parseFloat(n.sueldoNeto ?? 0).toFixed(2)}</strong></td>
                           <td>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleDescargar(n.idNomina)}>PDF</button>{" "}
-                            <button className="btn btn-info btn-sm" onClick={() => handleEnviarComprobante(n.idNomina)}>Email</button>
+                            <span className="badge badge-info">{n.estadoPago ?? "Calculada"}</span>
+                          </td>
+                          <td style={{ display: "flex", gap: "6px" }}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleDescargar(n.idNomina)}>
+                              📄 PDF
+                            </button>
+                            <button className="btn btn-info btn-sm" onClick={() => handleEnviarComprobante(n.idNomina)}>
+                              ✉️ Email
+                            </button>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <div className="section-card">
+              <h2>ℹ️ Desglose de Bonificaciones</h2>
+              <div className="alert alert-info">
+                Las bonificaciones consideradas en el cálculo son: familiar (por hijos), turno nocturno, guardias, riesgo hospitalario y cargo/productividad.
+                Los descuentos corresponden a tardanzas acumuladas y descuentos de ley aplicables.
               </div>
             </div>
           </>

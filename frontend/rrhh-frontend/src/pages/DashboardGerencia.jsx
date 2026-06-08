@@ -1,58 +1,65 @@
 import { Link } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 
 export default function DashboardGerencia() {
   return (
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2>Panel Gerencia</h2>
-          <p>Gestión Ejecutiva</p>
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/gerencia" className="active">🏠 Inicio</Link>
-          <Link to="/gerencia/solicitudes">📅 Solicitudes</Link>
-          <div className="nav-logout">
-            <Link to="/">🚪 Cerrar Sesión</Link>
-          </div>
-        </nav>
-      </aside>
+      <Sidebar rol="GERENCIA" />
 
       <main className="main-content">
-        <header className="main-header">
-          <h1>Bienvenido, Gerencia</h1>
-          <span>Panel de Gestión Ejecutiva</span>
+        <header className="main-header header-gerencia">
+          <div className="header-left">
+            <span className="page-breadcrumb">Panel Ejecutivo</span>
+            <h1>Bienvenido, Gerencia</h1>
+          </div>
+          <span className="role-pill role-pill-gerencia">Gestión Ejecutiva</span>
         </header>
 
         <div className="stats-row">
-          <div className="stat-box">
-            <div className="stat-value">48</div>
-            <div className="stat-label">Total Empleados</div>
+          <div className="stat-box accent-purple">
+            <div className="stat-icon">👥</div>
+            <div className="stat-info">
+              <div className="stat-value">—</div>
+              <div className="stat-label">Total Empleados</div>
+            </div>
           </div>
-          <div className="stat-box">
-            <div className="stat-value">4</div>
-            <div className="stat-label">Solicitudes por Aprobar</div>
+          <div className="stat-box accent-orange">
+            <div className="stat-icon">⏳</div>
+            <div className="stat-info">
+              <div className="stat-value">—</div>
+              <div className="stat-label">Por Aprobar</div>
+            </div>
           </div>
-          <div className="stat-box">
-            <div className="stat-value">12</div>
-            <div className="stat-label">Aprobadas este Mes</div>
+          <div className="stat-box accent-green">
+            <div className="stat-icon">✅</div>
+            <div className="stat-info">
+              <div className="stat-value">—</div>
+              <div className="stat-label">Aprobadas (Mes)</div>
+            </div>
           </div>
-          <div className="stat-box">
-            <div className="stat-value">3</div>
-            <div className="stat-label">Rechazadas este Mes</div>
+          <div className="stat-box accent-red">
+            <div className="stat-icon">❌</div>
+            <div className="stat-info">
+              <div className="stat-value">—</div>
+              <div className="stat-label">Rechazadas (Mes)</div>
+            </div>
           </div>
         </div>
 
         <div className="cards-grid">
           <Link to="/gerencia/solicitudes" className="card">
-            <div className="card-icon">📅</div>
+            <span className="card-icon">📅</span>
             <h3>Solicitudes Pendientes</h3>
-            <p>Aprobar o rechazar permisos y vacaciones</p>
+            <p>Aprobar o rechazar solicitudes de permisos y vacaciones</p>
           </Link>
         </div>
 
         <div className="section-card">
-          <h2>Solicitudes Recientes por Revisar</h2>
+          <h2>📅 Solicitudes por Revisar</h2>
+          <div className="alert alert-info">
+            Las solicitudes enviadas por RRHH aparecerán aquí para su evaluación y decisión final.
+          </div>
           <div className="table-wrapper">
             <table>
               <thead>
@@ -66,28 +73,20 @@ export default function DashboardGerencia() {
               </thead>
               <tbody>
                 <tr>
-                  <td>Ana Pérez</td>
-                  <td>Vacaciones</td>
-                  <td>10/06 – 20/06/2026</td>
-                  <td>10</td>
-                  <td><span className="badge badge-warning">Enviado a Gerencia</span></td>
-                </tr>
-                <tr>
-                  <td>Carlos López</td>
-                  <td>Permiso médico</td>
-                  <td>09/06/2026</td>
-                  <td>1</td>
-                  <td><span className="badge badge-warning">Enviado a Gerencia</span></td>
-                </tr>
-                <tr>
-                  <td>María Torres</td>
-                  <td>Permiso personal</td>
-                  <td>15/06/2026</td>
-                  <td>1</td>
-                  <td><span className="badge badge-warning">Enviado a Gerencia</span></td>
+                  <td colSpan={5}>
+                    <div className="empty-state">
+                      <div className="empty-state-icon">📅</div>
+                      <p>Las solicitudes pendientes de aprobación se mostrarán aquí.</p>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div className="form-actions" style={{ marginTop: "12px" }}>
+            <Link to="/gerencia/solicitudes" className="btn btn-purple">
+              Ver todas las solicitudes
+            </Link>
           </div>
         </div>
       </main>
