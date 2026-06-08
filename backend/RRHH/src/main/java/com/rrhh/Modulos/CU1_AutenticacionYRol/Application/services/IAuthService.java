@@ -21,5 +21,6 @@ public interface IAuthService {
 
 
     byte[] enable2FA(String username) throws Exception;
-    
+
+    AuthResponseDTO changePassword(ChangePasswordRequestDTO dto, String username);
 }

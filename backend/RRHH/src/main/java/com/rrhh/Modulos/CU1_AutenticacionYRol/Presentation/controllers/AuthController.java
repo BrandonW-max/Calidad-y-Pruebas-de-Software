@@ -1,6 +1,7 @@
 package com.rrhh.Modulos.CU1_AutenticacionYRol.Presentation.controllers;
 
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.AuthResponseDTO;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.ChangePasswordRequestDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.LoginRequestDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.RecoveryRequestDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.RecoveryResponseDTO;
@@ -12,17 +13,21 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.services.IAuthService;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.services.RecoveryService;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Presentation.routes.ApiRoutes;
 
+import com.rrhh.config.security.AuthenticatedUser;
+
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping(ApiRoutes.AUTH_BASE)
-@CrossOrigin("*")
 public class AuthController {
 
     @Autowired
@@ -33,7 +38,7 @@ public class AuthController {
 
     @PostMapping(ApiRoutes.LOGIN)
     public ResponseEntity<AuthResponseDTO> login(
-            @RequestBody LoginRequestDTO request,
+            @Valid @RequestBody LoginRequestDTO request,
             HttpServletRequest httpRequest
     ) {
 
@@ -53,7 +58,7 @@ public class AuthController {
 
     @PostMapping(ApiRoutes.VERIFY_2FA)
     public ResponseEntity<TwoFactorResponseDTO> verify(
-            @RequestBody TwoFactorRequestDTO request
+            @Valid @RequestBody TwoFactorRequestDTO request
     ) {
 
         TwoFactorResponseDTO response =
@@ -70,7 +75,7 @@ public class AuthController {
 
     @PostMapping(ApiRoutes.RECOVERY)
     public ResponseEntity<RecoveryResponseDTO> recovery(
-            @RequestBody RecoveryRequestDTO request
+            @Valid @RequestBody RecoveryRequestDTO request
     ) {
 
         RecoveryResponseDTO response =
@@ -87,7 +92,7 @@ public class AuthController {
 
     @PostMapping(ApiRoutes.RESET_PASSWORD)
     public ResponseEntity<RecoveryResponseDTO> resetPassword(
-            @RequestBody ResetPasswordRequestDTO request
+            @Valid @RequestBody ResetPasswordRequestDTO request
     ) {
 
         RecoveryResponseDTO response =
@@ -106,6 +111,16 @@ public class AuthController {
     public ResponseEntity<byte[]> enable2FA(
             @PathVariable String username
     ) throws Exception {
+
+        AuthenticatedUser authUser = (AuthenticatedUser) SecurityContextHolder
+                .getContext().getAuthentication().getPrincipal();
+
+        if (!authUser.getUsername().equals(username)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Solo puedes activar 2FA en tu propia cuenta"
+            );
+        }
 
         byte[] qrImage =
                 authService.enable2FA(username);
@@ -131,5 +146,25 @@ public class AuthController {
                         "0"
                 )
                 .body(qrImage);
+    }
+
+    @PostMapping(ApiRoutes.CHANGE_PASSWORD)
+    public ResponseEntity<AuthResponseDTO> changePassword(
+            @Valid @RequestBody ChangePasswordRequestDTO request
+    ) {
+
+        AuthenticatedUser authUser = (AuthenticatedUser) SecurityContextHolder
+                .getContext().getAuthentication().getPrincipal();
+
+        AuthResponseDTO response =
+                authService.changePassword(request, authUser.getUsername());
+
+        if (!response.isSuccess()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
 }

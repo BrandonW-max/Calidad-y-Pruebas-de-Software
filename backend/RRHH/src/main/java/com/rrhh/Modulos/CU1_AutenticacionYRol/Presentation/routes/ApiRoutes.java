@@ -13,4 +13,6 @@ public class ApiRoutes {
     public static final String RESET_PASSWORD = "/reset-password";
 
     public static final String ENABLE_2FA = "/enable-2fa/{username}";
+
+    public static final String CHANGE_PASSWORD = "/change-password";
 }

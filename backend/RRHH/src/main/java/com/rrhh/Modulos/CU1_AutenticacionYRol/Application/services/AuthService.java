@@ -82,6 +82,24 @@ public class AuthService implements IAuthService {
 
             historialRepository.save(log);
 
+            if (!user.isDosFAActivado()) {
+                List<String> permisos = getPermisosPorRol(user.getNombreRol());
+                String token = jwtConfig.generarToken(
+                        user.getNombreUsuario(),
+                        user.getNombreRol(),
+                        user.getId(),
+                        permisos
+                );
+                return new AuthResponseDTO(
+                        true,
+                        "Acceso concedido. Active 2FA para asegurar su cuenta.",
+                        user.getNombreRol(),
+                        false,
+                        token,
+                        true
+                );
+            }
+
             return new AuthResponseDTO(
                     true,
                     "2FA requerido",
@@ -183,14 +201,7 @@ public class AuthService implements IAuthService {
         user.resetearIntentos2FA();
         usuarioRepository.save(user);
 
-        List<String> permisos = List.of(
-            switch (user.getNombreRol().toUpperCase()) {
-                case "EMPLEADO" -> new String[]{"VER_ASISTENCIA", "REGISTRAR_SOLICITUD", "VER_NOMINA_PROPIA"};
-                case "RRHH" -> new String[]{"GESTIONAR_EMPLEADOS", "CALCULAR_NOMINA", "VER_SANCIONES", "REVISAR_SOLICITUDES", "VER_REPORTES", "MARCAR_ASISTENCIA"};
-                case "GERENCIA" -> new String[]{"DECIDIR_SOLICITUDES", "VER_REPORTES", "VER_EMPLEADOS"};
-                default -> new String[]{};
-            }
-        );
+        List<String> permisos = getPermisosPorRol(user.getNombreRol());
 
         String token =
                 jwtConfig.generarToken(
@@ -206,6 +217,40 @@ public class AuthService implements IAuthService {
                 token,
                 user.getNombreRol()
         );
+    }
+
+    private List<String> getPermisosPorRol(String nombreRol) {
+        return List.of(
+            switch (nombreRol.toUpperCase()) {
+                case "EMPLEADO" -> new String[]{"VER_ASISTENCIA", "REGISTRAR_SOLICITUD", "VER_NOMINA_PROPIA"};
+                case "RRHH" -> new String[]{"GESTIONAR_EMPLEADOS", "CALCULAR_NOMINA", "VER_SANCIONES", "REVISAR_SOLICITUDES", "VER_REPORTES", "MARCAR_ASISTENCIA"};
+                case "GERENCIA" -> new String[]{"DECIDIR_SOLICITUDES", "VER_REPORTES", "VER_EMPLEADOS"};
+                default -> new String[]{};
+            }
+        );
+    }
+
+    @Override
+    public AuthResponseDTO changePassword(ChangePasswordRequestDTO dto, String username) {
+
+        Usuario user = usuarioRepository.findByUsername(username);
+
+        if (user == null) {
+            return new AuthResponseDTO(false, "Usuario no encontrado");
+        }
+
+        if (!hashService.verificar(dto.getOldPassword(), user.getContrasenia())) {
+            return new AuthResponseDTO(false, "La contrasenia actual es incorrecta");
+        }
+
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
+        }
+
+        user.setContrasenia(hashService.encriptar(dto.getNewPassword()));
+        usuarioRepository.save(user);
+
+        return new AuthResponseDTO(true, "Contrasenia actualizada correctamente");
     }
 
     @Override

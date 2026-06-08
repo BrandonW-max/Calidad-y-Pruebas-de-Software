@@ -25,6 +25,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sangabriel_db_rrhh
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: jenner0125
+      JWT_SECRET: xJdVrQh3dvuoaAYZXC8cAj0s8mxpC/p202i0YYgPP4k=
     ports:
       - "8080:8080"
     depends_on:

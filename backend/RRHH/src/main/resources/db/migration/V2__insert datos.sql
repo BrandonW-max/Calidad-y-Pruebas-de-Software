@@ -130,7 +130,7 @@ INSERT INTO usuario(
 SELECT
     'admin.rrhh',
     'admin.rrhh@hospitalsangabriel.com',
-    '$2y$10$W.a0C2YO9qMRSElm6abDOeqfJv3cYLC8w5Ee1xdfihvOtywfq2xm6',
+    '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
     0,
     false,
     NULL,

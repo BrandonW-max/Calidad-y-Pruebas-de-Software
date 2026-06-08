@@ -140,7 +140,7 @@ public class RegistrarEmpleadoUseCase {
 
         usuario.setNombreUsuario(nombreUsuarioGenerado);
         usuario.setCorreoInst(correoInstitucionalGenerado);
-        usuario.setContrasenia(hashService.encriptar(dto.getContrasenia()));
+        usuario.setContrasenia(hashService.encriptar(dto.getNumeroDi()));
         usuario.setActivo(true);
         usuario.setDosfaActivo(false);
         usuario.setIdEmpleado(empleadoGuardado.getIdEmpleado());
