@@ -1,8 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 const NAV = {
   RRHH: {
-    icon: "🏢",
     title: "Panel RRHH",
     subtitle: "Recursos Humanos",
     themeClass: "sidebar-rrhh",
@@ -16,7 +16,6 @@ const NAV = {
     ],
   },
   EMPLEADO: {
-    icon: "👤",
     title: "Mi Portal",
     subtitle: "Portal del Empleado",
     themeClass: "sidebar-empleado",
@@ -27,7 +26,6 @@ const NAV = {
     ],
   },
   GERENCIA: {
-    icon: "👔",
     title: "Panel Gerencia",
     subtitle: "Gestión Ejecutiva",
     themeClass: "sidebar-gerencia",
@@ -47,7 +45,9 @@ export default function Sidebar({ rol }) {
   return (
     <aside className={`sidebar ${config.themeClass}`}>
       <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">{config.icon}</div>
+        <div className="sidebar-brand-icon">
+          <img src={logo} alt="Logo Hospital" className="sidebar-logo-img" />
+        </div>
         <div className="sidebar-brand-text">
           <h2>{config.title}</h2>
           <p>{config.subtitle}</p>

@@ -183,6 +183,88 @@ body { background: #f0f4f8; }
   gap: 6px;
 }
 
+/* ── FORGOT PASSWORD LINK ── */
+.login-forgot {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.login-forgot-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 0;
+  font-weight: 500;
+}
+
+.login-forgot-btn:hover { text-decoration: underline; color: #1d4ed8; }
+
+/* ── MODAL (login page) ── */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+}
+
+.login-modal-box {
+  background: white;
+  border-radius: 14px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+  animation: lm-in 0.18s ease-out;
+}
+
+@keyframes lm-in {
+  from { transform: translateY(-10px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1);         opacity: 1; }
+}
+
+.login-modal-box h3 { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+.login-modal-box > p { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5; }
+
+.login-modal-success {
+  background: #f0fdf4;
+  color: #14532d;
+  border-left: 4px solid #22c55e;
+  border-radius: 7px;
+  padding: 12px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.login-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.login-modal-btn-secondary {
+  padding: 11px 18px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.login-modal-btn-secondary:hover { background: #e2e8f0; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 680px) {
   .login-left { display: none; }

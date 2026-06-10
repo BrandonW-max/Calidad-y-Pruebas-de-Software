@@ -49,12 +49,17 @@ export default function SolicitudPermisos() {
     tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "",
   });
 
-  const [rechazoForm, setRechazoForm] = useState({ idSolicitud: null, respuesta: "" });
+  // Modals
+  const [modalObservar, setModalObservar]             = useState({ open: false, id: null, obs: "" });
+  const [modalEnviarGerencia, setModalEnviarGerencia] = useState({ open: false, id: null });
+  const [modalAprobar, setModalAprobar]               = useState({ open: false, id: null });
+  const [modalRechazo, setModalRechazo]               = useState({ open: false, id: null, respuesta: "" });
+  const [modalDetalle, setModalDetalle]               = useState(null);
 
   const estadoParaTab = {
-    pendientes: "PENDIENTE",
-    gerencia:   "PROCESADO",
-    historial:  "APROBADA",
+    pendientes:     "PENDIENTE",
+    gerencia:       "PROCESADO",
+    historial:      "APROBADA",
     misSolicitudes: "PENDIENTE",
   };
 
@@ -88,53 +93,61 @@ export default function SolicitudPermisos() {
     }
   };
 
-  const handleEnviarGerencia = async (idSolicitud) => {
-    setMensaje("");
+  // RRHH — Enviar a Gerencia (modal de confirmación)
+  const abrirEnviarGerencia = (id) => setModalEnviarGerencia({ open: true, id });
+  const confirmarEnviarGerencia = async () => {
     try {
-      await revisarSolicitudRRHH(idSolicitud, true, "");
+      await revisarSolicitudRRHH(modalEnviarGerencia.id, true, "");
       setMensaje("Solicitud enviada a Gerencia correctamente");
+      setModalEnviarGerencia({ open: false, id: null });
       cargarSolicitudes("PENDIENTE");
     } catch {
       setMensaje("Error al enviar la solicitud a Gerencia");
+      setModalEnviarGerencia({ open: false, id: null });
     }
   };
 
-  const handleObservar = async (idSolicitud) => {
-    const obs = prompt("Ingrese la observación para devolver al empleado:");
-    if (!obs) return;
+  // RRHH — Observar (modal)
+  const handleObservar = (id) => setModalObservar({ open: true, id, obs: "" });
+  const confirmarObservar = async () => {
+    if (!modalObservar.obs.trim()) return;
     try {
-      await revisarSolicitudRRHH(idSolicitud, false, obs);
+      await revisarSolicitudRRHH(modalObservar.id, false, modalObservar.obs);
       setMensaje("Solicitud devuelta al empleado con observación");
+      setModalObservar({ open: false, id: null, obs: "" });
       cargarSolicitudes("PENDIENTE");
     } catch {
       setMensaje("Error al observar la solicitud");
+      setModalObservar({ open: false, id: null, obs: "" });
     }
   };
 
-  const handleDecisionGerencia = async (idSolicitud, aprobado) => {
-    if (!aprobado) {
-      setRechazoForm({ idSolicitud, respuesta: "" });
-      return;
-    }
-    setMensaje("");
+  // Gerencia — Aprobar (modal de confirmación)
+  const handleAprobar = (id) => setModalAprobar({ open: true, id });
+  const confirmarAprobar = async () => {
     try {
-      await decidirSolicitudGerencia(idSolicitud, true, "");
+      await decidirSolicitudGerencia(modalAprobar.id, true, "");
       setMensaje("Solicitud aprobada correctamente. El saldo de vacaciones ha sido actualizado.");
+      setModalAprobar({ open: false, id: null });
       cargarSolicitudes("PROCESADO");
     } catch {
       setMensaje("Error al aprobar la solicitud");
+      setModalAprobar({ open: false, id: null });
     }
   };
 
-  const handleConfirmarRechazo = async (e) => {
-    e.preventDefault();
+  // Gerencia — Rechazar (modal con motivo)
+  const handleRechazar = (id) => setModalRechazo({ open: true, id, respuesta: "" });
+  const confirmarRechazo = async () => {
+    if (!modalRechazo.respuesta.trim()) return;
     try {
-      await decidirSolicitudGerencia(rechazoForm.idSolicitud, false, rechazoForm.respuesta);
+      await decidirSolicitudGerencia(modalRechazo.id, false, modalRechazo.respuesta);
       setMensaje("Solicitud rechazada. El empleado recibirá una notificación con el motivo.");
-      setRechazoForm({ idSolicitud: null, respuesta: "" });
+      setModalRechazo({ open: false, id: null, respuesta: "" });
       cargarSolicitudes("PROCESADO");
     } catch {
       setMensaje("Error al rechazar la solicitud");
+      setModalRechazo({ open: false, id: null, respuesta: "" });
     }
   };
 
@@ -144,7 +157,7 @@ export default function SolicitudPermisos() {
     return diff > 0 ? `${diff} día${diff > 1 ? "s" : ""}` : "—";
   };
 
-  /* ─── Tabla reutilizable para RRHH/Gerencia ─── */
+  /* ─── Tabla reutilizable ─── */
   const TablaSolicitudes = ({ cols, renderAcciones }) => (
     <div className="table-wrapper">
       {loading ? (
@@ -172,13 +185,22 @@ export default function SolicitudPermisos() {
                 <td>{s.fechaInicio}</td>
                 <td>{s.fechaFin}</td>
                 <td>{s.diasSolicitados}</td>
-                <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
+                <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.motivo}
+                </td>
                 <td>
                   <span className={`badge ${ESTADOS_BADGE[s.estado] ?? "badge-gray"}`}>
                     {ESTADOS_LABEL[s.estado] ?? s.estado}
                   </span>
                 </td>
-                {renderAcciones && <td style={{ display: "flex", gap: "6px" }}>{renderAcciones(s)}</td>}
+                {renderAcciones && (
+                  <td style={{ display: "flex", gap: "6px" }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setModalDetalle(s)}>
+                      🔍 Ver
+                    </button>
+                    {renderAcciones(s)}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -187,336 +209,427 @@ export default function SolicitudPermisos() {
     </div>
   );
 
-  /* ════════════════════════════════════════ */
-  /*  VISTA EMPLEADO                          */
-  /* ════════════════════════════════════════ */
-  if (rol === "EMPLEADO") {
-    return (
-      <div className="dashboard">
-        <Sidebar rol="EMPLEADO" />
-        <main className="main-content">
-          <header className="main-header header-empleado">
-            <div className="header-left">
-              <span className="page-breadcrumb">Mi Portal / Mis Solicitudes</span>
-              <h1>Solicitudes de Permisos y Vacaciones</h1>
-            </div>
-            <span className="role-pill role-pill-empleado">ECU-05</span>
-          </header>
-
-          {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-          {error   && <div className="alert alert-warning">⚠️ {error}</div>}
-
-          <div className="tab-bar">
-            <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
-              ➕ Nueva Solicitud
-            </button>
-            <button className={`tab ${tabActiva === "misSolicitudes" ? "active" : ""}`} onClick={() => setTabActiva("misSolicitudes")}>
-              📋 Mis Solicitudes
-            </button>
+  /* ─── Formulario nueva solicitud (reutilizable) ─── */
+  const FormSolicitud = ({ titulo, alerta }) => (
+    <div className="section-card">
+      <h2>{titulo}</h2>
+      <div className="alert alert-info">{alerta}</div>
+      <form onSubmit={handleNuevaSolicitud}>
+        <div className="form-grid">
+          <div className="form-group">
+            <label>Tipo de Solicitud *</label>
+            <select
+              value={nuevaForm.tipoSolicitud}
+              onChange={(e) => setNuevaForm({ ...nuevaForm, tipoSolicitud: e.target.value })}
+              required
+            >
+              <option value="">Seleccione una opción</option>
+              <option value="VACACIONES">Vacaciones</option>
+              <option value="PERMISO_PERSONAL">Permiso personal</option>
+              <option value="PERMISO_MEDICO">Permiso médico</option>
+              <option value="OTROS">Otros</option>
+            </select>
           </div>
-
-          {tabActiva === "nueva" && (
-            <div className="section-card">
-              <h2>➕ Registrar Nueva Solicitud</h2>
-              <div className="alert alert-info">
-                Complete todos los campos. Su solicitud pasará primero por validación de RRHH y luego será evaluada por Gerencia.
-              </div>
-              <form onSubmit={handleNuevaSolicitud}>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Tipo de Solicitud *</label>
-                    <select
-                      value={nuevaForm.tipoSolicitud}
-                      onChange={(e) => setNuevaForm({ ...nuevaForm, tipoSolicitud: e.target.value })}
-                      required
-                    >
-                      <option value="">Seleccione una opción</option>
-                      <option value="VACACIONES">Vacaciones</option>
-                      <option value="PERMISO_PERSONAL">Permiso personal</option>
-                      <option value="PERMISO_MEDICO">Permiso médico</option>
-                      <option value="OTROS">Otros</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Fecha de Inicio *</label>
-                    <input
-                      type="date"
-                      value={nuevaForm.fechaInicio}
-                      onChange={(e) => setNuevaForm({ ...nuevaForm, fechaInicio: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Fecha de Fin *</label>
-                    <input
-                      type="date"
-                      value={nuevaForm.fechaFin}
-                      onChange={(e) => setNuevaForm({ ...nuevaForm, fechaFin: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Días Totales</label>
-                    <input value={diasSolicitados()} readOnly style={{ background: "#f8fafc", cursor: "default" }} />
-                  </div>
-                  <div className="form-group form-full">
-                    <label>Motivo de la solicitud *</label>
-                    <textarea
-                      value={nuevaForm.motivo}
-                      onChange={(e) => setNuevaForm({ ...nuevaForm, motivo: e.target.value })}
-                      placeholder="Describa el motivo de su solicitud..."
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">📤 Registrar Solicitud</button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setNuevaForm({ tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "" })}
-                  >
-                    Limpiar
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {tabActiva === "misSolicitudes" && (
-            <div className="section-card">
-              <h2>📋 Mis Solicitudes</h2>
-              <TablaSolicitudes
-                cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado"]}
-                renderAcciones={null}
-              />
-            </div>
-          )}
-        </main>
-      </div>
-    );
-  }
-
-  /* ════════════════════════════════════════ */
-  /*  VISTA GERENCIA                          */
-  /* ════════════════════════════════════════ */
-  if (rol === "GERENCIA") {
-    return (
-      <div className="dashboard">
-        <Sidebar rol="GERENCIA" />
-        <main className="main-content">
-          <header className="main-header header-gerencia">
-            <div className="header-left">
-              <span className="page-breadcrumb">Gerencia / Solicitudes</span>
-              <h1>Decisión de Solicitudes</h1>
-            </div>
-            <span className="role-pill role-pill-gerencia">ECU-05</span>
-          </header>
-
-          {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-          {error   && <div className="alert alert-warning">⚠️ {error}</div>}
-
-          <div className="tab-bar">
-            <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
-              ⏳ Por Aprobar
-            </button>
-            <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
-              📋 Historial
-            </button>
+          <div className="form-group">
+            <label>Fecha de Inicio *</label>
+            <input
+              type="date"
+              value={nuevaForm.fechaInicio}
+              onChange={(e) => setNuevaForm({ ...nuevaForm, fechaInicio: e.target.value })}
+              required
+            />
           </div>
+          <div className="form-group">
+            <label>Fecha de Fin *</label>
+            <input
+              type="date"
+              value={nuevaForm.fechaFin}
+              onChange={(e) => setNuevaForm({ ...nuevaForm, fechaFin: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Días Totales</label>
+            <input value={diasSolicitados()} readOnly style={{ background: "#f8fafc", cursor: "default" }} />
+          </div>
+          <div className="form-group form-full">
+            <label>Motivo de la solicitud *</label>
+            <textarea
+              value={nuevaForm.motivo}
+              onChange={(e) => setNuevaForm({ ...nuevaForm, motivo: e.target.value })}
+              placeholder="Describa el motivo de su solicitud..."
+              required
+            />
+          </div>
+        </div>
+        <div className="form-actions">
+          <button type="submit" className="btn btn-primary">📤 Registrar Solicitud</button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setNuevaForm({ tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "" })}
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 
-          {tabActiva === "gerencia" && (
-            <div className="section-card">
-              <h2>⏳ Solicitudes Enviadas por RRHH — Requieren su Decisión</h2>
-              <div className="alert alert-info">
-                Estas solicitudes ya fueron validadas por RRHH. Revise la información del empleado y tome su decisión.
-                Al rechazar, deberá ingresar el motivo que será notificado al empleado.
-              </div>
-              <TablaSolicitudes
-                cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Decisión"]}
-                renderAcciones={(s) => (
-                  <>
-                    <button className="btn btn-success btn-sm" onClick={() => handleDecisionGerencia(s.idSolicitud, true)}>
-                      ✅ Aprobar
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDecisionGerencia(s.idSolicitud, false)}>
-                      ❌ Rechazar
-                    </button>
-                  </>
-                )}
-              />
+  /* ─── Config de encabezado por rol ─── */
+  const headerCfg = {
+    EMPLEADO: { breadcrumb: "Mi Portal / Mis Solicitudes",                    title: "Solicitudes de Permisos y Vacaciones", cls: "header-empleado", pill: "role-pill-empleado" },
+    GERENCIA: { breadcrumb: "Gerencia / Solicitudes",                         title: "Decisión de Solicitudes",             cls: "header-gerencia", pill: "role-pill-gerencia" },
+    RRHH:     { breadcrumb: "RRHH / Solicitudes de Permisos y Vacaciones",    title: "Gestión de Solicitudes",              cls: "header-rrhh",     pill: "role-pill-rrhh"     },
+  }[rol];
 
-              {rechazoForm.idSolicitud && (
-                <form onSubmit={handleConfirmarRechazo} style={{ marginTop: "20px" }}>
-                  <hr className="divider" />
-                  <h2>❌ Motivo de Rechazo — Solicitud #{rechazoForm.idSolicitud}</h2>
-                  <div className="alert alert-danger">
-                    Este motivo será notificado automáticamente al empleado.
-                  </div>
-                  <div className="form-grid">
-                    <div className="form-group form-full">
-                      <label>Ingrese el motivo de rechazo *</label>
-                      <textarea
-                        value={rechazoForm.respuesta}
-                        onChange={(e) => setRechazoForm({ ...rechazoForm, respuesta: e.target.value })}
-                        placeholder="Explique el motivo del rechazo..."
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="form-actions">
-                    <button type="submit" className="btn btn-danger">Confirmar Rechazo</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setRechazoForm({ idSolicitud: null, respuesta: "" })}>
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          {tabActiva === "historial" && (
-            <div className="section-card">
-              <h2>📋 Historial de Solicitudes Aprobadas</h2>
-              <TablaSolicitudes
-                cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado"]}
-                renderAcciones={null}
-              />
-            </div>
-          )}
-        </main>
-      </div>
-    );
-  }
-
-  /* ════════════════════════════════════════ */
-  /*  VISTA RRHH (por defecto)               */
-  /* ════════════════════════════════════════ */
   return (
     <div className="dashboard">
-      <Sidebar rol="RRHH" />
+      <Sidebar rol={rol} />
+
       <main className="main-content">
-        <header className="main-header header-rrhh">
+
+        <header className={`main-header ${headerCfg.cls}`}>
           <div className="header-left">
-            <span className="page-breadcrumb">RRHH / Solicitudes de Permisos y Vacaciones</span>
-            <h1>Gestión de Solicitudes</h1>
+            <span className="page-breadcrumb">{headerCfg.breadcrumb}</span>
+            <h1>{headerCfg.title}</h1>
           </div>
-          <span className="role-pill role-pill-rrhh">ECU-05</span>
+          <span className={`role-pill ${headerCfg.pill}`}>ECU-05</span>
         </header>
 
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <div className="tab-bar">
-          <button className={`tab ${tabActiva === "pendientes" ? "active" : ""}`} onClick={() => setTabActiva("pendientes")}>
-            📥 Pendientes (RRHH)
-          </button>
-          <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
-            ➕ Nueva Solicitud
-          </button>
-          <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
-            📤 Enviadas a Gerencia
-          </button>
-          <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
-            📋 Historial
-          </button>
-        </div>
-
-        {/* ── PENDIENTES RRHH ── */}
-        {tabActiva === "pendientes" && (
-          <div className="section-card">
-            <h2>📥 Solicitudes Pendientes de Validación RRHH</h2>
-            <div className="alert alert-info">
-              Valide los datos de cada solicitud. Si todo es correcto, envíe a Gerencia. Si hay inconsistencias, devuelva al empleado con una observación.
+        {/* ══ VISTA EMPLEADO ══ */}
+        {rol === "EMPLEADO" && (
+          <>
+            <div className="tab-bar">
+              <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
+                ➕ Nueva Solicitud
+              </button>
+              <button className={`tab ${tabActiva === "misSolicitudes" ? "active" : ""}`} onClick={() => setTabActiva("misSolicitudes")}>
+                📋 Mis Solicitudes
+              </button>
             </div>
-            <TablaSolicitudes
-              cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Acción RRHH"]}
-              renderAcciones={(s) => (
-                <>
-                  <button className="btn btn-primary btn-sm" onClick={() => handleEnviarGerencia(s.idSolicitud)}>
-                    📤 Enviar a Gerencia
-                  </button>
-                  <button className="btn btn-warning btn-sm" onClick={() => handleObservar(s.idSolicitud)}>
-                    👁 Observar
-                  </button>
-                </>
-              )}
-            />
+
+            {tabActiva === "nueva" && (
+              <FormSolicitud
+                titulo="➕ Registrar Nueva Solicitud"
+                alerta="Complete todos los campos. Su solicitud pasará primero por validación de RRHH y luego será evaluada por Gerencia."
+              />
+            )}
+
+            {tabActiva === "misSolicitudes" && (
+              <div className="section-card">
+                <h2>📋 Mis Solicitudes</h2>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Acciones"]}
+                  renderAcciones={() => null}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ VISTA GERENCIA ══ */}
+        {rol === "GERENCIA" && (
+          <>
+            <div className="tab-bar">
+              <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
+                ⏳ Por Aprobar
+              </button>
+              <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
+                📋 Historial
+              </button>
+            </div>
+
+            {tabActiva === "gerencia" && (
+              <div className="section-card">
+                <h2>⏳ Solicitudes Enviadas por RRHH — Requieren su Decisión</h2>
+                <div className="alert alert-info">
+                  Estas solicitudes ya fueron validadas por RRHH. Revise el detalle de cada una y tome su decisión.
+                  Al rechazar, deberá ingresar el motivo que será notificado al empleado.
+                </div>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Decisión"]}
+                  renderAcciones={(s) => (
+                    <>
+                      <button className="btn btn-success btn-sm" onClick={() => handleAprobar(s.idSolicitud)}>
+                        ✅ Aprobar
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleRechazar(s.idSolicitud)}>
+                        ❌ Rechazar
+                      </button>
+                    </>
+                  )}
+                />
+              </div>
+            )}
+
+            {tabActiva === "historial" && (
+              <div className="section-card">
+                <h2>📋 Historial de Solicitudes Resueltas</h2>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
+                  renderAcciones={() => null}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ VISTA RRHH ══ */}
+        {rol === "RRHH" && (
+          <>
+            <div className="tab-bar">
+              <button className={`tab ${tabActiva === "pendientes" ? "active" : ""}`} onClick={() => setTabActiva("pendientes")}>
+                📥 Pendientes (RRHH)
+              </button>
+              <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
+                ➕ Nueva Solicitud
+              </button>
+              <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
+                📤 Enviadas a Gerencia
+              </button>
+              <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
+                📋 Historial
+              </button>
+            </div>
+
+            {tabActiva === "pendientes" && (
+              <div className="section-card">
+                <h2>📥 Solicitudes Pendientes de Validación RRHH</h2>
+                <div className="alert alert-info">
+                  Valide los datos de cada solicitud. Si todo es correcto, envíe a Gerencia.
+                  Si hay inconsistencias, devuelva al empleado con una observación.
+                </div>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Acción RRHH"]}
+                  renderAcciones={(s) => (
+                    <>
+                      <button className="btn btn-primary btn-sm" onClick={() => abrirEnviarGerencia(s.idSolicitud)}>
+                        📤 Enviar a Gerencia
+                      </button>
+                      <button className="btn btn-warning btn-sm" onClick={() => handleObservar(s.idSolicitud)}>
+                        👁 Observar
+                      </button>
+                    </>
+                  )}
+                />
+              </div>
+            )}
+
+            {tabActiva === "nueva" && (
+              <FormSolicitud
+                titulo="➕ Registrar Nueva Solicitud"
+                alerta="Registre una solicitud en nombre de un empleado. El estado inicial será PENDIENTE para revisión de RRHH."
+              />
+            )}
+
+            {tabActiva === "gerencia" && (
+              <div className="section-card">
+                <h2>📤 Solicitudes Enviadas a Gerencia — En espera de decisión</h2>
+                <div className="alert alert-info">
+                  Estas solicitudes ya fueron validadas por RRHH y están pendientes de la decisión de Gerencia.
+                </div>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
+                  renderAcciones={() => null}
+                />
+              </div>
+            )}
+
+            {tabActiva === "historial" && (
+              <div className="section-card">
+                <h2>📋 Historial de Solicitudes Aprobadas</h2>
+                <TablaSolicitudes
+                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
+                  renderAcciones={() => null}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ MODAL: VER DETALLE ══ */}
+        {modalDetalle && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalDetalle(null)}>
+            <div className="modal-box">
+              <div className="modal-header">
+                <div>
+                  <h3>📋 Detalle de Solicitud #{modalDetalle.idSolicitud}</h3>
+                  <p>{modalDetalle.nombreEmpleado ?? `Empleado ${modalDetalle.idEmpleado}`}</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalDetalle(null)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Tipo</label>
+                    <p style={{ fontWeight: 600 }}>{modalDetalle.tipoSolicitud?.replace("_", " ")}</p>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Estado</label>
+                    <span className={`badge ${ESTADOS_BADGE[modalDetalle.estado] ?? "badge-gray"}`}>
+                      {ESTADOS_LABEL[modalDetalle.estado] ?? modalDetalle.estado}
+                    </span>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Fecha Inicio</label>
+                    <p style={{ fontWeight: 600 }}>{modalDetalle.fechaInicio}</p>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Fecha Fin</label>
+                    <p style={{ fontWeight: 600 }}>{modalDetalle.fechaFin}</p>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Días Solicitados</label>
+                    <p style={{ fontWeight: 700, fontSize: "20px", color: "#2563eb" }}>{modalDetalle.diasSolicitados}</p>
+                  </div>
+                </div>
+                <div className="form-group" style={{ marginTop: "8px" }}>
+                  <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Motivo</label>
+                  <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "12px 14px", fontSize: "13.5px", color: "#1e293b", border: "1px solid #e2e8f0" }}>
+                    {modalDetalle.motivo || "—"}
+                  </div>
+                </div>
+                {modalDetalle.observacionRrhh && (
+                  <div className="alert alert-warning" style={{ marginTop: "12px" }}>
+                    <strong>Observación RRHH:</strong> {modalDetalle.observacionRrhh}
+                  </div>
+                )}
+                {modalDetalle.respuestaGerencia && (
+                  <div className="alert alert-info" style={{ marginTop: "12px" }}>
+                    <strong>Respuesta Gerencia:</strong> {modalDetalle.respuestaGerencia}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalDetalle(null)}>Cerrar</button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ── NUEVA SOLICITUD ── */}
-        {tabActiva === "nueva" && (
-          <div className="section-card">
-            <h2>➕ Registrar Nueva Solicitud</h2>
-            <div className="alert alert-info">
-              Registre una solicitud en nombre de un empleado. El estado inicial será PENDIENTE para revisión de RRHH.
-            </div>
-            <form onSubmit={handleNuevaSolicitud}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Tipo de Solicitud *</label>
-                  <select
-                    value={nuevaForm.tipoSolicitud}
-                    onChange={(e) => setNuevaForm({ ...nuevaForm, tipoSolicitud: e.target.value })}
-                    required
-                  >
-                    <option value="">Seleccione una opción</option>
-                    <option value="VACACIONES">Vacaciones</option>
-                    <option value="PERMISO_PERSONAL">Permiso personal</option>
-                    <option value="PERMISO_MEDICO">Permiso médico</option>
-                    <option value="OTROS">Otros</option>
-                  </select>
+        {/* ══ MODAL: OBSERVAR ══ */}
+        {modalObservar.open && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalObservar({ open: false, id: null, obs: "" })}>
+            <div className="modal-box">
+              <div className="modal-header">
+                <div>
+                  <h3>👁 Devolver con Observación</h3>
+                  <p>Solicitud #{modalObservar.id} — será devuelta al empleado.</p>
                 </div>
+                <button className="modal-close" onClick={() => setModalObservar({ open: false, id: null, obs: "" })}>×</button>
+              </div>
+              <div className="modal-body">
                 <div className="form-group">
-                  <label>Fecha de Inicio *</label>
-                  <input type="date" value={nuevaForm.fechaInicio} onChange={(e) => setNuevaForm({ ...nuevaForm, fechaInicio: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Fecha de Fin *</label>
-                  <input type="date" value={nuevaForm.fechaFin} onChange={(e) => setNuevaForm({ ...nuevaForm, fechaFin: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Días Totales</label>
-                  <input value={diasSolicitados()} readOnly style={{ background: "#f8fafc", cursor: "default" }} />
-                </div>
-                <div className="form-group form-full">
-                  <label>Motivo *</label>
-                  <textarea value={nuevaForm.motivo} onChange={(e) => setNuevaForm({ ...nuevaForm, motivo: e.target.value })} placeholder="Describa el motivo..." required />
+                  <label>Motivo de la observación *</label>
+                  <textarea
+                    rows={3}
+                    value={modalObservar.obs}
+                    onChange={(e) => setModalObservar({ ...modalObservar, obs: e.target.value })}
+                    placeholder="Explique qué debe corregir o completar el empleado..."
+                    autoFocus
+                  />
                 </div>
               </div>
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary">📤 Registrar Solicitud</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setNuevaForm({ tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "" })}>Limpiar</button>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalObservar({ open: false, id: null, obs: "" })}>Cancelar</button>
+                <button className="btn btn-warning" onClick={confirmarObservar} disabled={!modalObservar.obs.trim()}>
+                  👁 Enviar Observación
+                </button>
               </div>
-            </form>
-          </div>
-        )}
-
-        {/* ── ENVIADAS A GERENCIA ── */}
-        {tabActiva === "gerencia" && (
-          <div className="section-card">
-            <h2>📤 Solicitudes Enviadas a Gerencia — En espera de decisión</h2>
-            <div className="alert alert-info">
-              Estas solicitudes ya fueron validadas por RRHH y están pendientes de la decisión de Gerencia.
             </div>
-            <TablaSolicitudes
-              cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado"]}
-              renderAcciones={null}
-            />
           </div>
         )}
 
-        {/* ── HISTORIAL ── */}
-        {tabActiva === "historial" && (
-          <div className="section-card">
-            <h2>📋 Historial de Solicitudes Aprobadas</h2>
-            <TablaSolicitudes
-              cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado"]}
-              renderAcciones={null}
-            />
+        {/* ══ MODAL: ENVIAR A GERENCIA ══ */}
+        {modalEnviarGerencia.open && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalEnviarGerencia({ open: false, id: null })}>
+            <div className="modal-box">
+              <div className="modal-header">
+                <div>
+                  <h3>📤 Enviar a Gerencia</h3>
+                  <p>Solicitud #{modalEnviarGerencia.id}</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalEnviarGerencia({ open: false, id: null })}>×</button>
+              </div>
+              <div className="modal-body">
+                <p style={{ fontSize: "14px", color: "#475569" }}>
+                  ¿Desea enviar esta solicitud a Gerencia para su aprobación?
+                  La solicitud cambiará de estado a <strong>"Enviado a Gerencia"</strong>.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalEnviarGerencia({ open: false, id: null })}>Cancelar</button>
+                <button className="btn btn-primary" onClick={confirmarEnviarGerencia}>📤 Confirmar Envío</button>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* ══ MODAL: APROBAR ══ */}
+        {modalAprobar.open && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalAprobar({ open: false, id: null })}>
+            <div className="modal-box">
+              <div className="modal-header">
+                <div>
+                  <h3>✅ Aprobar Solicitud</h3>
+                  <p>Solicitud #{modalAprobar.id}</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalAprobar({ open: false, id: null })}>×</button>
+              </div>
+              <div className="modal-body">
+                <p style={{ fontSize: "14px", color: "#475569" }}>
+                  ¿Confirma la aprobación de esta solicitud?
+                  El saldo de vacaciones del empleado se actualizará automáticamente y recibirá una notificación.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalAprobar({ open: false, id: null })}>Cancelar</button>
+                <button className="btn btn-success" onClick={confirmarAprobar}>✅ Confirmar Aprobación</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ MODAL: RECHAZAR ══ */}
+        {modalRechazo.open && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalRechazo({ open: false, id: null, respuesta: "" })}>
+            <div className="modal-box">
+              <div className="modal-header">
+                <div>
+                  <h3>❌ Rechazar Solicitud</h3>
+                  <p>Solicitud #{modalRechazo.id} — el empleado recibirá el motivo.</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalRechazo({ open: false, id: null, respuesta: "" })}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-danger" style={{ marginBottom: "14px" }}>
+                  Este motivo será notificado automáticamente al empleado vía el sistema.
+                </div>
+                <div className="form-group">
+                  <label>Motivo de rechazo *</label>
+                  <textarea
+                    rows={3}
+                    value={modalRechazo.respuesta}
+                    onChange={(e) => setModalRechazo({ ...modalRechazo, respuesta: e.target.value })}
+                    placeholder="Explique el motivo del rechazo..."
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalRechazo({ open: false, id: null, respuesta: "" })}>Cancelar</button>
+                <button className="btn btn-danger" onClick={confirmarRechazo} disabled={!modalRechazo.respuesta.trim()}>
+                  ❌ Confirmar Rechazo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );

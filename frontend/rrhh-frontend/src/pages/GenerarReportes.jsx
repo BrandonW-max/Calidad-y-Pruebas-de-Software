@@ -24,6 +24,7 @@ export default function GenerarReportes() {
   const [loading, setLoading]       = useState(false);
   const [mensaje, setMensaje]       = useState("");
   const [error, setError]           = useState("");
+  const [modalReporte, setModalReporte] = useState(false);
 
   const f    = filtros[tipoActivo];
   const setF = (campo, valor) => setFiltros({ ...filtros, [tipoActivo]: { ...f, [campo]: valor } });
@@ -40,6 +41,7 @@ export default function GenerarReportes() {
       const res  = await generarReporte(tipoActivo, f, null);
       const data = await res.json();
       setResultado(data);
+      setModalReporte(true);
       setMensaje("Reporte generado correctamente");
     } catch {
       setError("No se encontraron datos para los filtros seleccionados. Verifique los criterios e intente nuevamente.");
@@ -221,13 +223,18 @@ export default function GenerarReportes() {
           </form>
         </div>
 
-        {/* ── RESULTADO ── */}
+        {/* ── RESULTADO (resumen + botón ver) ── */}
         {resultado && (
           <div className="section-card">
-            <h2>📋 Resultado del Reporte — {tipoInfo?.label}</h2>
+            <div className="section-header">
+              <h2>✅ Reporte Generado — {tipoInfo?.label}</h2>
+              <button className="btn btn-primary" onClick={() => setModalReporte(true)}>
+                📊 Ver Reporte Completo
+              </button>
+            </div>
 
             {resultado.resumen && (
-              <div className="stats-row" style={{ marginBottom: "20px" }}>
+              <div className="stats-row">
                 {Object.entries(resultado.resumen).map(([k, v]) => (
                   <div className="stat-box accent-blue" key={k}>
                     <div className="stat-info">
@@ -239,43 +246,55 @@ export default function GenerarReportes() {
               </div>
             )}
 
-            {resultado.datos && resultado.datos.length > 0 ? (
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>{Object.keys(resultado.datos[0]).map((col) => <th key={col}>{col}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {resultado.datos.map((fila, i) => (
-                      <tr key={i}>
-                        {Object.values(fila).map((val, j) => <td key={j}>{val ?? "—"}</td>)}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-state-icon">🔍</div>
-                <p>No hay datos para mostrar con los filtros seleccionados</p>
-              </div>
-            )}
-
-            <hr className="divider" />
-            <h2>⬇️ Exportar Reporte</h2>
-            <div className="alert alert-info" style={{ marginBottom: "14px" }}>
-              Seleccione el formato de exportación. El archivo se descargará automáticamente.
+            <div className="form-actions" style={{ marginTop: "16px" }}>
+              <button className="btn btn-danger"    onClick={() => handleExportar("PDF")}>📄 Exportar PDF</button>
+              <button className="btn btn-success"   onClick={() => handleExportar("XLSX")}>📊 Exportar Excel</button>
+              <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 Exportar CSV</button>
+              <button className="btn btn-secondary" onClick={limpiar}>Nueva Consulta</button>
             </div>
-            <div className="form-actions">
-              <button className="btn btn-danger" onClick={() => handleExportar("PDF")}>
-                📄 Exportar PDF
-              </button>
-              <button className="btn btn-success" onClick={() => handleExportar("XLSX")}>
-                📊 Exportar Excel
-              </button>
-              <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>
-                📑 Exportar CSV
-              </button>
+          </div>
+        )}
+
+        {/* ── MODAL REPORTE ── */}
+        {modalReporte && resultado && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalReporte(false)}>
+            <div className="modal-box modal-box-wide">
+              <div className="modal-header">
+                <div>
+                  <h3>📋 Reporte de {tipoInfo?.label}</h3>
+                  <p>{resultado.datos?.length ?? 0} registros encontrados</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalReporte(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {resultado.datos && resultado.datos.length > 0 ? (
+                  <div className="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>{Object.keys(resultado.datos[0]).map((col) => <th key={col}>{col}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {resultado.datos.map((fila, i) => (
+                          <tr key={i}>
+                            {Object.values(fila).map((val, j) => <td key={j}>{val ?? "—"}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">🔍</div>
+                    <p>No hay datos para mostrar con los filtros seleccionados</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalReporte(false)}>Cerrar</button>
+                <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 CSV</button>
+                <button className="btn btn-success"   onClick={() => handleExportar("XLSX")}>📊 Excel</button>
+                <button className="btn btn-danger"    onClick={() => handleExportar("PDF")}>📄 PDF</button>
+              </div>
             </div>
           </div>
         )}

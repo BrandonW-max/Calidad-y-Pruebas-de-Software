@@ -6,6 +6,7 @@ import {
   buscarEmpleados,
   buscarEmpleadosAvanzado,
   registrarEmpleado,
+  actualizarEmpleado,
   desactivarEmpleado,
   reactivarEmpleado,
   registrarSancion,
@@ -34,6 +35,10 @@ export default function GestionEmpleados() {
   const [form, setForm]           = useState(FORM_VACIO);
   const [sancionForm, setSancionForm] = useState({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
   const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
+
+  const [modalDesactivar, setModalDesactivar] = useState({ open: false, id: null, motivo: "" });
+  const [modalReactivar,  setModalReactivar]  = useState({ open: false, id: null });
+  const [modalEditar, setModalEditar]         = useState(null);
 
   useEffect(() => { cargarEmpleados(); }, []);
 
@@ -89,25 +94,53 @@ export default function GestionEmpleados() {
     }
   };
 
-  const handleDesactivar = async (id) => {
-    const motivo = prompt("Ingrese el motivo de desactivación:");
-    if (!motivo) return;
+  const handleDesactivar = (id) => setModalDesactivar({ open: true, id, motivo: "" });
+
+  const confirmarDesactivar = async () => {
+    if (!modalDesactivar.motivo.trim()) return;
     try {
-      await desactivarEmpleado(id, motivo);
+      await desactivarEmpleado(modalDesactivar.id, modalDesactivar.motivo);
       setMensaje("Empleado desactivado correctamente");
+      setModalDesactivar({ open: false, id: null, motivo: "" });
       cargarEmpleados();
     } catch {
       setMensaje("Error al desactivar el empleado");
+      setModalDesactivar({ open: false, id: null, motivo: "" });
     }
   };
 
-  const handleReactivar = async (id) => {
+  const handleReactivar = (id) => setModalReactivar({ open: true, id });
+
+  const confirmarReactivar = async () => {
     try {
-      await reactivarEmpleado(id, "Reactivación manual");
+      await reactivarEmpleado(modalReactivar.id, "Reactivación manual");
       setMensaje("Empleado reactivado correctamente");
+      setModalReactivar({ open: false, id: null });
       cargarEmpleados();
     } catch {
       setMensaje("Error al reactivar el empleado");
+      setModalReactivar({ open: false, id: null });
+    }
+  };
+
+  const handleGuardarEdicion = async (e) => {
+    e.preventDefault();
+    if (!modalEditar) return;
+    try {
+      await actualizarEmpleado(modalEditar.idEmpleado, {
+        cargo: modalEditar.cargo,
+        correo: modalEditar.correo,
+        telefono: modalEditar.telefono,
+        direccion: modalEditar.direccion,
+        tipoContrato: modalEditar.tipoContrato,
+        sueldo: parseFloat(modalEditar.sueldo),
+        idDpto: parseInt(modalEditar.idDpto),
+      });
+      setMensaje("Datos del empleado actualizados correctamente");
+      setModalEditar(null);
+      cargarEmpleados();
+    } catch {
+      setMensaje("Error al actualizar el empleado. Verifique los datos.");
     }
   };
 
@@ -238,7 +271,10 @@ export default function GestionEmpleados() {
                             {emp.estado}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ display: "flex", gap: "6px" }}>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setModalEditar({ ...emp })}>
+                            ✏️ Editar
+                          </button>
                           {emp.estado === "ACTIVO" ? (
                             <button className="btn btn-danger btn-sm" onClick={() => handleDesactivar(emp.idEmpleado)}>
                               Desactivar
@@ -457,6 +493,128 @@ export default function GestionEmpleados() {
           </div>
         )}
       </main>
+
+      {/* ── MODAL EDITAR ── */}
+      {modalEditar && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalEditar(null)}>
+          <div className="modal-box modal-box-wide">
+            <div className="modal-header">
+              <div>
+                <h3>✏️ Editar Empleado</h3>
+                <p>{modalEditar.apellidos}, {modalEditar.nombres} — {modalEditar.numeroDi}</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalEditar(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="alert alert-info" style={{ marginBottom: "16px" }}>
+                Los campos DNI, nombres y apellidos no son editables según política del sistema.
+              </div>
+              <form id="form-editar" onSubmit={handleGuardarEdicion}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Cargo</label>
+                    <input value={modalEditar.cargo ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, cargo: e.target.value })} placeholder="Cargo actual" />
+                  </div>
+                  <div className="form-group">
+                    <label>Tipo de Contrato</label>
+                    <select value={modalEditar.tipoContrato ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, tipoContrato: e.target.value })}>
+                      <option value="">Seleccione</option>
+                      <option value="PLAZO_FIJO">Plazo fijo</option>
+                      <option value="INDEFINIDO">Indefinido</option>
+                      <option value="SERVICIOS">Por servicio</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Sueldo Base (S/)</label>
+                    <input type="number" step="0.01" min="0" value={modalEditar.sueldo ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, sueldo: e.target.value })} placeholder="0.00" />
+                  </div>
+                  <div className="form-group">
+                    <label>ID Departamento</label>
+                    <input type="number" value={modalEditar.idDpto ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, idDpto: e.target.value })} placeholder="Ej: 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" value={modalEditar.correo ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, correo: e.target.value })} placeholder="correo@ejemplo.com" />
+                  </div>
+                  <div className="form-group">
+                    <label>Teléfono</label>
+                    <input value={modalEditar.telefono ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, telefono: e.target.value })} placeholder="999 999 999" />
+                  </div>
+                  <div className="form-group form-full">
+                    <label>Dirección</label>
+                    <input value={modalEditar.direccion ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, direccion: e.target.value })} placeholder="Dirección del empleado" />
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalEditar(null)}>Cancelar</button>
+              <button className="btn btn-success" type="submit" form="form-editar">💾 Guardar Cambios</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DESACTIVAR ── */}
+      {modalDesactivar.open && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>Desactivar Empleado</h3>
+                <p>Esta acción bloqueará el acceso del empleado al sistema.</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalDesactivar({ open: false, id: null, motivo: "" })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="alert alert-warning" style={{ marginBottom: "14px" }}>
+                ⚠️ El historial del empleado se conservará. El acceso al sistema quedará bloqueado durante el período de desactivación.
+              </div>
+              <div className="form-group">
+                <label>Motivo de desactivación *</label>
+                <textarea
+                  rows={3}
+                  value={modalDesactivar.motivo}
+                  onChange={(e) => setModalDesactivar({ ...modalDesactivar, motivo: e.target.value })}
+                  placeholder="Describa el motivo de la desactivación..."
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalDesactivar({ open: false, id: null, motivo: "" })}>Cancelar</button>
+              <button className="btn btn-danger" onClick={confirmarDesactivar} disabled={!modalDesactivar.motivo.trim()}>
+                Confirmar Desactivación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL REACTIVAR ── */}
+      {modalReactivar.open && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>Reactivar Empleado</h3>
+                <p>El empleado recuperará acceso al sistema.</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalReactivar({ open: false, id: null })}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: "14px", color: "#475569" }}>
+                ¿Confirma la reactivación del empleado? Recuperará acceso al sistema con su rol asignado previamente.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalReactivar({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-success" onClick={confirmarReactivar}>✅ Confirmar Reactivación</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

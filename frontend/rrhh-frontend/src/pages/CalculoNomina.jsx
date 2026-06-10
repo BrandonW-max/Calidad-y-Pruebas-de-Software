@@ -9,6 +9,8 @@ export default function CalculoNomina() {
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error, setError]       = useState("");
+  const [modalDetalle, setModalDetalle] = useState(null);
+  const [modalEmail, setModalEmail]     = useState(null);
 
   const totales = nominas.reduce(
     (acc, n) => ({
@@ -225,10 +227,13 @@ export default function CalculoNomina() {
                             <span className="badge badge-info">{n.estadoPago ?? "Calculada"}</span>
                           </td>
                           <td style={{ display: "flex", gap: "6px" }}>
+                            <button className="btn btn-purple btn-sm" onClick={() => setModalDetalle(n)}>
+                              🔍 Ver
+                            </button>
                             <button className="btn btn-secondary btn-sm" onClick={() => handleDescargar(n.idNomina)}>
                               📄 PDF
                             </button>
-                            <button className="btn btn-info btn-sm" onClick={() => handleEnviarComprobante(n.idNomina)}>
+                            <button className="btn btn-info btn-sm" onClick={() => setModalEmail(n.idNomina)}>
                               ✉️ Email
                             </button>
                           </td>
@@ -250,6 +255,123 @@ export default function CalculoNomina() {
           </>
         )}
       </main>
+
+      {/* ── MODAL DETALLE NÓMINA ── */}
+      {modalDetalle && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalDetalle(null)}>
+          <div className="modal-box modal-box-wide">
+            <div className="modal-header">
+              <div>
+                <h3>📄 Detalle de Nómina — {modalDetalle.nombreEmpleado}</h3>
+                <p>Período: {modalDetalle.periodo} · Estado: {modalDetalle.estadoPago ?? "Calculada"}</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalDetalle(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="stats-row" style={{ marginBottom: "20px" }}>
+                <div className="stat-box accent-blue">
+                  <div className="stat-info">
+                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoBase ?? 0).toFixed(2)}</div>
+                    <div className="stat-label">Sueldo Base</div>
+                  </div>
+                </div>
+                <div className="stat-box accent-orange">
+                  <div className="stat-info">
+                    <div className="stat-value">{modalDetalle.totalHorasExtra ?? 0}h</div>
+                    <div className="stat-label">Horas Extra</div>
+                  </div>
+                </div>
+                <div className="stat-box accent-green">
+                  <div className="stat-info">
+                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoBruto ?? 0).toFixed(2)}</div>
+                    <div className="stat-label">Sueldo Bruto</div>
+                  </div>
+                </div>
+                <div className="stat-box accent-teal">
+                  <div className="stat-info">
+                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoNeto ?? 0).toFixed(2)}</div>
+                    <div className="stat-label">Sueldo Neto</div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="modal-section-title">Desglose de Bonificaciones</p>
+              <div className="table-wrapper" style={{ marginBottom: "16px" }}>
+                <table>
+                  <thead><tr><th>Tipo de Bonificación</th><th>Monto (S/)</th></tr></thead>
+                  <tbody>
+                    <tr><td>Bonificación Familiar (por hijos)</td><td>S/ {parseFloat(modalDetalle.bonifFamiliar ?? 0).toFixed(2)}</td></tr>
+                    <tr><td>Turno Nocturno</td><td>S/ {parseFloat(modalDetalle.bonifTurnoNocturno ?? 0).toFixed(2)}</td></tr>
+                    <tr><td>Guardia Hospitalaria</td><td>S/ {parseFloat(modalDetalle.bonifGuardia ?? 0).toFixed(2)}</td></tr>
+                    <tr><td>Riesgo Hospitalario</td><td>S/ {parseFloat(modalDetalle.bonifRiesgo ?? 0).toFixed(2)}</td></tr>
+                    <tr><td>Cargo / Productividad</td><td>S/ {parseFloat(modalDetalle.bonifCargo ?? 0).toFixed(2)}</td></tr>
+                    <tr style={{ background: "#f0fdf4" }}>
+                      <td><strong>Total Bonificaciones</strong></td>
+                      <td><strong>S/ {(
+                        parseFloat(modalDetalle.bonifFamiliar ?? 0) +
+                        parseFloat(modalDetalle.bonifTurnoNocturno ?? 0) +
+                        parseFloat(modalDetalle.bonifGuardia ?? 0) +
+                        parseFloat(modalDetalle.bonifRiesgo ?? 0) +
+                        parseFloat(modalDetalle.bonifCargo ?? 0)
+                      ).toFixed(2)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="modal-section-title">Descuentos Aplicados</p>
+              <div className="table-wrapper">
+                <table>
+                  <thead><tr><th>Tipo de Descuento</th><th>Monto (S/)</th></tr></thead>
+                  <tbody>
+                    <tr><td>Descuento por Tardanzas</td><td style={{ color: "#ef4444" }}>- S/ {parseFloat(modalDetalle.descuentoTardanzas ?? 0).toFixed(2)}</td></tr>
+                    <tr><td>Descuentos de Ley</td><td style={{ color: "#ef4444" }}>- S/ {parseFloat(modalDetalle.descuentoLey ?? 0).toFixed(2)}</td></tr>
+                    <tr style={{ background: "#fff1f2" }}>
+                      <td><strong>Total Descuentos</strong></td>
+                      <td><strong style={{ color: "#ef4444" }}>- S/ {(
+                        parseFloat(modalDetalle.descuentoTardanzas ?? 0) +
+                        parseFloat(modalDetalle.descuentoLey ?? 0)
+                      ).toFixed(2)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalDetalle(null)}>Cerrar</button>
+              <button className="btn btn-info" onClick={() => { setModalEmail(modalDetalle.idNomina); setModalDetalle(null); }}>✉️ Enviar por Email</button>
+              <button className="btn btn-danger" onClick={() => handleDescargar(modalDetalle.idNomina)}>📄 Descargar PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CONFIRMACIÓN EMAIL ── */}
+      {modalEmail && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalEmail(null)}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>✉️ Enviar Comprobante por Correo</h3>
+                <p>Nómina #{modalEmail}</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalEmail(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: "14px", color: "#475569" }}>
+                Se enviará el comprobante de pago al correo electrónico registrado del empleado. ¿Desea continuar?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalEmail(null)}>Cancelar</button>
+              <button className="btn btn-info" onClick={async () => { await handleEnviarComprobante(modalEmail); setModalEmail(null); }}>
+                ✉️ Confirmar y Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
