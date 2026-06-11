@@ -56,6 +56,9 @@ public class NominaService implements INominaService {
     @Value("${rrhh.bonif-cargo}")
     private BigDecimal tasaCargo;
 
+    @Value("${rrhh.tasa-descuento-ley:0.13}")
+    private BigDecimal tasaDescuentoLey;
+
     private static final int MINUTOS_EN_HORA = 60;
     private static final int HORAS_JORNADA_DIARIA = 8;
 
@@ -136,17 +139,22 @@ public class NominaService implements INominaService {
                     .mapToInt(r -> r.getMinutosTardanza() != null ? r.getMinutosTardanza() : 0)
                     .sum();
 
-                BigDecimal totalMinutosExtra = registros.stream()
-                    .map(r -> BigDecimal.valueOf(r.getMinutosExtra() != null ? r.getMinutosExtra() : 0))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                BigDecimal totalHorasExtra = totalMinutosExtra
-                    .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP);
-
                 BigDecimal valorHoraDiaria = sueldoBase
                     .divide(BigDecimal.valueOf(30), 4, RoundingMode.HALF_UP)
                     .divide(BigDecimal.valueOf(HORAS_JORNADA_DIARIA), 4, RoundingMode.HALF_UP);
 
-                BigDecimal montoHorasExtra = calcularMontoHorasExtra(totalHorasExtra, valorHoraDiaria);
+                BigDecimal montoHorasExtra = BigDecimal.ZERO;
+                BigDecimal totalHorasExtra = BigDecimal.ZERO;
+                for (RegistroAsistenciaModel r : registros) {
+                    int minExtra = r.getMinutosExtra() != null ? r.getMinutosExtra() : 0;
+                    if (minExtra > 0) {
+                        BigDecimal horasExtraDia = BigDecimal.valueOf(minExtra)
+                            .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP);
+                        totalHorasExtra = totalHorasExtra.add(horasExtraDia);
+                        montoHorasExtra = montoHorasExtra.add(calcularMontoHorasExtra(horasExtraDia, valorHoraDiaria));
+                    }
+                }
+                montoHorasExtra = montoHorasExtra.setScale(2, RoundingMode.HALF_UP);
 
                 BigDecimal valorMinuto = sueldoBase
                     .divide(BigDecimal.valueOf(30), 4, RoundingMode.HALF_UP)
@@ -178,12 +186,14 @@ public class NominaService implements INominaService {
                     .add(bonifCargo)
                     .setScale(2, RoundingMode.HALF_UP);
 
+                BigDecimal descuentoLey = sueldoBruto.multiply(tasaDescuentoLey).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal sueldoNeto = sueldoBruto
                     .subtract(descuentoTardanzas)
+                    .subtract(descuentoLey)
                     .setScale(2, RoundingMode.HALF_UP);
 
                 validarPrecision(sueldoBase, montoHorasExtra, bonifFamiliar, bonifTurnoNocturno,
-                        bonifGuardia, bonifRiesgo, bonifCargo, sueldoBruto, descuentoTardanzas, sueldoNeto, empleado);
+                        bonifGuardia, bonifRiesgo, bonifCargo, sueldoBruto, descuentoTardanzas, descuentoLey, sueldoNeto, empleado);
 
                 List<DetalleNomina> detalles = generarDetallesDiarios(
                     registros, valorHoraDiaria, valorMinuto
@@ -204,7 +214,7 @@ public class NominaService implements INominaService {
                 nomina.setBonifRiesgo(bonifRiesgo);
                 nomina.setBonifCargo(bonifCargo);
                 nomina.setDescuentoTardanzas(descuentoTardanzas);
-                nomina.setDescuentoLey(BigDecimal.ZERO);
+                nomina.setDescuentoLey(descuentoLey);
                 nomina.setAsignacionFamiliar(bonifFamiliar);
                 nomina.setSueldoBruto(sueldoBruto);
                 nomina.setSueldoNeto(sueldoNeto);
@@ -336,11 +346,11 @@ public class NominaService implements INominaService {
 
     private void validarPrecision(BigDecimal sueldoBase, BigDecimal horasExtra, BigDecimal fam,
                                    BigDecimal noct, BigDecimal guardia, BigDecimal riesgo, BigDecimal cargo,
-                                   BigDecimal bruto, BigDecimal descTardanzas, BigDecimal neto,
+                                   BigDecimal bruto, BigDecimal descTardanzas, BigDecimal descLey, BigDecimal neto,
                                    EmpleadoModel empleado) {
         BigDecimal brutoEsperado = sueldoBase.add(horasExtra).add(fam).add(noct)
                 .add(guardia).add(riesgo).add(cargo).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal netoEsperado = bruto.subtract(descTardanzas).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netoEsperado = bruto.subtract(descTardanzas).subtract(descLey).setScale(2, RoundingMode.HALF_UP);
 
         if (bruto.subtract(brutoEsperado).abs().compareTo(new BigDecimal("0.02")) > 0) {
             throw new IllegalStateException("Error: Inconsistencia en sueldo bruto del empleado " +
@@ -354,32 +364,92 @@ public class NominaService implements INominaService {
 
     private byte[] generarPDF(NominaResponseDTO dto) {
         List<Map<String, Object>> datos = new ArrayList<>();
+
+        // ── Detalle diario ──
+        if (dto.getDetalles() != null) {
+            for (DetalleNominaResponseDTO det : dto.getDetalles()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("Dia", det.getFecha() != null ? det.getFecha().toString() : "—");
+                row.put("Horas Trabajadas", det.getHorasTrabajadas());
+                row.put("Min. Tardanza", det.getMinutosTardanza());
+                row.put("Desc. Tardanza", "S/ " + det.getDescuentoTardanza());
+                row.put("Min. Extra", det.getMinutosExtra());
+                row.put("Monto H.Extra", "S/ " + det.getMontoHoraExtra());
+                datos.add(row);
+            }
+        }
+
+        // ── Línea separadora ──
+        Map<String, Object> sep = new LinkedHashMap<>();
+        sep.put("Dia", "─── RESUMEN ───");
+        sep.put("Horas Trabajadas", "");
+        sep.put("Min. Tardanza", "");
+        sep.put("Desc. Tardanza", "");
+        sep.put("Min. Extra", "");
+        sep.put("Monto H.Extra", "");
+        datos.add(sep);
+
+        // ── Resumen ──
         Map<String, Object> fila = new LinkedHashMap<>();
-        fila.put("Empleado", dto.getNombreEmpleado());
-        fila.put("Periodo", dto.getPeriodo());
-        fila.put("Sueldo Base", "S/ " + dto.getSueldoBase());
+        fila.put("Dia", "");
         fila.put("Horas Trabajadas", dto.getTotalHorasTrabajadas());
-        fila.put("Horas Extra", dto.getTotalHorasExtra());
-        fila.put("Bonif. Familiar", "S/ " + dto.getBonifFamiliar());
-        fila.put("Bonif. Nocturno", "S/ " + dto.getBonifTurnoNocturno());
-        fila.put("Bonif. Guardia", "S/ " + dto.getBonifGuardia());
-        fila.put("Bonif. Riesgo", "S/ " + dto.getBonifRiesgo());
-        fila.put("Bonif. Cargo", "S/ " + dto.getBonifCargo());
-        fila.put("Desc. Tardanzas", "S/ " + dto.getDescuentoTardanzas());
-        fila.put("Sueldo Bruto", "S/ " + dto.getSueldoBruto());
-        fila.put("Sueldo Neto", "S/ " + dto.getSueldoNeto());
-        fila.put("Estado", dto.getEstadoPago());
+        fila.put("Min. Tardanza", dto.getTotalMinutosTardanza());
+        fila.put("Desc. Tardanza", "S/ " + dto.getDescuentoTardanzas());
+        fila.put("Min. Extra", "S/ " + dto.getTotalHorasExtra());
+        fila.put("Monto H.Extra", "S/ " + (dto.getSueldoBruto() != null && dto.getSueldoBruto().subtract(dto.getSueldoBase() != null ? dto.getSueldoBase() : BigDecimal.ZERO).compareTo(BigDecimal.ZERO) > 0 ? dto.getSueldoBruto().subtract(dto.getSueldoBase()).subtract(
+            (dto.getBonifFamiliar() != null ? dto.getBonifFamiliar() : BigDecimal.ZERO).add(
+            dto.getBonifTurnoNocturno() != null ? dto.getBonifTurnoNocturno() : BigDecimal.ZERO).add(
+            dto.getBonifGuardia() != null ? dto.getBonifGuardia() : BigDecimal.ZERO).add(
+            dto.getBonifRiesgo() != null ? dto.getBonifRiesgo() : BigDecimal.ZERO).add(
+            dto.getBonifCargo() != null ? dto.getBonifCargo() : BigDecimal.ZERO)).toString() : "—"));
         datos.add(fila);
 
-        List<String> headers = new ArrayList<>(fila.keySet());
-        String[] headerArray = headers.toArray(new String[0]);
-        String[] keyArray = headers.toArray(new String[0]);
+        Map<String, Object> totalRow = new LinkedHashMap<>();
+        totalRow.put("Dia", "Empleado: " + dto.getNombreEmpleado() + " | Periodo: " + dto.getPeriodo());
+        totalRow.put("Horas Trabajadas", "");
+        totalRow.put("Min. Tardanza", "");
+        totalRow.put("Desc. Tardanza", "");
+        totalRow.put("Min. Extra", "");
+        totalRow.put("Monto H.Extra", "");
+        datos.add(totalRow);
+
+        Map<String, Object> resumen = new LinkedHashMap<>();
+        resumen.put("Dia", "Sueldo Base: S/ " + dto.getSueldoBase());
+        resumen.put("Horas Trabajadas", "");
+        resumen.put("Min. Tardanza", "");
+        resumen.put("Desc. Tardanza", "");
+        resumen.put("Min. Extra", "");
+        resumen.put("Monto H.Extra", "");
+        datos.add(resumen);
+
+        Map<String, Object> bonifRow = new LinkedHashMap<>();
+        bonifRow.put("Dia", "Bonif. Familiar: S/ " + dto.getBonifFamiliar() + " | Nocturno: S/ " + dto.getBonifTurnoNocturno()
+            + " | Guardia: S/ " + dto.getBonifGuardia() + " | Riesgo: S/ " + dto.getBonifRiesgo() + " | Cargo: S/ " + dto.getBonifCargo());
+        bonifRow.put("Horas Trabajadas", "");
+        bonifRow.put("Min. Tardanza", "");
+        bonifRow.put("Desc. Tardanza", "");
+        bonifRow.put("Min. Extra", "");
+        bonifRow.put("Monto H.Extra", "");
+        datos.add(bonifRow);
+
+        Map<String, Object> totales = new LinkedHashMap<>();
+        totales.put("Dia", "Sueldo Bruto: S/ " + dto.getSueldoBruto() + " | Desc. Tardanza: S/ " + dto.getDescuentoTardanzas()
+            + " | Desc. Ley: S/ " + dto.getDescuentoLey() + " | Sueldo Neto: S/ " + dto.getSueldoNeto() + " | Estado: " + dto.getEstadoPago());
+        totales.put("Horas Trabajadas", "");
+        totales.put("Min. Tardanza", "");
+        totales.put("Desc. Tardanza", "");
+        totales.put("Min. Extra", "");
+        totales.put("Monto H.Extra", "");
+        datos.add(totales);
+
+        String[] headers = {"Dia", "Horas Trabajadas", "Min. Tardanza", "Desc. Tardanza", "Min. Extra", "Monto H.Extra"};
+        String[] keys = {"Dia", "Horas Trabajadas", "Min. Tardanza", "Desc. Tardanza", "Min. Extra", "Monto H.Extra"};
 
         ExportAbstractFactory factory = exportFactories.get("nominaExportFactory");
         if (factory == null) {
             throw new IllegalStateException("Fabrica de exportacion de nomina no encontrada.");
         }
-        return factory.createPDFExporter().export("Comprobante de Nomina", datos, headerArray, keyArray);
+        return factory.createPDFExporter().export("Comprobante de Nomina", datos, headers, keys);
     }
 
     private List<EmpleadoModel> obtenerEmpleadosActivos(CalcularNominaRequestDTO request) {
@@ -388,6 +458,9 @@ public class NominaService implements INominaService {
                 .filter(e -> "ACTIVO".equals(e.getEstado()))
                 .map(List::of)
                 .orElse(List.of());
+        }
+        if (request.getIdDepartamento() != null) {
+            return jpaEmpleadoRepository.buscarAvanzado("ACTIVO", request.getIdDepartamento(), null);
         }
         return jpaEmpleadoRepository.findByEstado("ACTIVO");
     }

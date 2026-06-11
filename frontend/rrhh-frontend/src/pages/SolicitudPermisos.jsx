@@ -7,6 +7,8 @@ import {
   revisarSolicitudRRHH,
   decidirSolicitudGerencia,
   getSolicitudesPorEstado,
+  getSolicitudesPorEmpleado,
+  getCurrentUserId,
 } from "../services/api";
 
 const ESTADOS_BADGE = {
@@ -59,13 +61,23 @@ export default function SolicitudPermisos() {
   const estadoParaTab = {
     pendientes:     "PENDIENTE",
     gerencia:       "PROCESADO",
-    historial:      "APROBADA",
-    misSolicitudes: "PENDIENTE",
   };
 
   useEffect(() => {
     const estado = estadoParaTab[tabActiva];
     if (estado) cargarSolicitudes(estado);
+    if (tabActiva === "misSolicitudes") cargarMisSolicitudes();
+    if (tabActiva === "historial") cargarHistorial();
+  }, [tabActiva]);
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      const estado = estadoParaTab[tabActiva];
+      if (estado) cargarSolicitudes(estado);
+      if (tabActiva === "misSolicitudes") cargarMisSolicitudes();
+      if (tabActiva === "historial") cargarHistorial();
+    }, 30000);
+    return () => clearInterval(intervalo);
   }, [tabActiva]);
 
   const cargarSolicitudes = async (estado) => {
@@ -76,6 +88,36 @@ export default function SolicitudPermisos() {
       setSolicitudes(Array.isArray(data) ? data : []);
     } catch {
       setError("No se pudieron cargar las solicitudes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarMisSolicitudes = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const idUsuario = getCurrentUserId();
+      const data = await getSolicitudesPorEmpleado(idUsuario);
+      setSolicitudes(Array.isArray(data) ? data : []);
+    } catch {
+      setError("No se pudieron cargar tus solicitudes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarHistorial = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [aprobadas, rechazadas] = await Promise.all([
+        getSolicitudesPorEstado("APROBADA"),
+        getSolicitudesPorEstado("RECHAZADA"),
+      ]);
+      setSolicitudes([...(Array.isArray(aprobadas) ? aprobadas : []), ...(Array.isArray(rechazadas) ? rechazadas : [])]);
+    } catch {
+      setError("No se pudo cargar el historial");
     } finally {
       setLoading(false);
     }
@@ -153,8 +195,17 @@ export default function SolicitudPermisos() {
 
   const diasSolicitados = () => {
     if (!nuevaForm.fechaInicio || !nuevaForm.fechaFin) return "—";
-    const diff = Math.round((new Date(nuevaForm.fechaFin) - new Date(nuevaForm.fechaInicio)) / 86400000) + 1;
-    return diff > 0 ? `${diff} día${diff > 1 ? "s" : ""}` : "—";
+    const inicio = new Date(nuevaForm.fechaInicio);
+    const fin = new Date(nuevaForm.fechaFin);
+    if (fin < inicio) return "—";
+    let count = 0;
+    const current = new Date(inicio);
+    while (current <= fin) {
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) count++;
+      current.setDate(current.getDate() + 1);
+    }
+    return `${count} día${count !== 1 ? "s" : ""}`;
   };
 
   /* ─── Tabla reutilizable ─── */
@@ -385,9 +436,6 @@ export default function SolicitudPermisos() {
               <button className={`tab ${tabActiva === "pendientes" ? "active" : ""}`} onClick={() => setTabActiva("pendientes")}>
                 📥 Pendientes (RRHH)
               </button>
-              <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
-                ➕ Nueva Solicitud
-              </button>
               <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
                 📤 Enviadas a Gerencia
               </button>
@@ -417,13 +465,6 @@ export default function SolicitudPermisos() {
                   )}
                 />
               </div>
-            )}
-
-            {tabActiva === "nueva" && (
-              <FormSolicitud
-                titulo="➕ Registrar Nueva Solicitud"
-                alerta="Registre una solicitud en nombre de un empleado. El estado inicial será PENDIENTE para revisión de RRHH."
-              />
             )}
 
             {tabActiva === "gerencia" && (
@@ -498,9 +539,9 @@ export default function SolicitudPermisos() {
                     <strong>Observación RRHH:</strong> {modalDetalle.observacionRrhh}
                   </div>
                 )}
-                {modalDetalle.respuestaGerencia && (
+                {modalDetalle.respuesta && (
                   <div className="alert alert-info" style={{ marginTop: "12px" }}>
-                    <strong>Respuesta Gerencia:</strong> {modalDetalle.respuestaGerencia}
+                    <strong>Respuesta Gerencia:</strong> {modalDetalle.respuesta}
                   </div>
                 )}
               </div>

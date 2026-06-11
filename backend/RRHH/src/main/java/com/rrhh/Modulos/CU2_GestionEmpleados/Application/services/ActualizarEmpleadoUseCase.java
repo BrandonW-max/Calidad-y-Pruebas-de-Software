@@ -3,9 +3,11 @@ package com.rrhh.Modulos.CU2_GestionEmpleados.Application.services;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.ActualizarEmpleadoRequestDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.EmpleadoResponseDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Contrato;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Departamento;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Empleado;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.UsuarioGestion;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoRepository;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IDepartamentoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
@@ -21,6 +23,9 @@ public class ActualizarEmpleadoUseCase {
 
     @Autowired
     private IContratoRepository contratoRepository;
+
+    @Autowired
+    private IDepartamentoRepository departamentoRepository;
 
     @Autowired
     private IUsuarioGestionRepository usuarioRepository;
@@ -91,13 +96,48 @@ public class ActualizarEmpleadoUseCase {
         Empleado empleadoActualizado =
                 empleadoRepository.save(empleado);
 
+        Contrato contrato =
+                contratoRepository.findContratoActivoByEmpleado(idEmpleado);
+
+        String cambiosContrato = "";
+
+        if (contrato != null) {
+            if (dto.getCargo() != null && !dto.getCargo().isBlank()) {
+                contrato.cambiarCargo(dto.getCargo());
+                cambiosContrato += ", cargo=" + dto.getCargo();
+            }
+
+            if (dto.getSueldo() != null && dto.getSueldo().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                contrato.cambiarSueldo(dto.getSueldo());
+                cambiosContrato += ", sueldo=" + dto.getSueldo();
+            }
+
+            if (dto.getTipoContrato() != null && !dto.getTipoContrato().isBlank()) {
+                contrato.setTipoContrato(dto.getTipoContrato());
+                cambiosContrato += ", tipoContrato=" + dto.getTipoContrato();
+            }
+
+            if (dto.getIdDpto() != null) {
+                Departamento dep = departamentoRepository.findById(dto.getIdDpto());
+                if (dep != null) {
+                    contrato.cambiarDepartamento(dep.getIdDpto(), dep.getNombre());
+                    cambiosContrato += ", idDpto=" + dto.getIdDpto();
+                }
+            }
+
+            if (!cambiosContrato.isEmpty()) {
+                contratoRepository.save(contrato);
+            }
+        }
+
         String valorNuevo =
                 "fechaNac=" + empleadoActualizado.getFechaNac()
                         + ", sexo=" + empleadoActualizado.getSexo()
                         + ", estadoCivil=" + empleadoActualizado.getEstadoCivil()
                         + ", direccion=" + empleadoActualizado.getDireccion()
                         + ", correo=" + empleadoActualizado.getCorreo()
-                        + ", telefono=" + empleadoActualizado.getTelefono();
+                        + ", telefono=" + empleadoActualizado.getTelefono()
+                        + cambiosContrato;
 
         auditoriaEmpleadoService.registrar(
                 empleadoActualizado.getIdEmpleado(),
@@ -106,9 +146,6 @@ public class ActualizarEmpleadoUseCase {
                 valorAnterior,
                 valorNuevo
         );
-
-        Contrato contrato =
-                contratoRepository.findContratoActivoByEmpleado(idEmpleado);
 
         UsuarioGestion usuario =
                 usuarioRepository.findByEmpleadoId(idEmpleado);

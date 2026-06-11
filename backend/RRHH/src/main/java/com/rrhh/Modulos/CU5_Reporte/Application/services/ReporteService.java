@@ -11,7 +11,10 @@ import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteSolicitu
 import com.rrhh.Modulos.CU5_Reporte.Application.factory.IReporteFactory;
 import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -36,6 +39,9 @@ public class ReporteService implements IReporteService {
     private final Map<String, ExportAbstractFactory> exportFactories;
     private final IReporteFactory reporteFactory;
 
+    @PersistenceContext
+    private EntityManager em;
+
     public ReporteService(
             IReporteGeneradoRepository reporteGeneradoRepository,
             JpaReporteEmpleadoRepository jpaEmpleadoRepository,
@@ -56,6 +62,7 @@ public class ReporteService implements IReporteService {
     }
 
     @Override
+    @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario) {
 
         validarFiltroEmpleado(filtro);
@@ -72,7 +79,7 @@ public class ReporteService implements IReporteService {
             throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
         }
 
-        validarConsistenciaDatos("EMPLEADOS", empleados.size());
+        validarConsistenciaDatos("EMPLEADOS", empleados);
 
         List<Map<String, Object>> datos = empleados.stream().map(e -> {
             Map<String, Object> fila = new LinkedHashMap<>();
@@ -89,6 +96,7 @@ public class ReporteService implements IReporteService {
     }
 
     @Override
+    @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteAsistencia(FiltroAsistenciaDTO filtro, Long idUsuario) {
 
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
@@ -104,7 +112,7 @@ public class ReporteService implements IReporteService {
             throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
         }
 
-        validarConsistenciaDatos("ASISTENCIA", registros.size());
+        validarConsistenciaDatos("ASISTENCIA", registros);
 
         List<Map<String, Object>> datos = registros.stream().map(r -> {
             Map<String, Object> fila = new LinkedHashMap<>();
@@ -123,6 +131,7 @@ public class ReporteService implements IReporteService {
     }
 
     @Override
+    @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteNomina(FiltroNominaDTO filtro, Long idUsuario) {
 
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
@@ -140,7 +149,7 @@ public class ReporteService implements IReporteService {
             throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
         }
 
-        validarConsistenciaDatos("NOMINA", nominas.size());
+        validarConsistenciaDatos("NOMINA", nominas);
 
         List<Map<String, Object>> datos = nominas.stream().map(n -> {
             Map<String, Object> fila = new LinkedHashMap<>();
@@ -161,6 +170,7 @@ public class ReporteService implements IReporteService {
     }
 
     @Override
+    @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteSolicitudes(FiltroSolicitudDTO filtro, Long idUsuario) {
 
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
@@ -170,6 +180,7 @@ public class ReporteService implements IReporteService {
             filtro.getArea(),
             filtro.getTipoSolicitud(),
             filtro.getEstado(),
+            filtro.getCargo(),
             filtro.getFechaInicio(),
             filtro.getFechaFin()
         );
@@ -178,7 +189,7 @@ public class ReporteService implements IReporteService {
             throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
         }
 
-        validarConsistenciaDatos("SOLICITUDES", solicitudes.size());
+        validarConsistenciaDatos("SOLICITUDES", solicitudes);
 
         List<Map<String, Object>> datos = solicitudes.stream().map(s -> {
             Map<String, Object> fila = new LinkedHashMap<>();
@@ -216,10 +227,34 @@ public class ReporteService implements IReporteService {
         }
     }
 
-    private void validarConsistenciaDatos(String tipoReporte, int cantidadRegistros) {
-        if (cantidadRegistros < 0) {
-            throw new IllegalStateException("Error de consistencia en reporte " + tipoReporte +
-                    ": cantidad de registros invalida.");
+    private void validarConsistenciaDatos(String tipoReporte, List<?> datos) {
+        if (datos == null || datos.isEmpty()) {
+            throw new IllegalStateException("Error de consistencia: el reporte " + tipoReporte +
+                    " no contiene datos.");
+        }
+
+        int size = datos.size();
+
+        String tabla = switch (tipoReporte) {
+            case "EMPLEADOS" -> "empleado";
+            case "ASISTENCIA" -> "registro_asistencia";
+            case "NOMINA" -> "nomina";
+            case "SOLICITUDES" -> "solicitud";
+            default -> null;
+        };
+
+        if (tabla != null) {
+            try {
+                Number dbCount = (Number) em.createNativeQuery(
+                        "SELECT COUNT(*) FROM " + tabla).getSingleResult();
+                if (size > dbCount.intValue()) {
+                    throw new IllegalStateException("Error de consistencia en reporte " + tipoReporte +
+                            ": " + size + " registros reportados superan los " + dbCount.intValue() +
+                            " registros en la base de datos.");
+                }
+            } catch (Exception ignore) {
+                // Si falla la consulta de conteo, se omite la validación
+            }
         }
     }
 

@@ -23,6 +23,8 @@ const FORM_VACIO = {
 
 export default function GestionEmpleados() {
   const [empleados, setEmpleados]   = useState([]);
+  const [page, setPage]             = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
   const [mensaje, setMensaje]       = useState("");
@@ -31,10 +33,11 @@ export default function GestionEmpleados() {
   const [filtroTexto, setFiltroTexto]   = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroCargo, setFiltroCargo]   = useState("");
+  const [filtroDpto, setFiltroDpto]     = useState("");
 
   const [form, setForm]           = useState(FORM_VACIO);
   const [sancionForm, setSancionForm] = useState({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
-  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
+  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaCambio: "" });
 
   const [modalDesactivar, setModalDesactivar] = useState({ open: false, id: null, motivo: "" });
   const [modalReactivar,  setModalReactivar]  = useState({ open: false, id: null });
@@ -42,12 +45,14 @@ export default function GestionEmpleados() {
 
   useEffect(() => { cargarEmpleados(); }, []);
 
-  const cargarEmpleados = async () => {
+  const cargarEmpleados = async (pagina = 0) => {
     setLoading(true);
     setError("");
     try {
-      const data = await listarEmpleados();
+      const data = await listarEmpleados(pagina);
       setEmpleados(data.content ?? data);
+      setTotalPages(data.totalPages ?? 1);
+      setPage(pagina);
     } catch {
       setError("No se pudo cargar la lista de empleados");
     } finally {
@@ -55,17 +60,19 @@ export default function GestionEmpleados() {
     }
   };
 
-  const handleBuscar = async () => {
+  const handleBuscar = async (pagina = 0) => {
     setLoading(true);
     setError("");
     try {
       let data;
       if (filtroTexto) {
-        data = await buscarEmpleados(filtroTexto);
+        data = await buscarEmpleados(filtroTexto, pagina);
       } else {
-        data = await buscarEmpleadosAvanzado({ estado: filtroEstado, cargo: filtroCargo });
+        data = await buscarEmpleadosAvanzado({ estado: filtroEstado, cargo: filtroCargo, idDpto: filtroDpto || undefined }, pagina);
       }
       setEmpleados(data.content ?? data);
+      setTotalPages(data.totalPages ?? 1);
+      setPage(pagina);
     } catch {
       setError("Error al buscar empleados");
     } finally {
@@ -148,10 +155,17 @@ export default function GestionEmpleados() {
     e.preventDefault();
     setMensaje("");
     try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const dias = parseInt(sancionForm.diasSuspension) || 0;
+      const fin = dias > 0
+        ? new Date(Date.now() + dias * 86400000).toISOString().split('T')[0]
+        : hoy;
       await registrarSancion(sancionForm.idEmpleado, {
-        tipoSancion: sancionForm.tipoSancion,
-        diasSuspension: parseInt(sancionForm.diasSuspension),
-        justificacion: sancionForm.justificacion,
+        motivo: sancionForm.tipoSancion,
+        descripcion: sancionForm.justificacion,
+        fechaInicio: hoy,
+        fechaFin: fin,
+        bloquearAcceso: sancionForm.tipoSancion === "SUSPENSION" && dias > 0,
       });
       setMensaje("Sanción registrada correctamente");
       setSancionForm({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
@@ -165,9 +179,12 @@ export default function GestionEmpleados() {
     setMensaje("");
     try {
       await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
-      await cambioSalarial(ascensoForm.idEmpleado, { nuevoSueldo: parseFloat(ascensoForm.nuevoSueldo) });
+      await cambioSalarial(ascensoForm.idEmpleado, {
+        nuevoSueldo: parseFloat(ascensoForm.nuevoSueldo),
+        fechaCambio: ascensoForm.fechaCambio || null,
+      });
       setMensaje("Ascenso y cambio salarial registrados correctamente");
-      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
+      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaCambio: "" });
       cargarEmpleados();
     } catch {
       setMensaje("Error al registrar el ascenso");
@@ -221,7 +238,7 @@ export default function GestionEmpleados() {
               <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                 <option value="">Todos los estados</option>
                 <option value="ACTIVO">Activo</option>
-                <option value="INACTIVO">Inactivo</option>
+                <option value="DESVINCULADO">Desvinculado</option>
               </select>
               <input
                 type="text"
@@ -229,8 +246,15 @@ export default function GestionEmpleados() {
                 value={filtroCargo}
                 onChange={(e) => setFiltroCargo(e.target.value)}
               />
+              <input
+                type="number"
+                placeholder="ID Depto..."
+                value={filtroDpto}
+                onChange={(e) => setFiltroDpto(e.target.value)}
+                style={{ maxWidth: "120px" }}
+              />
               <button className="btn btn-primary" onClick={handleBuscar}>🔍 Buscar</button>
-              <button className="btn btn-secondary" onClick={() => { setFiltroTexto(""); setFiltroEstado(""); setFiltroCargo(""); cargarEmpleados(); }}>
+              <button className="btn btn-secondary" onClick={() => { setFiltroTexto(""); setFiltroEstado(""); setFiltroCargo(""); setFiltroDpto(""); cargarEmpleados(); }}>
                 Limpiar
               </button>
             </div>
@@ -482,10 +506,18 @@ export default function GestionEmpleados() {
                     placeholder="0.00"
                   />
                 </div>
+                <div className="form-group">
+                  <label>Fecha de Vigencia</label>
+                  <input
+                    type="date"
+                    value={ascensoForm.fechaCambio}
+                    onChange={(e) => setAscensoForm({ ...ascensoForm, fechaCambio: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary">💾 Guardar Cambios</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" })}>
+                <button type="button" className="btn btn-secondary" onClick={() => setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaCambio: "" })}>
                   Limpiar
                 </button>
               </div>
@@ -543,8 +575,22 @@ export default function GestionEmpleados() {
                   <div className="form-group form-full">
                     <label>Dirección</label>
                     <input value={modalEditar.direccion ?? ""} onChange={(e) => setModalEditar({ ...modalEditar, direccion: e.target.value })} placeholder="Dirección del empleado" />
-                  </div>
-                </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="pagination" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "16px" }}>
+                <button className="btn btn-secondary btn-sm" disabled={page === 0} onClick={() => filtroTexto || filtroEstado || filtroCargo || filtroDpto ? handleBuscar(page - 1) : cargarEmpleados(page - 1)}>
+                  ◀ Anterior
+                </button>
+                <span style={{ fontSize: "14px", color: "#475569" }}>
+                  Página {page + 1} de {totalPages}
+                </span>
+                <button className="btn btn-secondary btn-sm" disabled={page >= totalPages - 1} onClick={() => filtroTexto || filtroEstado || filtroCargo || filtroDpto ? handleBuscar(page + 1) : cargarEmpleados(page + 1)}>
+                  Siguiente ▶
+                </button>
+              </div>
+            )}
+          </div>
               </form>
             </div>
             <div className="modal-footer">

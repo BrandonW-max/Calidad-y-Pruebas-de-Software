@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -29,7 +30,8 @@ public class JwtConfig {
             String username,
             String rol,
             Long idUsuario,
-            List<String> permisos
+            List<String> permisos,
+            LocalDateTime tokenInvalidoDesde
     ) {
 
         return Jwts.builder()
@@ -37,6 +39,7 @@ public class JwtConfig {
                 .claim("rol", rol)
                 .claim("idUsuario", idUsuario)
                 .claim("permisos", permisos)
+                .claim("tokenInvalidoDesde", tokenInvalidoDesde != null ? tokenInvalidoDesde.toString() : null)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(getSigningKey())
@@ -84,6 +87,11 @@ public class JwtConfig {
         return obtenerClaims(token).get("permisos", List.class);
     }
 
+    public LocalDateTime obtenerTokenInvalidoDesde(String token) {
+        String valor = obtenerClaims(token).get("tokenInvalidoDesde", String.class);
+        return valor != null ? LocalDateTime.parse(valor) : null;
+    }
+
     public long tiempoRestanteMs(String token) {
         try {
             Claims claims = obtenerClaims(token);
@@ -99,9 +107,11 @@ public class JwtConfig {
         String rol = claims.get("rol", String.class);
         Number id = claims.get("idUsuario", Number.class);
         List<String> permisos = obtenerPermisos(token);
+        String inv = claims.get("tokenInvalidoDesde", String.class);
+        LocalDateTime tokenInvalidoDesde = inv != null ? LocalDateTime.parse(inv) : null;
 
         Long idUsuario = id != null ? id.longValue() : null;
 
-        return generarToken(username, rol, idUsuario, permisos);
+        return generarToken(username, rol, idUsuario, permisos, tokenInvalidoDesde);
     }
 }

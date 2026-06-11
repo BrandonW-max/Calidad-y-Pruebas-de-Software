@@ -88,7 +88,8 @@ public class AuthService implements IAuthService {
                         user.getNombreUsuario(),
                         user.getNombreRol(),
                         user.getId(),
-                        permisos
+                        permisos,
+                        user.getTokenInvalidoDesde()
                 );
                 return new AuthResponseDTO(
                         true,
@@ -118,6 +119,7 @@ public class AuthService implements IAuthService {
                             "LOGIN_FALLIDO",
                             ip
                     );
+            logFallo.setValorNuevo("Rol: " + user.getNombreRol());
 
             historialRepository.save(logFallo);
 
@@ -208,7 +210,8 @@ public class AuthService implements IAuthService {
                         user.getNombreUsuario(),
                         user.getNombreRol(),
                         user.getId(),
-                        permisos
+                        permisos,
+                        user.getTokenInvalidoDesde()
                 );
 
         return new TwoFactorResponseDTO(

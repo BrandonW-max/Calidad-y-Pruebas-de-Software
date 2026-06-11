@@ -1,6 +1,7 @@
 package com.rrhh.Modulos.CU6_Solicitud.Application.services;
 
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.DecisionGerenciaRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RegistrarSolicitudRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RevisionRrhhRequestDTO;
@@ -111,6 +112,15 @@ public class SolicitudService implements ISolicitudService {
 
         Solicitud actualizada = solicitudRepository.guardar(solicitud);
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(actualizada.getIdEmpleado()).orElse(null);
+
+        HistorialAuditoriaModel log = new HistorialAuditoriaModel();
+        log.setTablaAfectada("SOLICITUD");
+        log.setIdRegistroAfectado(actualizada.getIdSolicitud().longValue());
+        log.setAccion("REVISION_RRHH");
+        log.setValorNuevo("estado=" + actualizada.getEstado() + ", revisadoPor=" + idUsuarioRrhh
+                + ", observacion=" + (request.getObservacionRrhh() != null ? request.getObservacionRrhh() : ""));
+        em.persist(log);
+
         return mapearAResponse(actualizada, empleado);
     }
 
@@ -154,6 +164,15 @@ public class SolicitudService implements ISolicitudService {
 
         Solicitud actualizada = solicitudRepository.guardar(solicitud);
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(actualizada.getIdEmpleado()).orElse(null);
+
+        HistorialAuditoriaModel log = new HistorialAuditoriaModel();
+        log.setTablaAfectada("SOLICITUD");
+        log.setIdRegistroAfectado(actualizada.getIdSolicitud().longValue());
+        log.setAccion(request.isAprobado() ? "APROBACION_GERENCIA" : "RECHAZO_GERENCIA");
+        log.setValorAnterior("estado=PROCESADO");
+        log.setValorNuevo("estado=" + actualizada.getEstado() + ", aprobadoPor=" + idUsuarioGerencia
+                + ", respuesta=" + actualizada.getRespuesta());
+        em.persist(log);
 
         return mapearAResponse(actualizada, empleado);
     }

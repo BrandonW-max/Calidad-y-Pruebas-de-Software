@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegistrarEmpleadoRequestDTO {
@@ -21,6 +22,7 @@ public class RegistrarEmpleadoRequestDTO {
 
     @NotBlank(message = "El numero de documento es obligatorio")
     @Size(min = 8, max = 12, message = "El numero de documento debe tener entre 8 y 12 digitos")
+    @Pattern(regexp = "\\d+", message = "El numero de documento debe ser numerico")
     private String numeroDi;
     private LocalDate fechaNac;
     private String sexo;

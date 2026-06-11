@@ -162,7 +162,7 @@ public class Usuario implements Prototype<Usuario> {
     public void registrarFallo() {
         this.intentosFallidos++;
 
-        if (this.intentosFallidos >= 5) {
+        if (this.intentosFallidos >= 3) {
             this.cuentaBloqueada = true;
             this.fechaBloqueo = LocalDateTime.now();
         }
@@ -190,7 +190,7 @@ public class Usuario implements Prototype<Usuario> {
     public void registrarFallo2FA() {
         this.intentosFalla2fa++;
 
-        if (this.intentosFalla2fa >= 5) {
+        if (this.intentosFalla2fa >= 3) {
             this.bloqueo2faHasta = LocalDateTime.now().plusMinutes(5);
         }
     }

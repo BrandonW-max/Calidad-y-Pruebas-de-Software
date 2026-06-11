@@ -4,8 +4,15 @@ import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
+  listarJustificacionesEmpleado,
   registrarManual,
   revisarJustificacion,
+  justificarTardanza,
+  listarHorarios,
+  crearHorario,
+  actualizarHorario,
+  eliminarHorario,
+  getUser,
 } from "../services/api";
 
 function getRolFromPath(pathname) {
@@ -19,6 +26,7 @@ export default function ControlAsistencia() {
   const rol = getRolFromPath(location.pathname);
 
   const [justificaciones, setJustificaciones] = useState([]);
+  const [misJustificaciones, setMisJustificaciones] = useState([]);
   const [loading, setLoading]                 = useState(false);
   const [mensaje, setMensaje]                 = useState("");
   const [error, setError]                     = useState("");
@@ -28,8 +36,18 @@ export default function ControlAsistencia() {
     idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "",
   });
 
+  const [justificacionForm, setJustificacionForm] = useState({
+    idRegistroAsistencia: "", motivo: "",
+  });
+
+  const [horarios, setHorarios] = useState([]);
+  const [horarioForm, setHorarioForm] = useState({
+    idHorario: null, nombreTurno: "", horaEntrada: "", horaSalida: "", tolerancia: 10,
+  });
+
   useEffect(() => {
     if (rol === "RRHH") cargarJustificaciones();
+    if (rol === "EMPLEADO") cargarMisJustificaciones();
   }, [rol]);
 
   const cargarJustificaciones = async () => {
@@ -40,6 +58,20 @@ export default function ControlAsistencia() {
       setJustificaciones(Array.isArray(data) ? data : []);
     } catch {
       setError("No se pudieron cargar las justificaciones");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarMisJustificaciones = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const user = getUser();
+      const data = await listarJustificacionesEmpleado(user.idUsuario);
+      setMisJustificaciones(Array.isArray(data) ? data : []);
+    } catch {
+      setError("No se pudieron cargar tus justificaciones");
     } finally {
       setLoading(false);
     }
@@ -66,11 +98,85 @@ export default function ControlAsistencia() {
     const comentario = decision === "RECHAZADO" ? prompt("Motivo del rechazo:") ?? "" : "";
     try {
       await revisarJustificacion(id, decision, comentario);
-      setMensaje(`Justificación ${decision === "APROBADO" ? "aprobada" : "rechazada"} correctamente`);
+      setMensaje(`Justificación ${decision === "APROBADA" ? "aprobada" : "rechazada"} correctamente`);
       cargarJustificaciones();
     } catch {
       setMensaje("Error al revisar la justificación");
     }
+  };
+
+  const handleJustificar = async (e) => {
+    e.preventDefault();
+    setMensaje("");
+    try {
+      await justificarTardanza({
+        idRegistroAsistencia: parseInt(justificacionForm.idRegistroAsistencia),
+        motivo: justificacionForm.motivo,
+        evidenciaUrl: "",
+      });
+      setMensaje("Justificación enviada correctamente. RRHH la revisará pronto.");
+      setJustificacionForm({ idRegistroAsistencia: "", motivo: "" });
+      cargarMisJustificaciones();
+    } catch {
+      setMensaje("Error al enviar la justificación");
+    }
+  };
+
+  const cargarHorarios = async () => {
+    setLoading(true);
+    try {
+      const data = await listarHorarios();
+      setHorarios(Array.isArray(data) ? data : []);
+    } catch {
+      setError("No se pudieron cargar los horarios");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHorarioSubmit = async (e) => {
+    e.preventDefault();
+    setMensaje("");
+    try {
+      const dto = {
+        nombreTurno: horarioForm.nombreTurno,
+        horaEntrada: horarioForm.horaEntrada,
+        horaSalida: horarioForm.horaSalida,
+        tolerancia: parseInt(horarioForm.tolerancia) || 10,
+      };
+      if (horarioForm.idHorario) {
+        await actualizarHorario(horarioForm.idHorario, dto);
+        setMensaje("Horario actualizado correctamente");
+      } else {
+        await crearHorario(dto);
+        setMensaje("Horario creado correctamente");
+      }
+      setHorarioForm({ idHorario: null, nombreTurno: "", horaEntrada: "", horaSalida: "", tolerancia: 10 });
+      cargarHorarios();
+    } catch {
+      setMensaje("Error al guardar el horario");
+    }
+  };
+
+  const handleEliminarHorario = async (id) => {
+    try {
+      await eliminarHorario(id);
+      setMensaje("Horario eliminado correctamente");
+      cargarHorarios();
+    } catch {
+      setMensaje("Error al eliminar el horario");
+    }
+  };
+
+  const handleEditarHorario = (h) => {
+    setHorarioForm({
+      idHorario: h.idHorario,
+      nombreTurno: h.nombreTurno || "",
+      horaEntrada: h.horaEntrada || "",
+      horaSalida: h.horaSalida || "",
+      tolerancia: h.tolerancia ?? 10,
+    });
+    setTabActiva("horarios");
   };
 
   /* ══════════════════════════════════════ */
@@ -117,28 +223,78 @@ export default function ControlAsistencia() {
                 ⏱ Tienes <strong>1 día</strong> desde la incidencia para registrar tu justificación.
                 Pasado ese plazo, ya no podrás justificar la tardanza.
               </div>
+
+              <h3 style={{ marginTop: "20px", marginBottom: "12px" }}>Nueva Justificación</h3>
+              <form onSubmit={handleJustificar} style={{ marginBottom: "20px" }}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>ID Registro de Asistencia *</label>
+                    <input
+                      type="number"
+                      value={justificacionForm.idRegistroAsistencia}
+                      onChange={(e) => setJustificacionForm({ ...justificacionForm, idRegistroAsistencia: e.target.value })}
+                      placeholder="ID del registro con tardanza"
+                      required
+                    />
+                  </div>
+                  <div className="form-group form-full">
+                    <label>Motivo de la Justificación *</label>
+                    <textarea
+                      value={justificacionForm.motivo}
+                      onChange={(e) => setJustificacionForm({ ...justificacionForm, motivo: e.target.value })}
+                      placeholder="Explique el motivo de su tardanza..."
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">📤 Enviar Justificación</button>
+                </div>
+              </form>
+
+              <h3 style={{ marginBottom: "12px" }}>Historial de Justificaciones</h3>
               <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Fecha Tardanza</th>
-                      <th>Minutos de Retraso</th>
-                      <th>Motivo</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colSpan={5}>
-                        <div className="empty-state">
-                          <div className="empty-state-icon">✅</div>
-                          <p>No tienes justificaciones pendientes</p>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                {loading ? (
+                  <div className="loading-text">Cargando justificaciones...</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Registro ID</th>
+                        <th>Motivo</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Comentario</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {misJustificaciones.length === 0 ? (
+                        <tr>
+                          <td colSpan={6}>
+                            <div className="empty-state">
+                              <div className="empty-state-icon">✅</div>
+                              <p>No tienes justificaciones registradas</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : misJustificaciones.map((j) => (
+                        <tr key={j.id ?? j.idJustificacion}>
+                          <td>{j.idJustificacion ?? j.id ?? "—"}</td>
+                          <td>{j.idRegistroAsistencia ?? "—"}</td>
+                          <td>{j.motivo}</td>
+                          <td>
+                            <span className={`badge ${j.estado === "APROBADA" ? "badge-success" : j.estado === "RECHAZADA" ? "badge-danger" : "badge-warning"}`}>
+                              {j.estado ?? "PENDIENTE"}
+                            </span>
+                          </td>
+                          <td>{j.fechaJustificacion ?? "—"}</td>
+                          <td>{j.comentarioRevision ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}
@@ -206,6 +362,9 @@ export default function ControlAsistencia() {
           </button>
           <button className={`tab ${tabActiva === "justificaciones" ? "active" : ""}`} onClick={() => { setTabActiva("justificaciones"); cargarJustificaciones(); }}>
             📋 Justificaciones Pendientes
+          </button>
+          <button className={`tab ${tabActiva === "horarios" ? "active" : ""}`} onClick={() => { setTabActiva("horarios"); cargarHorarios(); }}>
+            ⏰ Configurar Horarios
           </button>
         </div>
 
@@ -313,7 +472,7 @@ export default function ControlAsistencia() {
                           <span className="badge badge-warning">{j.estado ?? "Pendiente"}</span>
                         </td>
                         <td style={{ display: "flex", gap: "6px" }}>
-                          <button className="btn btn-success btn-sm" onClick={() => handleRevisar(j.id ?? j.idJustificacion, "APROBADO")}>
+                          <button className="btn btn-success btn-sm" onClick={() => handleRevisar(j.id ?? j.idJustificacion, "APROBADA")}>
                             ✅ Aprobar
                           </button>
                           <button className="btn btn-danger btn-sm" onClick={() => handleRevisar(j.id ?? j.idJustificacion, "RECHAZADO")}>
@@ -328,6 +487,113 @@ export default function ControlAsistencia() {
             </div>
             <div className="form-actions" style={{ marginTop: "12px" }}>
               <button className="btn btn-secondary" onClick={cargarJustificaciones}>🔄 Actualizar</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── CONFIGURAR HORARIOS ── */}
+        {tabActiva === "horarios" && (
+          <div className="section-card">
+            <h2>⏰ Configurar Horarios y Tolerancia</h2>
+            <div className="alert alert-info">
+              Defina los turnos de trabajo con su hora de entrada, salida y tolerancia en minutos.
+            </div>
+            <form onSubmit={handleHorarioSubmit} style={{ marginBottom: "20px" }}>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Nombre Turno *</label>
+                  <input
+                    value={horarioForm.nombreTurno}
+                    onChange={(e) => setHorarioForm({ ...horarioForm, nombreTurno: e.target.value })}
+                    placeholder="Ej: Turno Mañana"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hora Entrada *</label>
+                  <input
+                    type="time"
+                    value={horarioForm.horaEntrada}
+                    onChange={(e) => setHorarioForm({ ...horarioForm, horaEntrada: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hora Salida *</label>
+                  <input
+                    type="time"
+                    value={horarioForm.horaSalida}
+                    onChange={(e) => setHorarioForm({ ...horarioForm, horaSalida: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tolerancia (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={horarioForm.tolerancia}
+                    onChange={(e) => setHorarioForm({ ...horarioForm, tolerancia: e.target.value })}
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary">
+                  {horarioForm.idHorario ? "💾 Actualizar" : "➕ Crear Horario"}
+                </button>
+                {horarioForm.idHorario && (
+                  <button type="button" className="btn btn-secondary" onClick={() => setHorarioForm({ idHorario: null, nombreTurno: "", horaEntrada: "", horaSalida: "", tolerancia: 10 })}>
+                    Cancelar edición
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <h3 style={{ marginBottom: "12px" }}>Horarios Configurados</h3>
+            <div className="table-wrapper">
+              {loading ? (
+                <div className="loading-text">Cargando horarios...</div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Turno</th>
+                      <th>Entrada</th>
+                      <th>Salida</th>
+                      <th>Tolerancia</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {horarios.length === 0 ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <div className="empty-state">
+                            <div className="empty-state-icon">⏰</div>
+                            <p>No hay horarios configurados</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : horarios.map((h) => (
+                      <tr key={h.idHorario}>
+                        <td><strong>{h.nombreTurno}</strong></td>
+                        <td>{h.horaEntrada ?? "—"}</td>
+                        <td>{h.horaSalida ?? "—"}</td>
+                        <td>{h.tolerancia ?? 10} min</td>
+                        <td style={{ display: "flex", gap: "6px" }}>
+                          <button className="btn btn-secondary btn-sm" onClick={() => handleEditarHorario(h)}>
+                            ✏️ Editar
+                          </button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleEliminarHorario(h.idHorario)}>
+                            🗑️ Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}

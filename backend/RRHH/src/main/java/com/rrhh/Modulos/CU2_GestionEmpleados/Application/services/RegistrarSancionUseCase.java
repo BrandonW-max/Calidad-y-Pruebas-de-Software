@@ -95,8 +95,20 @@ public class RegistrarSancionUseCase {
         sancion.setBloqueaAcceso(Boolean.TRUE.equals(dto.getBloquearAcceso()));
         sancion.setEstado("ACTIVA");
 
-        Sancion sancionGuardada =
-                sancionRepository.save(sancion);
+        Sancion sancionGuardada = null;
+        int maxReintentos = 5;
+        for (int intento = 0; intento < maxReintentos; intento++) {
+            try {
+                sancionGuardada = sancionRepository.save(sancion);
+                break;
+            } catch (Exception e) {
+                if (intento == maxReintentos - 1) {
+                    throw new RuntimeException("No se pudo generar un codigo unico para la sancion tras " + maxReintentos + " intentos", e);
+                }
+                secuencia = ThreadLocalRandom.current().nextInt(1000, 9999);
+                sancion.setCodigo("SANC-" + Year.now().getValue() + "-" + empleado.getIdEmpleado() + "-" + secuencia);
+            }
+        }
 
         UsuarioGestion usuario =
                 usuarioRepository.findByEmpleadoId(idEmpleado);

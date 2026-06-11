@@ -11,10 +11,10 @@ const TIPOS = [
 ];
 
 const FILTROS_INICIALES = {
-  empleados:   { area: "", cargo: "", tipoContrato: "", estado: "", nivelJerarquico: "", empleado: "" },
-  asistencia:  { fechaInicio: "", fechaFin: "", area: "", empleado: "" },
-  nomina:      { fechaInicio: "", fechaFin: "", area: "", empleado: "", tipoPago: "", rangoSalarial: "" },
-  solicitudes: { fechaInicio: "", fechaFin: "", area: "", empleado: "", tipoSolicitud: "", estado: "" },
+  empleados:   { area: "", cargo: "", tipoContrato: "", estado: "", nivelJerarquico: "", idEmpleado: "" },
+  asistencia:  { fechaInicio: "", fechaFin: "", area: "", idEmpleado: "" },
+  nomina:      { fechaInicio: "", fechaFin: "", area: "", idEmpleado: "", tipoPago: "", rangoSalarial: "" },
+  solicitudes: { fechaInicio: "", fechaFin: "", area: "", idEmpleado: "", tipoSolicitud: "", estado: "" },
 };
 
 export default function GenerarReportes() {
@@ -55,7 +55,7 @@ export default function GenerarReportes() {
     try {
       const res  = await generarReporte(tipoActivo, f, formato);
       const blob = await res.blob();
-      const ext  = formato === "PDF" ? "pdf" : formato === "XLSX" ? "xlsx" : "csv";
+      const ext  = formato === "PDF" ? "pdf" : formato === "EXCEL" ? "xlsx" : "csv";
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
       a.href     = url;
@@ -141,8 +141,8 @@ export default function GenerarReportes() {
               </div>
 
               <div className="form-group">
-                <label>Empleado (nombre o DNI)</label>
-                <input placeholder="Todos los empleados" value={f.empleado} onChange={(e) => setF("empleado", e.target.value)} />
+                <label>ID Empleado</label>
+                <input type="number" placeholder="Todos los empleados" value={f.idEmpleado} onChange={(e) => setF("idEmpleado", e.target.value)} />
               </div>
 
               {tipoActivo === "empleados" && (
@@ -208,6 +208,10 @@ export default function GenerarReportes() {
                       <option value="RECHAZADA">Rechazada</option>
                     </select>
                   </div>
+                  <div className="form-group">
+                    <label>Cargo</label>
+                    <input placeholder="Todos los cargos" value={f.cargo} onChange={(e) => setF("cargo", e.target.value)} />
+                  </div>
                 </>
               )}
             </div>
@@ -248,7 +252,7 @@ export default function GenerarReportes() {
 
             <div className="form-actions" style={{ marginTop: "16px" }}>
               <button className="btn btn-danger"    onClick={() => handleExportar("PDF")}>📄 Exportar PDF</button>
-              <button className="btn btn-success"   onClick={() => handleExportar("XLSX")}>📊 Exportar Excel</button>
+              <button className="btn btn-success"   onClick={() => handleExportar("EXCEL")}>📊 Exportar Excel</button>
               <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 Exportar CSV</button>
               <button className="btn btn-secondary" onClick={limpiar}>Nueva Consulta</button>
             </div>
@@ -292,7 +296,7 @@ export default function GenerarReportes() {
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setModalReporte(false)}>Cerrar</button>
                 <button className="btn btn-secondary" onClick={() => handleExportar("CSV")}>📑 CSV</button>
-                <button className="btn btn-success"   onClick={() => handleExportar("XLSX")}>📊 Excel</button>
+                <button className="btn btn-success"   onClick={() => handleExportar("EXCEL")}>📊 Excel</button>
                 <button className="btn btn-danger"    onClick={() => handleExportar("PDF")}>📄 PDF</button>
               </div>
             </div>

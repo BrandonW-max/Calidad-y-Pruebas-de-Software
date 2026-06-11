@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { getUser } from "./services/api";
+import { useEffect } from "react";
+import { getUser, clearSession } from "./services/api";
 import Login from "./pages/Login";
 import Acceso403 from "./pages/Acceso403";
 import DashboardRRHH from "./pages/DashboardRRHH";
@@ -19,6 +20,20 @@ function ProtectedRoute({ children, requiredRole }) {
 }
 
 function App() {
+  useEffect(() => {
+    let timer;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { clearSession(); window.location.href = '/'; }, 15 * 60 * 1000);
+    };
+    ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.addEventListener(e, reset));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.removeEventListener(e, reset));
+    };
+  }, []);
+
   return (
     <Routes>
       {/* Auth */}

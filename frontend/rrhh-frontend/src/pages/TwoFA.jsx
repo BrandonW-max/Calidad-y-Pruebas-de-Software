@@ -5,7 +5,7 @@ import { verify2FA, saveSession } from "../services/api";
 export default function TwoFA({ open, username, onClose, onSuccess }) {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [time, setTime] = useState(300);
-  const [intentos, setIntentos] = useState(5);
+  const [intentos, setIntentos] = useState(3);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 

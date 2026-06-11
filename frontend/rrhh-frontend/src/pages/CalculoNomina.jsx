@@ -37,8 +37,8 @@ export default function CalculoNomina() {
       const data = await calcularNomina(dto);
       setNominas(Array.isArray(data) ? data : [data]);
       setMensaje("Nómina calculada correctamente. Revise el detalle a continuación.");
-    } catch {
-      setError("Error al calcular la nómina. Verifique que los registros de asistencia estén completos y sin inconsistencias.");
+    } catch (err) {
+      setError(err?.message || "Error al calcular la nómina. Verifique los registros de asistencia.");
     } finally {
       setLoading(false);
     }

@@ -61,6 +61,13 @@ public class JustificacionService {
             r.setMinutosTardanza(0);
             r.setEstado("PUNTUAL");
             r.setObservacion("Tardanza justificada y aprobada por RRHH");
+            if (r.getHoraEntrada() != null && r.getHoraSalida() != null) {
+                long minutos = java.time.Duration.between(r.getHoraEntrada(), r.getHoraSalida()).toMinutes();
+                if (minutos > 0) {
+                    r.setHorasTrabajadas(java.math.BigDecimal.valueOf(minutos)
+                            .divide(java.math.BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP));
+                }
+            }
             em.merge(r);
         }
 

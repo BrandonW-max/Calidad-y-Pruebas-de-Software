@@ -60,6 +60,9 @@ public class EmpleadoModel {
     @Column(name = "actualizado_el")
     private LocalDateTime actualizadoEl = LocalDateTime.now();
 
+    @Column(name = "fecha_desvinculacion")
+    private LocalDateTime fechaDesvinculacion;
+
     // =========================
     // RELACIONES
     // =========================
@@ -248,6 +251,14 @@ public class EmpleadoModel {
 
     public void setActualizadoEl(LocalDateTime actualizadoEl) {
         this.actualizadoEl = actualizadoEl;
+    }
+
+    public LocalDateTime getFechaDesvinculacion() {
+        return fechaDesvinculacion;
+    }
+
+    public void setFechaDesvinculacion(LocalDateTime fechaDesvinculacion) {
+        this.fechaDesvinculacion = fechaDesvinculacion;
     }
 
     public UsuarioModel getUsuario() {

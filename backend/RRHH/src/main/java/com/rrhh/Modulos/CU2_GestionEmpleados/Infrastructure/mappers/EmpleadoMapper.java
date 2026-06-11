@@ -25,6 +25,7 @@ public class EmpleadoMapper {
         domain.setCorreo(model.getCorreo());
         domain.setTelefono(model.getTelefono());
         domain.setEstado(model.getEstado());
+        domain.setFechaDesvinculacion(model.getFechaDesvinculacion());
 
         return domain;
     }
@@ -49,6 +50,7 @@ public class EmpleadoMapper {
         model.setCorreo(domain.getCorreo());
         model.setTelefono(domain.getTelefono());
         model.setEstado(domain.getEstado());
+        model.setFechaDesvinculacion(domain.getFechaDesvinculacion());
 
         return model;
     }

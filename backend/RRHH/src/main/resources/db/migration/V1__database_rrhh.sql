@@ -35,7 +35,8 @@ CREATE TABLE empleado(
     huella_template TEXT,
     saldo_vacaciones INT DEFAULT 30,
     creado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    actualizado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_desvinculacion TIMESTAMP
 );
 
 ALTER TABLE departamento ADD CONSTRAINT fk_jefe_dpto FOREIGN KEY (jefe_dpto) REFERENCES empleado(id_empleado);
@@ -147,7 +148,8 @@ CREATE TABLE registro_asistencia (
     id_empleado BIGINT REFERENCES empleado(id_empleado),
     id_horario BIGINT REFERENCES horario(id_horario),
     creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_asistencia_emp_fecha UNIQUE (id_empleado, fecha)
 );
 
 CREATE TABLE nomina (
@@ -285,9 +287,12 @@ CREATE TABLE feriado (
 
 CREATE INDEX idx_empleado_dni ON empleado(numero_di);
 CREATE INDEX idx_empleado_nombres ON empleado(nombres, apellidos);
+CREATE INDEX idx_empleado_estado ON empleado(estado);
 CREATE INDEX idx_usuario_login ON usuario(nombre_usuario) WHERE activo = TRUE;
 CREATE INDEX idx_asistencia_emp_fecha ON registro_asistencia(id_empleado, fecha);
 CREATE INDEX idx_asignacion_vigente ON asignacion_horario(id_empleado, fecha_desde, fecha_hasta) WHERE activo = TRUE;
+CREATE INDEX idx_contrato_cargo ON contrato(cargo);
+CREATE INDEX idx_contrato_emp_estado ON contrato(id_empleado, estado);
 
 -- =========================
 -- TRIGGERS

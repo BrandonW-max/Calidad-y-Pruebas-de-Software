@@ -11,6 +11,8 @@ import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HorarioModel;
 import com.rrhh.Shared.persistence.AsignacionHorarioModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -28,6 +31,9 @@ public class AsistenciaService {
     private final JpaEmpleadoRepository empleadoRepository;
     private final IHistorialRepository historialRepository;
 
+    @PersistenceContext
+    private EntityManager em;
+
     public AsistenciaService(JpaRegistroAsistenciaNominaRepository registroAsistenciaRepository,
                              JpaEmpleadoRepository empleadoRepository,
                              IHistorialRepository historialRepository) {
@@ -36,22 +42,24 @@ public class AsistenciaService {
         this.historialRepository = historialRepository;
     }
 
-    public MarcarAsistenciaResponseDTO marcarAsistencia(MarcarAsistenciaRequestDTO request) {
+    public MarcarAsistenciaResponseDTO marcarAsistencia(MarcarAsistenciaRequestDTO request, String ip) {
 
         if (request.getIdEmpleado() == null) {
+            registrarLogFallo(null, "ID_EMPLEADO_NULO", ip);
             return new MarcarAsistenciaResponseDTO(false, "Debe enviar el ID del empleado.");
         }
 
         Optional<EmpleadoModel> empleadoOptional = empleadoRepository.findById(request.getIdEmpleado().longValue());
 
         if (empleadoOptional.isEmpty()) {
+            registrarLogFallo(request.getIdEmpleado().longValue(), "EMPLEADO_NO_ENCONTRADO", ip);
             return new MarcarAsistenciaResponseDTO(false, "Empleado no encontrado.");
         }
 
         EmpleadoModel empleado = empleadoOptional.get();
 
         if (!"ACTIVO".equalsIgnoreCase(empleado.getEstado())) {
-            registrarLogFallo(empleado.getIdEmpleado(), "EMPLEADO_INACTIVO");
+            registrarLogFallo(empleado.getIdEmpleado(), "EMPLEADO_INACTIVO", ip);
             return new MarcarAsistenciaResponseDTO(false, "Usuario denegado. El empleado esta inactivo.");
         }
 
@@ -59,7 +67,7 @@ public class AsistenciaService {
         if (huellaTemplate == null || huellaTemplate.isBlank()
                 || empleado.getHuellaTemplate() == null
                 || !huellaTemplate.equals(empleado.getHuellaTemplate())) {
-            registrarLogFallo(empleado.getIdEmpleado(), "HUELLA_NO_COINCIDE");
+            registrarLogFallo(empleado.getIdEmpleado(), "HUELLA_NO_COINCIDE", ip);
             return new MarcarAsistenciaResponseDTO(false, "Usuario denegado. La huella no coincide.");
         }
 
@@ -80,17 +88,19 @@ public class AsistenciaService {
         }
 
         if (registro.getHoraEntrada() != null && registro.getHoraSalida() != null) {
-            registrarLogFallo(empleado.getIdEmpleado(), "REGISTRO_DUPLICADO");
+            registrarLogFallo(empleado.getIdEmpleado(), "REGISTRO_DUPLICADO", ip);
             return new MarcarAsistenciaResponseDTO(
                     false,
                     "Registro duplicado. El empleado ya tiene entrada y salida registradas hoy."
             );
         }
 
+        registrarLogFallo(empleado.getIdEmpleado(), "REGISTRO_INCONSISTENTE", ip);
         return new MarcarAsistenciaResponseDTO(false, "Registro inconsistente. Revise la asistencia manualmente.");
     }
 
-    public MarcarAsistenciaResponseDTO registrarManual(MarcarAsistenciaManualRequestDTO request) {
+    public MarcarAsistenciaResponseDTO registrarManual(MarcarAsistenciaManualRequestDTO request,
+                                                         Long idUsuarioRrhh, String ip) {
 
         if (request.getIdEmpleado() == null) {
             return new MarcarAsistenciaResponseDTO(false, "Debe enviar el ID del empleado.");
@@ -131,6 +141,10 @@ public class AsistenciaService {
             registro.setFecha(fecha);
         } else {
             registro = registroOptional.get();
+            if (registro.getHoraEntrada() != null && registro.getHoraSalida() != null) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "El empleado ya tiene entrada y salida registradas para este dia.");
+            }
         }
 
         String motivo = request.getMotivo() != null ? request.getMotivo() : "Ajuste manual por RRHH";
@@ -170,6 +184,14 @@ public class AsistenciaService {
 
         RegistroAsistenciaModel guardado = registroAsistenciaRepository.save(registro);
 
+        Historial log = new Historial(idUsuarioRrhh, "REGISTRO_MANUAL_ASISTENCIA", ip);
+        log.setTablaAfectada("REGISTRO_ASISTENCIA");
+        log.setValorNuevo("Empleado: " + empleado.getIdEmpleado()
+                + " | Tipo: " + (esEntrada ? "ENTRADA" : "SALIDA")
+                + " | Motivo: " + motivo
+                + " | Fecha: " + fecha);
+        historialRepository.save(log);
+
         return new MarcarAsistenciaResponseDTO(
                 true,
                 "Registro manual de asistencia almacenado correctamente.",
@@ -184,35 +206,40 @@ public class AsistenciaService {
         );
     }
 
-    private void registrarLogFallo(Long idEmpleado, String motivo) {
-        Historial log = new Historial(idEmpleado, "INTENTO_FALLIDO_ASISTENCIA", "127.0.0.1");
+    private void registrarLogFallo(Long idEmpleado, String motivo, String ip) {
+        Historial log = new Historial(idEmpleado != null ? idEmpleado : 0L, "INTENTO_FALLIDO_ASISTENCIA", ip);
         log.setTablaAfectada("REGISTRO_ASISTENCIA");
         log.setValorNuevo(motivo);
         historialRepository.save(log);
     }
 
-    private LocalTime obtenerHoraEntradaProgramada(EmpleadoModel empleado) {
-        Optional<RegistroAsistenciaModel> registroHoy =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(
-                        empleado.getIdEmpleado().intValue(), LocalDate.now());
+    private HorarioModel obtenerHorarioAsignado(EmpleadoModel empleado) {
+        List<AsignacionHorarioModel> asignaciones = em.createQuery(
+                "SELECT a FROM AsignacionHorarioModel a WHERE a.empleado.idEmpleado = :idEmpleado AND a.activo = true",
+                AsignacionHorarioModel.class)
+                .setParameter("idEmpleado", empleado.getIdEmpleado())
+                .getResultList();
 
-        if (registroHoy.isPresent() && registroHoy.get().getHorario() != null) {
-            return registroHoy.get().getHorario().getHoraEntrada();
+        if (!asignaciones.isEmpty() && asignaciones.get(0).getHorario() != null) {
+            return asignaciones.get(0).getHorario();
         }
 
+        return null;
+    }
+
+    private LocalTime obtenerHoraEntradaProgramada(EmpleadoModel empleado) {
+        HorarioModel horario = obtenerHorarioAsignado(empleado);
+        if (horario != null && horario.getHoraEntrada() != null) {
+            return horario.getHoraEntrada();
+        }
         return LocalTime.of(8, 0);
     }
 
     private int obtenerTolerancia(EmpleadoModel empleado) {
-        Optional<RegistroAsistenciaModel> registroHoy =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(
-                        empleado.getIdEmpleado().intValue(), LocalDate.now());
-
-        if (registroHoy.isPresent() && registroHoy.get().getHorario() != null
-                && registroHoy.get().getHorario().getTolerancia() != null) {
-            return registroHoy.get().getHorario().getTolerancia();
+        HorarioModel horario = obtenerHorarioAsignado(empleado);
+        if (horario != null && horario.getTolerancia() != null) {
+            return horario.getTolerancia();
         }
-
         return 10;
     }
 
@@ -228,11 +255,13 @@ public class AsistenciaService {
         registro.setHoraEntrada(horaActual);
         registro.setTipoUltimoRegistro("ENTRADA");
 
-        LocalTime horaLimite = obtenerHoraEntradaProgramada(empleado).plusMinutes(obtenerTolerancia(empleado));
+        LocalTime horaEntradaProgramada = obtenerHoraEntradaProgramada(empleado);
+        int tolerancia = obtenerTolerancia(empleado);
+        LocalTime horaLimite = horaEntradaProgramada.plusMinutes(tolerancia);
         int minutosTardanza = 0;
 
         if (horaActual.isAfter(horaLimite)) {
-            minutosTardanza = (int) Duration.between(obtenerHoraEntradaProgramada(empleado), horaActual).toMinutes();
+            minutosTardanza = (int) Duration.between(horaEntradaProgramada, horaActual).toMinutes();
         }
 
         if (minutosTardanza > 0) {

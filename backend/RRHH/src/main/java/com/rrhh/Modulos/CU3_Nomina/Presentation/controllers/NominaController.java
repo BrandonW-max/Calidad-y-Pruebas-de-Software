@@ -9,7 +9,10 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailServi
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.UsuarioGestion;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
+import com.rrhh.Shared.persistence.NotificacionEnvioModel;
 import com.rrhh.config.security.AuthenticatedUser;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @RestController
 public class NominaController {
 
@@ -29,6 +35,9 @@ public class NominaController {
     private final EmailService emailService;
     private final IUsuarioGestionRepository usuarioGestionRepository;
     private final JpaEmpleadoRepository jpaEmpleadoRepository;
+
+    @PersistenceContext
+    private EntityManager em;
 
     public NominaController(INominaService nominaService,
                             NominaService nominaServicePdf,
@@ -52,9 +61,9 @@ public class NominaController {
             List<NominaResponseDTO> resultado = nominaService.calcularNomina(request, idUsuario);
             return ResponseEntity.ok(resultado);
         } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -144,12 +153,48 @@ public class NominaController {
                         "El empleado no tiene correo registrado."));
             }
 
-            emailService.enviarComprobanteNomina(correo,
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    nomina.getPeriodo(), pdf);
+            String errorMsg = null;
+            boolean exito = false;
 
-            return ResponseEntity.ok(Map.of("success", true, "message",
-                    "Comprobante enviado a " + correo));
+            for (int intento = 1; intento <= 3; intento++) {
+                try {
+                    emailService.enviarComprobanteNomina(correo,
+                            empleado.getNombres() + " " + empleado.getApellidos(),
+                            nomina.getPeriodo(), pdf);
+
+                    NotificacionEnvioModel notif = new NotificacionEnvioModel();
+                    notif.setIdNomina(id);
+                    notif.setTipo("COMPROBANTE_NOMINA");
+                    notif.setEstado("ENVIADO");
+                    notif.setIntentos(intento);
+                    notif.setFechaEnvio(java.time.LocalDateTime.now());
+                    em.persist(notif);
+
+                    exito = true;
+                    break;
+                } catch (Exception e) {
+                    errorMsg = e.getMessage();
+                    if (intento < 3) {
+                        Thread.sleep(1000);
+                    }
+                }
+            }
+
+            if (exito) {
+                return ResponseEntity.ok(Map.of("success", true, "message",
+                        "Comprobante enviado a " + correo));
+            }
+
+            NotificacionEnvioModel notif = new NotificacionEnvioModel();
+            notif.setIdNomina(id);
+            notif.setTipo("COMPROBANTE_NOMINA");
+            notif.setEstado("FALLIDO");
+            notif.setIntentos(3);
+            notif.setError(errorMsg);
+            em.persist(notif);
+
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("success", false, "message", "Error al enviar tras 3 intentos: " + errorMsg));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("success", false, "message", "Error al enviar: " + e.getMessage()));

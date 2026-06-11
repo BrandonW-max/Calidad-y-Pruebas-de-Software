@@ -10,6 +10,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -29,6 +30,8 @@ public class CierreJornadaService {
         List<RegistroAsistenciaModel> abiertos =
                 repository.findByFechaAndHoraSalidaIsNull(hoy);
 
+        List<RegistroAsistenciaModel> cerrados = new ArrayList<>();
+
         for (RegistroAsistenciaModel r : abiertos) {
             if (r.getHoraEntrada() != null) {
                 long minutos = Duration.between(r.getHoraEntrada(), horaCierre).toMinutes();
@@ -39,9 +42,13 @@ public class CierreJornadaService {
                     r.setHorasTrabajadas(horas);
                     r.setTipoUltimoRegistro("CIERRE_AUTOMATICO");
                     r.setObservacion("Jornada cerrada automaticamente. Salida no registrada.");
-                    repository.save(r);
+                    cerrados.add(r);
                 }
             }
+        }
+
+        if (!cerrados.isEmpty()) {
+            repository.saveAll(cerrados);
         }
     }
 }

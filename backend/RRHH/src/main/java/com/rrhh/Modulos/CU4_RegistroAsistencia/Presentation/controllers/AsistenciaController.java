@@ -7,6 +7,7 @@ import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaR
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaResponseDTO;
 import com.rrhh.Shared.persistence.JustificacionTardanzaModel;
 import com.rrhh.config.security.AuthenticatedUser;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,8 +32,10 @@ public class AsistenciaController {
 
     @PostMapping("/marcar")
     public ResponseEntity<MarcarAsistenciaResponseDTO> marcarAsistencia(
-            @RequestBody MarcarAsistenciaRequestDTO request) {
-        MarcarAsistenciaResponseDTO response = asistenciaService.marcarAsistencia(request);
+            @RequestBody MarcarAsistenciaRequestDTO request,
+            HttpServletRequest httpRequest) {
+        String ip = httpRequest.getRemoteAddr();
+        MarcarAsistenciaResponseDTO response = asistenciaService.marcarAsistencia(request, ip);
         if (!response.isSuccess()) {
             return ResponseEntity.badRequest().body(response);
         }
@@ -42,8 +45,11 @@ public class AsistenciaController {
     @PostMapping("/manual")
     @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<MarcarAsistenciaResponseDTO> registrarManual(
-            @RequestBody MarcarAsistenciaManualRequestDTO request) {
-        MarcarAsistenciaResponseDTO response = asistenciaService.registrarManual(request);
+            @RequestBody MarcarAsistenciaManualRequestDTO request,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest) {
+        String ip = httpRequest.getRemoteAddr();
+        MarcarAsistenciaResponseDTO response = asistenciaService.registrarManual(request, user.getIdUsuario(), ip);
         if (!response.isSuccess()) {
             return ResponseEntity.badRequest().body(response);
         }

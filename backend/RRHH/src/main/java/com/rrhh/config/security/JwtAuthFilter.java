@@ -1,8 +1,5 @@
 package com.rrhh.config.security;
 
-import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.entities.Usuario;
-import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IUsuarioRepository;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,9 +25,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtConfig jwtConfig;
-
-    @Autowired
-    private IUsuarioRepository usuarioRepository;
 
     @Override
     protected void doFilterInternal(
@@ -55,13 +51,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String rol = jwtConfig.obtenerRol(token);
         Long idUsuario = jwtConfig.obtenerIdUsuario(token);
 
-        Usuario usuario = usuarioRepository.findByUsername(username);
-        if (usuario != null
-                && usuario.getTokenInvalidoDesde() != null
+        LocalDateTime tokenInvalidoDesde = jwtConfig.obtenerTokenInvalidoDesde(token);
+        if (tokenInvalidoDesde != null
                 && jwtConfig.obtenerClaims(token).getIssuedAt()
                         .before(java.util.Date.from(
-                                usuario.getTokenInvalidoDesde()
-                                        .atZone(java.time.ZoneId.systemDefault())
+                                tokenInvalidoDesde
+                                        .atZone(ZoneId.systemDefault())
                                         .toInstant()
                         ))
         ) {

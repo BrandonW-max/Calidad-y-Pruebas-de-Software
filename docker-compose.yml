@@ -42,5 +42,16 @@ services:
     depends_on:
       - backend
 
+  backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: rrhh-backup
+    depends_on:
+      - postgres
+    volumes:
+      - backup_data:/backups
+
 volumes:
   postgres_data:
+  backup_data:

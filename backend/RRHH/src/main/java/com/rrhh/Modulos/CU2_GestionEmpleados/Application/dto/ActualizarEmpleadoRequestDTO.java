@@ -1,5 +1,6 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Email;
@@ -14,6 +15,11 @@ public class ActualizarEmpleadoRequestDTO {
     @Email(message = "El correo electronico no tiene un formato valido")
     private String correo;
     private String telefono;
+
+    private String cargo;
+    private BigDecimal sueldo;
+    private Integer idDpto;
+    private String tipoContrato;
 
     public ActualizarEmpleadoRequestDTO() {
     }
@@ -80,5 +86,37 @@ public class ActualizarEmpleadoRequestDTO {
 
     public void setTelefono(String telefono) {
         this.telefono = telefono;
+    }
+
+    public String getCargo() {
+        return cargo;
+    }
+
+    public void setCargo(String cargo) {
+        this.cargo = cargo;
+    }
+
+    public BigDecimal getSueldo() {
+        return sueldo;
+    }
+
+    public void setSueldo(BigDecimal sueldo) {
+        this.sueldo = sueldo;
+    }
+
+    public Integer getIdDpto() {
+        return idDpto;
+    }
+
+    public void setIdDpto(Integer idDpto) {
+        this.idDpto = idDpto;
+    }
+
+    public String getTipoContrato() {
+        return tipoContrato;
+    }
+
+    public void setTipoContrato(String tipoContrato) {
+        this.tipoContrato = tipoContrato;
     }
 }

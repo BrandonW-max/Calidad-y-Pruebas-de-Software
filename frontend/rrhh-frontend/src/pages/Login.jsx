@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
-import { login, saveSession, clearSession } from "../services/api";
+import { login, saveSession, clearSession, solicitarRecuperacion } from "../services/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -15,9 +15,13 @@ export default function Login() {
   const [forgotInput, setForgotInput] = useState("");
   const [forgotOk, setForgotOk]     = useState(false);
 
-  const handleForgot = (e) => {
+  const handleForgot = async (e) => {
     e.preventDefault();
-    setForgotOk(true);
+    try {
+      await solicitarRecuperacion(forgotInput);
+    } finally {
+      setForgotOk(true);
+    }
   };
 
   const cerrarForgot = () => { setShowForgot(false); setForgotInput(""); setForgotOk(false); };

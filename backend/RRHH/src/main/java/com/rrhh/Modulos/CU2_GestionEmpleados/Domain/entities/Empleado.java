@@ -1,6 +1,7 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class Empleado {
 
@@ -16,6 +17,7 @@ public class Empleado {
     private String correo;
     private String telefono;
     private String estado;
+    private LocalDateTime fechaDesvinculacion;
 
     public Empleado() {
     }
@@ -50,6 +52,7 @@ public class Empleado {
 
     public void desvincular() {
         this.estado = "DESVINCULADO";
+        this.fechaDesvinculacion = LocalDateTime.now();
     }
 
     public void suspender() {
@@ -154,5 +157,13 @@ public class Empleado {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public LocalDateTime getFechaDesvinculacion() {
+        return fechaDesvinculacion;
+    }
+
+    public void setFechaDesvinculacion(LocalDateTime fechaDesvinculacion) {
+        this.fechaDesvinculacion = fechaDesvinculacion;
     }
 }

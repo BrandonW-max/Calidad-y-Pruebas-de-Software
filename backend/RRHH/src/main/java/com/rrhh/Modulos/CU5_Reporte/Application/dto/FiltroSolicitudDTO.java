@@ -10,6 +10,7 @@ public class FiltroSolicitudDTO {
     private Long idEmpleado;
     private String tipoSolicitud;
     private String estado;
+    private String cargo;
 
     public FiltroSolicitudDTO() {}
 
@@ -30,4 +31,7 @@ public class FiltroSolicitudDTO {
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public String getCargo() { return cargo; }
+    public void setCargo(String cargo) { this.cargo = cargo; }
 }
