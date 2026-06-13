@@ -62,19 +62,6 @@ export default function Login() {
         <div className="login-left">
           <img src={logo} className="logo-img" alt="Hospital San Gabriel" />
           <p className="login-tagline">Sistema de Recursos Humanos – Hospital</p>
-          <div className="login-features">
-            <div className="login-feature">
-              <span className="lf-icon">🔒</span>
-              <span>Acceso seguro con verificación en dos pasos.</span>
-            </div>
-            <div className="login-feature">
-              <span className="lf-icon">👥</span>
-              <div>
-                Acceso según rol:<br />
-                <strong>Empleado &nbsp;|&nbsp; RRHH &nbsp;|&nbsp; Gerencia</strong>
-              </div>
-            </div>
-          </div>
           <p className="login-sys-label">Sistema de Recursos Humanos – Hospital</p>
         </div>
 
@@ -142,9 +129,6 @@ export default function Login() {
             </div>
           )}
 
-          <div className="login-security-footer">
-            🔒 Su seguridad es nuestra prioridad. Este sistema utiliza verificación en dos pasos para proteger su información.
-          </div>
         </div>
       </div>
 
