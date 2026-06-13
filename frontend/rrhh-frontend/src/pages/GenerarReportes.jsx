@@ -52,10 +52,20 @@ export default function GenerarReportes() {
     };
 
     try {
-      const data = await generarReporte(params);
-      if (data instanceof Blob) {
-        const url = URL.createObjectURL(data);
-        const a   = document.createElement("a");
+      // generarReporte returns raw Response — must resolve content-type before consuming body
+      const response = await generarReporte(params);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const contentType = response.headers.get("content-type") || "";
+      const isFile = contentType.includes("application/pdf")
+        || contentType.includes("application/vnd")
+        || contentType.includes("text/csv")
+        || contentType.includes("application/octet-stream");
+
+      if (isFile) {
+        const blob = await response.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
         a.href     = url;
         a.download = `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${formato.toLowerCase()}`;
         a.click();
@@ -63,6 +73,7 @@ export default function GenerarReportes() {
         setMensaje("Reporte generado y descargado correctamente.");
         setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: "Descargado" }, ...h].slice(0, 10));
       } else {
+        const data = await response.json();
         const lista = Array.isArray(data) ? data : (data?.data ?? data?.content ?? []);
         setResultado(lista);
         setMensaje(`Reporte generado correctamente (${lista.length} registros).`);

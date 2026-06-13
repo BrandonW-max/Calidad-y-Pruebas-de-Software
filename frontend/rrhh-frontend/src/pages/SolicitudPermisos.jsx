@@ -75,6 +75,10 @@ function VistaEmpleado() {
   const handleEnviar = async (e) => {
     e.preventDefault();
     if (!idEmpleado) { setError("No se pudo obtener tu ID de empleado. Contacta a RRHH."); return; }
+    if (form.fechaInicio && form.fechaFin && form.fechaInicio > form.fechaFin) {
+      setError("La fecha de inicio no puede ser mayor que la fecha fin.");
+      return;
+    }
     setEnviando(true); setMensaje(""); setError("");
     try {
       await registrarSolicitud({ idEmpleado, tipo: form.tipo, fechaInicio: form.fechaInicio, fechaFin: form.fechaFin, descripcion: form.descripcion });

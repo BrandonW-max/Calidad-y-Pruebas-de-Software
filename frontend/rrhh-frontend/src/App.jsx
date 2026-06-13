@@ -12,6 +12,7 @@ import CalculoNomina from "./pages/CalculoNomina";
 import SolicitudPermisos from "./pages/SolicitudPermisos";
 import GenerarReportes from "./pages/GenerarReportes";
 import NominaEmpleado from "./pages/NominaEmpleado";
+import DevLogin from "./pages/DevLogin"; // ELIMINAR ANTES DE PRODUCCIÓN
 
 function ProtectedRoute({ children, requiredRole }) {
   const user = getUser();
@@ -57,6 +58,9 @@ function App() {
       {/* Gerencia */}
       <Route path="/gerencia" element={<ProtectedRoute requiredRole="GERENCIA"><DashboardGerencia /></ProtectedRoute>} />
       <Route path="/gerencia/solicitudes" element={<ProtectedRoute requiredRole="GERENCIA"><SolicitudPermisos /></ProtectedRoute>} />
+
+      {/* DEV — ELIMINAR ANTES DE PRODUCCIÓN */}
+      <Route path="/dev" element={<DevLogin />} />
 
       {/* Catch-all: ruta no encontrada */}
       <Route path="*" element={<Acceso403 />} />
