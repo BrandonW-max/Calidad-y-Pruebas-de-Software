@@ -32,8 +32,9 @@ const NAV = {
     subtitle: "Gestión Ejecutiva",
     themeClass: "sidebar-gerencia",
     links: [
-      { to: "/gerencia",            icon: "🏠", label: "Inicio" },
-      { to: "/gerencia/solicitudes", icon: "📅", label: "Solicitudes" },
+      { to: "/gerencia",                  icon: "🏠", label: "Inicio" },
+      { to: "/gerencia/solicitudes",      icon: "📅", label: "Solicitudes" },
+      { to: "/gerencia/justificaciones",  icon: "⏰", label: "Justificaciones" },
     ],
   },
 };

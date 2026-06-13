@@ -12,17 +12,43 @@ import {
   getUser,
 } from "../services/api";
 
+const STEP_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
+
 function FlowBar({ step }) {
   const steps = ["EMPLEADO", "RRHH", "GERENCIA", "RESULTADO"];
   return (
     <div className="sol-flow-bar">
-      {steps.map((s, i) => (
-        <div key={s} className={`sol-flow-step ${i === step ? "active" : i < step ? "done" : ""}`}>
-          <div className="sol-flow-dot">{i < step ? "✓" : i + 1}</div>
-          <span>{s}</span>
-          {i < steps.length - 1 && <div className="sol-flow-line" />}
-        </div>
-      ))}
+      {steps.map((s, i) => {
+        const color   = STEP_COLORS[i];
+        const isActive = i === step;
+        const isDone   = i < step;
+        const lit      = isActive || isDone;
+        return (
+          <div key={s} className="sol-flow-step">
+            <div
+              className="sol-flow-dot"
+              style={{
+                background: lit ? color : "#f1f5f9",
+                color:      lit ? "#fff" : color,
+                border:     `2px solid ${color}`,
+                opacity:    lit ? 1 : 0.45,
+                fontWeight: 700,
+              }}
+            >
+              {isDone ? "✓" : i + 1}
+            </div>
+            <span style={{
+              color:      isActive ? color : isDone ? "#16a34a" : "var(--text-3)",
+              fontWeight: isActive ? 700 : 500,
+            }}>
+              {s}
+            </span>
+            {i < steps.length - 1 && (
+              <div className="sol-flow-line" style={{ background: isDone ? "#22c55e" : "var(--border)" }} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -120,7 +146,13 @@ function VistaEmpleado() {
 
         {tabActiva === "lista" && (
           <div className="section-card">
-            <h2>Mis Solicitudes</h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+              <h2 style={{ margin: 0 }}>Mis Solicitudes</h2>
+              <div className="alert alert-info" style={{ margin: 0, padding: "6px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                ⏰ ¿Llegaste tarde? Justifica tu tardanza en
+                <a href="/empleado/asistencia" style={{ color: "var(--empleado)", fontWeight: 600, marginLeft: 4 }}>Mi Asistencia →</a>
+              </div>
+            </div>
             <div className="table-wrapper">
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
@@ -379,6 +411,7 @@ function VistaRRHH() {
 ══════════════════════════════════════════════════════════ */
 function VistaGerencia() {
   const [solicitudes,   setSolicitudes]   = useState([]);
+  const [solAprobadas,  setSolAprobadas]  = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [mensaje,       setMensaje]       = useState("");
   const [error,         setError]         = useState("");
@@ -391,8 +424,12 @@ function VistaGerencia() {
   const cargarSolicitudes = async () => {
     setLoading(true); setError("");
     try {
-      const data = await getSolicitudesPorEstado("EN_REVISION");
-      setSolicitudes(Array.isArray(data) ? data : []);
+      const [enRev, aprob] = await Promise.all([
+        getSolicitudesPorEstado("EN_REVISION"),
+        getSolicitudesPorEstado("APROBADO"),
+      ]);
+      setSolicitudes(Array.isArray(enRev) ? enRev : []);
+      setSolAprobadas(Array.isArray(aprob) ? aprob : []);
     } catch { setError("No se pudieron cargar las solicitudes"); }
     finally  { setLoading(false); }
   };
@@ -418,10 +455,13 @@ function VistaGerencia() {
     <div className="ger-wrap">
       <div className="ger-topbar">
         <div className="emp-topbar-brand">
-          <div className="emp-topbar-plus">✚</div>
+          <div className="emp-topbar-plus" style={{ background: "#7c3aed", color: "#fff" }}>✚</div>
           <span className="emp-topbar-text">HOSPITAL SAN GABRIEL</span>
         </div>
         <div className="emp-topbar-right">
+          <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = "/gerencia"}>
+            ← Inicio
+          </button>
           <span className="emp-topbar-username">{user?.username ?? "Gerente"}</span>
           <span className="role-pill role-pill-gerencia">Gerencia</span>
         </div>
@@ -441,43 +481,89 @@ function VistaGerencia() {
 
         <FlowBar step={2} />
 
-        <div className="section-card" style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
-          <div className="table-wrapper" style={{ marginBottom: 0 }}>
-            {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
-              <table>
-                <thead>
-                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Rev. RRHH</th><th>Estado</th><th>Decisión</th></tr>
-                </thead>
-                <tbody>
-                  {solicitudes.length === 0 ? (
-                    <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
-                  ) : solicitudes.map(s => (
-                    <tr key={s.idSolicitud ?? s.id}>
-                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
-                      <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                      <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                      <td>{s.fechaInicio ?? "—"}</td>
-                      <td>{s.fechaFin ?? "—"}</td>
-                      <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
-                      <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.comentarioRRHH ?? "—"}</td>
-                      <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                      <td>
-                        <div style={{ display: "flex", gap: "4px" }}>
-                          <button className="btn btn-success btn-sm"
-                            onClick={() => setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" })}>
-                            ✅ Aprobar
-                          </button>
-                          <button className="btn btn-danger btn-sm"
-                            onClick={() => setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" })}>
-                            ❌ Rechazar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+        {/* ── Tabla: En Revisión (decisión pendiente) ── */}
+        <div style={{ marginTop: 16 }}>
+          <h3 style={{ margin: "0 0 10px", fontSize: 15, color: "#f97316", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#f97316", display: "inline-block" }} />
+            Esperando Decisión ({solicitudes.length})
+          </h3>
+          <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="table-wrapper" style={{ marginBottom: 0 }}>
+              {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Rev. RRHH</th><th>Estado</th><th>Decisión</th></tr>
+                  </thead>
+                  <tbody>
+                    {solicitudes.length === 0 ? (
+                      <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
+                    ) : solicitudes.map(s => (
+                      <tr key={s.idSolicitud ?? s.id}>
+                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
+                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                        <td>{s.fechaInicio ?? "—"}</td>
+                        <td>{s.fechaFin ?? "—"}</td>
+                        <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
+                        <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.comentarioRRHH ?? "—"}</td>
+                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                        <td>
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            <button className="btn btn-success btn-sm"
+                              onClick={() => setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" })}>
+                              ✅ Aprobar
+                            </button>
+                            <button className="btn btn-danger btn-sm"
+                              onClick={() => setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" })}>
+                              ❌ Rechazar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabla: Aprobadas ── */}
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ margin: "0 0 10px", fontSize: 15, color: "#22c55e", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+            Solicitudes Aprobadas ({solAprobadas.length})
+          </h3>
+          <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="table-wrapper" style={{ marginBottom: 0 }}>
+              {loading ? (
+                <div className="loading-text">Actualizando solicitudes aprobadas...</div>
+              ) : solAprobadas.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📋</div>
+                  <p>No hay solicitudes aprobadas todavía</p>
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Respuesta Gerencia</th></tr>
+                  </thead>
+                  <tbody>
+                    {solAprobadas.map(s => (
+                      <tr key={s.idSolicitud ?? s.id}>
+                        <td style={{ color: "var(--text-3)", fontSize: 13 }}>{s.idSolicitud ?? s.id}</td>
+                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                        <td>{s.fechaInicio ?? "—"}</td>
+                        <td>{s.fechaFin ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
+                        <td style={{ fontSize: 12, color: "#16a34a" }}>{s.respuestaGerencia ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </main>

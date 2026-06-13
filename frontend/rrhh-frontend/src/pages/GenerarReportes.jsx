@@ -1,5 +1,7 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
+import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
 import { generarReporte } from "../services/api";
 
@@ -36,6 +38,76 @@ export default function GenerarReportes() {
   const [resultado, setResultado] = useState(null);
   const [historial, setHistorial] = useState([]);
   const [modalPreview, setModalPreview] = useState(false);
+
+  const nombreArchivo = (ext) =>
+    `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${ext}`;
+
+  const exportar = () => {
+    if (!resultado?.length) return;
+
+    if (formato === "CSV") {
+      const headers = Object.keys(resultado[0]);
+      const rows = resultado.map(r =>
+        headers.map(h => `"${String(r[h] ?? "").replace(/"/g, '""')}"`).join(",")
+      );
+      const csv = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = nombreArchivo("csv"); a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (formato === "XLSX") {
+      const ws = XLSX.utils.json_to_sheet(resultado);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, tipoActual?.label ?? tipoSeleccionado);
+      XLSX.writeFile(wb, nombreArchivo("xlsx"));
+      return;
+    }
+
+    // PDF — genera HTML completo y lo abre en nueva pestaña vía blob URL
+    const logoUrl = window.location.origin + logo;
+    const headers = Object.keys(resultado[0]);
+    const ths = headers.map(h => `<th>${h}</th>`).join("");
+    const trs = resultado.map(r =>
+      `<tr>${headers.map(h => `<td>${r[h] ?? ""}</td>`).join("")}</tr>`
+    ).join("");
+
+    const html = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8"><title>Reporte ${tipoSeleccionado}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11px;padding:24px;color:#1e293b}
+  .hdr{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #3b82f6}
+  .hdr img{height:54px}
+  .hdr h1{margin:0 0 2px;font-size:16px;color:#1e293b}
+  .hdr p{margin:0;font-size:11px;color:#64748b}
+  h2{margin:0 0 4px;font-size:13px;color:#3b82f6}
+  .meta{color:#64748b;font-size:11px;margin:0 0 14px}
+  table{border-collapse:collapse;width:100%}
+  th{background:#3b82f6;color:#fff;padding:6px 8px;text-align:left;border:1px solid #2563eb}
+  td{padding:4px 8px;border:1px solid #e2e8f0}
+  tr:nth-child(even){background:#f8fafc}
+  .footer{margin-top:16px;font-size:10px;color:#94a3b8}
+  .print-btn{margin-top:14px;padding:8px 18px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+  @media print{.print-btn{display:none}}
+</style></head><body>
+<div class="hdr">
+  <img src="${logoUrl}" alt="Hospital San Gabriel" onerror="this.style.display='none'" />
+  <div><h1>Hospital San Gabriel</h1><p>Sistema de Recursos Humanos</p></div>
+</div>
+<h2>${tipoActual?.icon ?? ""} ${tipoActual?.label ?? tipoSeleccionado}</h2>
+<p class="meta">Generado: ${new Date().toLocaleString("es-PE")} — ${resultado.length} registros</p>
+<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
+<p class="footer">Documento generado automáticamente — Hospital San Gabriel</p>
+<button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
+</body></html>`;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
 
   const handleGenerar = async (e) => {
     e.preventDefault();
@@ -196,15 +268,18 @@ export default function GenerarReportes() {
                     </div>
                   )}
                 </div>
-                <div className="form-actions" style={{ marginTop: 16 }}>
+                <div className="form-actions" style={{ marginTop: 16, flexWrap: "wrap", gap: "8px" }}>
                   <button type="submit" className="btn btn-primary" disabled={generando}>
-                    {generando ? "Generando..." : `📊 Generar Reporte ${formato}`}
+                    {generando ? "Generando..." : "📊 Generar Reporte"}
                   </button>
-                  {resultado && resultado.length > 0 && (
+                  {resultado && resultado.length > 0 && (<>
                     <button type="button" className="btn btn-secondary" onClick={() => setModalPreview(true)}>
                       👁 Vista Previa
                     </button>
-                  )}
+                    <button type="button" className="btn btn-secondary" onClick={exportar}>
+                      💾 Exportar
+                    </button>
+                  </>)}
                 </div>
               </form>
             </div>
@@ -274,6 +349,7 @@ export default function GenerarReportes() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModalPreview(false)}>Cerrar</button>
+              <button className="btn btn-secondary" onClick={exportar}>💾 Exportar</button>
             </div>
           </div>
         </div>

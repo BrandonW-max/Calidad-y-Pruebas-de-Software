@@ -17,6 +17,12 @@
   --gerencia: #7c3aed;
   --gerencia-dark: #6d28d9;
 
+  /* Primary & semantic */
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --success: #10b981;
+  --danger: #ef4444;
+
   /* Neutrals */
   --bg: #f0f4f8;
   --surface: #ffffff;
