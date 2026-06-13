@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -236,6 +237,27 @@ export default function GestionEmpleados() {
   const formatSueldo = (v) =>
     v != null ? `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}` : "—";
 
+  const exportarEmpleados = () => {
+    if (!empleados.length) return;
+    const data = empleados.map(e => ({
+      "ID":             e.idEmpleado ?? "—",
+      "Nombre Completo": `${e.nombres ?? ""} ${e.apellidos ?? ""}`.trim(),
+      "DNI":            e.numeroDi ?? "—",
+      "Cargo":          e.cargo ?? "—",
+      "Área":           e.departamento ?? "—",
+      "Sueldo Base":    e.sueldo != null ? Number(e.sueldo).toFixed(2) : "—",
+      "Estado":         e.estado ?? "—",
+      "Tipo Contrato":  e.tipoContrato ?? "—",
+      "Fecha Ingreso":  formatFecha(e.fechaInicio),
+      "Correo":         e.correo ?? "—",
+      "Teléfono":       e.telefono ?? "—",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Empleados");
+    XLSX.writeFile(wb, `empleados_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
   return (
     <div className="dashboard">
       <Sidebar rol="RRHH" />
@@ -253,7 +275,7 @@ export default function GestionEmpleados() {
             <button className="btn btn-success" onClick={() => setModalNuevo(true)}>
               ＋ Nuevo Empleado
             </button>
-            <button className="btn btn-primary">⬇ Exportar</button>
+            <button className="btn btn-primary" onClick={exportarEmpleados}>⬇ Exportar</button>
           </div>
         </header>
 
@@ -448,7 +470,6 @@ export default function GestionEmpleados() {
           {/* ── BOTTOM INFO BAR ── */}
           <div className="table-footer-bar">
             <span>ℹ️ Puede buscar, editar, desactivar y realizar acciones adicionales sobre los empleados.</span>
-            <a href="#">⓪ Ver guía de ayuda</a>
           </div>
         </div>
 
