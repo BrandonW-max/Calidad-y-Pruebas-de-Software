@@ -265,6 +265,99 @@ body { background: #f0f4f8; }
 
 .login-modal-btn-secondary:hover { background: #e2e8f0; }
 
+/* ── LEFT PANEL EXTRAS ── */
+.lf-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.login-sys-label {
+  margin-top: auto;
+  padding-top: 24px;
+  font-size: 11px;
+  opacity: 0.5;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ── RIGHT PANEL EXTRAS ── */
+.login-avatar {
+  width: 56px;
+  height: 56px;
+  background: #eff6ff;
+  border: 2px solid #bfdbfe;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 18px;
+}
+
+/* ── INPUT CON ICONO PREFIJO ── */
+.lf-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lf-wrap input {
+  padding-left: 38px;
+  padding-right: 38px;
+}
+
+.lf-prefix {
+  position: absolute;
+  left: 11px;
+  font-size: 15px;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.lf-eye {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.lf-eye:hover { color: #475569; }
+
+/* ── ALERTAS DENTRO DEL FORMULARIO ── */
+.login-info-alert {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #1d4ed8;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.login-attempts {
+  font-size: 12px;
+  color: #be123c;
+  margin-top: 5px;
+  font-weight: 600;
+}
+
+.login-security-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 680px) {
   .login-left { display: none; }

@@ -1,22 +1,14 @@
 const BASE = 'http://localhost:8080';
 
-export const getToken  = () => localStorage.getItem('token');
-export const getUser   = () => JSON.parse(localStorage.getItem('user') || '{}');
-export const saveSession = (token, rol, username) =>
-  localStorage.setItem('user', JSON.stringify({ token, rol, username }));
-export const clearSession = () => localStorage.removeItem('user');
-
-const parseJwt = (token) => {
-  try { return JSON.parse(atob(token.split('.')[1])); } catch { return {}; }
-};
-
-export const getCurrentUserId = () => {
-  const user = getUser();
-  return parseJwt(user.token).idUsuario;
-};
+export const getToken      = () => localStorage.getItem('token');
+export const getUser       = () => JSON.parse(localStorage.getItem('user') || '{}');
+export const getIdEmpleado = () => getUser()?.idEmpleado ?? null;
+export const saveSession   = (token, rol, username, idEmpleado = null) =>
+  localStorage.setItem('user', JSON.stringify({ token, rol, username, idEmpleado }));
+export const clearSession  = () => localStorage.removeItem('user');
 
 const json = (r) => {
-  if (!r.ok && r.status !== 400) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok && r.status !== 400 && r.status !== 401) throw new Error(`HTTP ${r.status}`);
   return r.json();
 };
 
@@ -24,22 +16,6 @@ const h = () => ({
   'Content-Type': 'application/json',
   Authorization: `Bearer ${getUser().token}`,
 });
-
-const fetchAuth = (url, options = {}) =>
-  fetch(url, { ...options, headers: { ...h(), ...options.headers } }).then((r) => {
-    const newToken = r.headers.get('X-New-Token');
-    if (newToken) {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      user.token = newToken;
-      localStorage.setItem('user', JSON.stringify(user));
-    }
-    if (r.status === 401) {
-      clearSession();
-      window.location.href = '/';
-      throw new Error('Sesión expirada');
-    }
-    return r;
-  });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 export const login = (nombreUsuario, password) =>
@@ -56,156 +32,145 @@ export const verify2FA = (username, code) =>
     body: JSON.stringify({ username, code }),
   }).then(json);
 
-export const solicitarRecuperacion = (email) =>
-  fetch(`${BASE}/api/v1/auth/recovery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  }).then(json);
-
 // ── EMPLEADOS ─────────────────────────────────────────────────────────────────
 export const listarEmpleados = (page = 0, size = 20) =>
-  fetchAuth(`${BASE}/api/v1/empleados/listar?page=${page}&size=${size}`).then(json);
+  fetch(`${BASE}/api/v1/empleados/listar?page=${page}&size=${size}`, { headers: h() }).then(json);
 
 export const buscarEmpleados = (filtro, page = 0) =>
-  fetchAuth(`${BASE}/api/v1/empleados/buscar?filtro=${encodeURIComponent(filtro)}&page=${page}`).then(json);
+  fetch(`${BASE}/api/v1/empleados/buscar?filtro=${encodeURIComponent(filtro)}&page=${page}`, { headers: h() }).then(json);
 
 export const buscarEmpleadosAvanzado = ({ estado, idDpto, cargo } = {}, page = 0) => {
   const p = new URLSearchParams({ page });
   if (estado) p.append('estado', estado);
   if (idDpto) p.append('idDpto', idDpto);
   if (cargo)  p.append('cargo', cargo);
-  return fetchAuth(`${BASE}/api/v1/empleados/buscar-avanzado?${p}`).then(json);
+  return fetch(`${BASE}/api/v1/empleados/buscar-avanzado?${p}`, { headers: h() }).then(json);
 };
 
 export const registrarEmpleado = (dto) =>
-  fetchAuth(`${BASE}/api/v1/empleados/registrar`, {
-    method: 'POST', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/empleados/registrar`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 export const actualizarEmpleado = (id, dto) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}`, {
-    method: 'PUT', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/empleados/${id}`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 export const desactivarEmpleado = (id, motivo) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}/desactivar`, {
-    method: 'PUT', body: JSON.stringify({ motivo }),
+  fetch(`${BASE}/api/v1/empleados/${id}/desactivar`, {
+    method: 'PUT', headers: h(), body: JSON.stringify({ motivo }),
   }).then(json);
 
 export const reactivarEmpleado = (id, motivo) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}/reactivar`, {
-    method: 'PUT', body: JSON.stringify({ motivo }),
+  fetch(`${BASE}/api/v1/empleados/${id}/reactivar`, {
+    method: 'PUT', headers: h(), body: JSON.stringify({ motivo }),
   }).then(json);
 
 export const registrarSancion = (id, dto) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}/sancion`, {
-    method: 'PUT', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/empleados/${id}/sancion`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 export const registrarAscenso = (id, dto) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}/ascenso`, {
-    method: 'PUT', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/empleados/${id}/ascenso`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 export const cambioSalarial = (id, dto) =>
-  fetchAuth(`${BASE}/api/v1/empleados/${id}/cambio-salarial`, {
-    method: 'PUT', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/empleados/${id}/cambio-salarial`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 // ── ASISTENCIA ────────────────────────────────────────────────────────────────
 export const registrarManual = (dto) =>
-  fetchAuth(`${BASE}/api/v1/asistencia/manual`, {
-    method: 'POST', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/v1/asistencia/manual`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 export const listarJustificacionesPendientes = () =>
-  fetchAuth(`${BASE}/api/v1/asistencia/justificaciones/pendientes`).then(json);
+  fetch(`${BASE}/api/v1/asistencia/justificaciones/pendientes`, { headers: h() }).then(json);
 
 export const listarJustificacionesEmpleado = (idEmpleado) =>
-  fetchAuth(`${BASE}/api/v1/asistencia/justificaciones/empleado/${idEmpleado}`).then(json);
+  fetch(`${BASE}/api/v1/asistencia/justificaciones/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+// ECU-03 A4: empleado registra justificación de tardanza
+export const registrarJustificacion = (dto) =>
+  fetch(`${BASE}/api/v1/asistencia/justificar`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
+  }).then(json);
 
 export const revisarJustificacion = (id, decision, comentario = '') =>
-  fetchAuth(`${BASE}/api/v1/asistencia/justificar/${id}/revisar`, {
-    method: 'PUT', body: JSON.stringify({ decision, comentario }),
-  }).then(json);
-
-export const justificarTardanza = (dto) =>
-  fetchAuth(`${BASE}/api/v1/asistencia/justificar`, {
-    method: 'POST', body: JSON.stringify(dto),
-  }).then(json);
-
-// ── HORARIOS ──────────────────────────────────────────────────────────────────
-export const listarHorarios = () =>
-  fetchAuth(`${BASE}/api/v1/horarios`).then(json);
-
-export const crearHorario = (dto) =>
-  fetchAuth(`${BASE}/api/v1/horarios`, {
-    method: 'POST', body: JSON.stringify(dto),
-  }).then(json);
-
-export const actualizarHorario = (id, dto) =>
-  fetchAuth(`${BASE}/api/v1/horarios/${id}`, {
-    method: 'PUT', body: JSON.stringify(dto),
-  }).then(json);
-
-export const eliminarHorario = (id) =>
-  fetchAuth(`${BASE}/api/v1/horarios/${id}`, {
-    method: 'DELETE',
+  fetch(`${BASE}/api/v1/asistencia/justificar/${id}/revisar`, {
+    method: 'PUT', headers: h(), body: JSON.stringify({ decision, comentario }),
   }).then(json);
 
 // ── NÓMINA ────────────────────────────────────────────────────────────────────
-export const calcularNomina = async (dto) => {
-  const r = await fetchAuth(`${BASE}/api/nomina/calcular`, {
-    method: 'POST', body: JSON.stringify(dto),
-  });
-  const data = await r.json();
-  if (data && data.message) throw new Error(data.message);
-  return data;
-};
-
-export const getNominasPorPeriodo = (periodo) =>
-  fetchAuth(`${BASE}/api/nomina/periodo/${periodo}`).then(json);
-
-export const getNominasPorEmpleado = (idEmpleado) =>
-  fetchAuth(`${BASE}/api/nomina/empleado/${idEmpleado}`).then(json);
-
-export const enviarComprobante = (id) =>
-  fetchAuth(`${BASE}/api/nomina/${id}/enviar`, {
-    method: 'POST',
+// ECU-04: calcular nómina por mes y año
+export const calcularNomina = (mes, anio) =>
+  fetch(`${BASE}/api/nomina/calcular`, {
+    method: 'POST', headers: h(), body: JSON.stringify({ mes, anio }),
   }).then(json);
 
+// ECU-04: cargar nóminas de un período ya calculado
+export const getNominasPorPeriodo = (mes, anio) =>
+  fetch(`${BASE}/api/nomina/periodo/${anio}-${mes}`, { headers: h() }).then(json);
+
+export const getNominasPorEmpleado = (idEmpleado) =>
+  fetch(`${BASE}/api/nomina/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+export const enviarComprobante = (id) =>
+  fetch(`${BASE}/api/nomina/${id}/enviar`, {
+    method: 'POST', headers: h(),
+  }).then(json);
+
+// Returns a Blob for PDF download
 export const descargarComprobante = (id) =>
-  fetchAuth(`${BASE}/api/nomina/${id}/comprobante`);
+  fetch(`${BASE}/api/nomina/${id}/comprobante`, { headers: h() }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.blob();
+  });
 
 // ── SOLICITUDES ───────────────────────────────────────────────────────────────
 export const registrarSolicitud = (dto) =>
-  fetchAuth(`${BASE}/api/solicitud/registrar`, {
-    method: 'POST', body: JSON.stringify(dto),
+  fetch(`${BASE}/api/solicitud/registrar`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
-export const revisarSolicitudRRHH = (idSolicitud, aprobado, observacionRrhh = '') =>
-  fetchAuth(`${BASE}/api/solicitud/revisar`, {
-    method: 'PUT',
-    body: JSON.stringify({ idSolicitud, aprobado, observacionRrhh }),
+// ECU-05: RRHH revisa y envía a Gerencia (decision: "APROBAR" | "DEVOLVER")
+export const revisarSolicitudRRHH = (idSolicitud, { decision, comentario } = {}) =>
+  fetch(`${BASE}/api/solicitud/revisar`, {
+    method: 'PUT', headers: h(),
+    body: JSON.stringify({
+      idSolicitud,
+      aprobado: decision === 'APROBAR',
+      observacionRrhh: comentario,
+    }),
   }).then(json);
 
-export const decidirSolicitudGerencia = (idSolicitud, aprobado, respuesta = '') =>
-  fetchAuth(`${BASE}/api/solicitud/decidir`, {
-    method: 'PUT',
-    body: JSON.stringify({ idSolicitud, aprobado, respuesta }),
+// ECU-05: Gerencia aprueba o rechaza (decision: "APROBAR" | "RECHAZAR")
+export const decidirSolicitudGerencia = (idSolicitud, { decision, comentario } = {}) =>
+  fetch(`${BASE}/api/solicitud/decidir`, {
+    method: 'PUT', headers: h(),
+    body: JSON.stringify({
+      idSolicitud,
+      aprobado: decision === 'APROBAR',
+      respuesta: comentario,
+    }),
   }).then(json);
 
 export const getSolicitudesPorEstado = (estado) =>
-  fetchAuth(`${BASE}/api/solicitud/estado/${estado}`).then(json);
+  fetch(`${BASE}/api/solicitud/estado/${estado}`, { headers: h() }).then(json);
 
 export const getSolicitudesPorEmpleado = (idEmpleado) =>
-  fetchAuth(`${BASE}/api/solicitud/empleado/${idEmpleado}`).then(json);
+  fetch(`${BASE}/api/solicitud/empleado/${idEmpleado}`, { headers: h() }).then(json);
 
 // ── REPORTES ──────────────────────────────────────────────────────────────────
-export const generarReporte = (tipo, filtros, formato) => {
-  const params = formato ? `?formato=${formato}` : '';
-  return fetchAuth(`${BASE}/api/reporte/${tipo}${params}`, {
-    method: 'POST', body: JSON.stringify(filtros),
+// ECU-06: params = { tipo, formato, mes, anio, fechaInicio, fechaFin, estado, ... }
+export const generarReporte = (params) => {
+  const { tipo, formato, ...filtros } = params;
+  const query = formato ? `?formato=${encodeURIComponent(formato)}` : '';
+  return fetch(`${BASE}/api/reporte/${tipo}${query}`, {
+    method: 'POST', headers: h(), body: JSON.stringify(filtros),
   });
 };

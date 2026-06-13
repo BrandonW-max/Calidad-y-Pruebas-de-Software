@@ -11,6 +11,7 @@ import ControlAsistencia from "./pages/ControlAsistencia";
 import CalculoNomina from "./pages/CalculoNomina";
 import SolicitudPermisos from "./pages/SolicitudPermisos";
 import GenerarReportes from "./pages/GenerarReportes";
+import NominaEmpleado from "./pages/NominaEmpleado";
 
 function ProtectedRoute({ children, requiredRole }) {
   const user = getUser();
@@ -51,10 +52,14 @@ function App() {
       <Route path="/empleado" element={<ProtectedRoute requiredRole="EMPLEADO"><DashboardEmpleado /></ProtectedRoute>} />
       <Route path="/empleado/asistencia" element={<ProtectedRoute requiredRole="EMPLEADO"><ControlAsistencia /></ProtectedRoute>} />
       <Route path="/empleado/solicitudes" element={<ProtectedRoute requiredRole="EMPLEADO"><SolicitudPermisos /></ProtectedRoute>} />
+      <Route path="/empleado/nomina" element={<ProtectedRoute requiredRole="EMPLEADO"><NominaEmpleado /></ProtectedRoute>} />
 
       {/* Gerencia */}
       <Route path="/gerencia" element={<ProtectedRoute requiredRole="GERENCIA"><DashboardGerencia /></ProtectedRoute>} />
       <Route path="/gerencia/solicitudes" element={<ProtectedRoute requiredRole="GERENCIA"><SolicitudPermisos /></ProtectedRoute>} />
+
+      {/* Catch-all: ruta no encontrada */}
+      <Route path="*" element={<Acceso403 />} />
     </Routes>
   );
 }

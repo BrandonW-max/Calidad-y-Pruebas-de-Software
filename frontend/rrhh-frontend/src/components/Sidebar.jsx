@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
+import { clearSession } from "../services/api";
 
 const NAV = {
   RRHH: {
@@ -23,6 +24,7 @@ const NAV = {
       { to: "/empleado",                icon: "🏠", label: "Inicio" },
       { to: "/empleado/asistencia",     icon: "📋", label: "Mi Asistencia" },
       { to: "/empleado/solicitudes",    icon: "📅", label: "Mis Solicitudes" },
+      { to: "/empleado/nomina",         icon: "💰", label: "Mi Nómina" },
     ],
   },
   GERENCIA: {
@@ -65,10 +67,13 @@ export default function Sidebar({ rol }) {
           </Link>
         ))}
         <div className="nav-logout">
-          <Link to="/">
+          <button
+            onClick={() => { clearSession(); window.location.href = "/"; }}
+            style={{ background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left", padding: 0 }}
+          >
             <span className="nav-icon">🚪</span>
             <span>Cerrar Sesión</span>
-          </Link>
+          </button>
         </div>
       </nav>
     </aside>

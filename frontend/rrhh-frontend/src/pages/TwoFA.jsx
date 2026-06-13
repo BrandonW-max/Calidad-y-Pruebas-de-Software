@@ -3,14 +3,14 @@ import "../styles/TwoFA.css";
 import { verify2FA, saveSession } from "../services/api";
 
 export default function TwoFA({ open, username, onClose, onSuccess }) {
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
-  const [time, setTime] = useState(300);
-  const [intentos, setIntentos] = useState(3);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [code,     setCode]     = useState(["", "", "", "", "", ""]);
+  const [time,     setTime]     = useState(300);
+  const [intentos, setIntentos] = useState(5);
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
 
   const intervalRef = useRef(null);
-  const inputRefs = useRef([]);
+  const inputRefs   = useRef([]);
 
   useEffect(() => {
     if (open) inputRefs.current[0]?.focus();
@@ -19,12 +19,8 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
   useEffect(() => {
     if (!open) return;
     intervalRef.current = setInterval(() => {
-      setTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          onClose();
-          return 0;
-        }
+      setTime(prev => {
+        if (prev <= 1) { clearInterval(intervalRef.current); onClose(); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -45,21 +41,24 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
     }
   };
 
+  const handlePaste = (e) => {
+    const paste = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (paste.length === 6) {
+      setCode(paste.split(""));
+      inputRefs.current[5]?.focus();
+    }
+  };
+
   const verify = async () => {
     const finalCode = code.join("");
-    if (finalCode.length < 6) {
-      setError("Ingresa el código completo de 6 dígitos");
-      return;
-    }
+    if (finalCode.length < 6) { setError("Ingresa el código completo de 6 dígitos"); return; }
 
     setLoading(true);
     setError("");
-
     try {
       const data = await verify2FA(username, finalCode);
-
       if (data.success) {
-        saveSession(data.token, data.rol, username);
+        saveSession(data.token, data.rol, username, data.idEmpleado ?? null);
         onSuccess(data.rol);
         onClose();
       } else {
@@ -69,8 +68,8 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
         setCode(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
         if (nuevosIntentos <= 0) {
-          setError("Cuenta bloqueada por demasiados intentos");
-          setTimeout(onClose, 2000);
+          setError("Cuenta bloqueada por exceso de intentos. Intente en 5 minutos.");
+          setTimeout(onClose, 3000);
         }
       }
     } catch {
@@ -80,46 +79,73 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
     }
   };
 
+  const handleResend = () => {
+    setCode(["", "", "", "", "", ""]);
+    setError("");
+    setTime(300);
+    setIntentos(5);
+    inputRefs.current[0]?.focus();
+  };
+
+  const fmt = (s) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
   if (!open) return null;
 
   return (
-    <div className="twofa-modal">
-      <div className="twofa-content">
-        <h2>Verificación 2FA</h2>
+    <div className="twofa-overlay">
+      <div className="twofa-card">
+        <div className="twofa-lock-wrap">🔒</div>
+
+        <h2 className="twofa-title">Verificación en dos pasos</h2>
         <p className="twofa-subtitle">
-          Ingresa el código de 6 dígitos de Google Authenticator
+          Ingrese el código de verificación enviado a su dispositivo o aplicación autenticadora.
         </p>
 
-        <div className="twofa-code-box">
+        <div className="twofa-info-box">
+          ℹ️ Hemos enviado un código de verificación a su dispositivo registrado.
+        </div>
+
+        <p className="twofa-code-label">Código de verificación</p>
+        <div className="twofa-code-box" onPaste={handlePaste}>
           {code.map((c, i) => (
             <input
               key={i}
-              ref={(el) => (inputRefs.current[i] = el)}
+              ref={el => (inputRefs.current[i] = el)}
               maxLength="1"
               value={c}
-              onChange={(e) => handleChange(e.target.value, i)}
-              onKeyDown={(e) => handleKeyDown(e, i)}
+              onChange={e => handleChange(e.target.value, i)}
+              onKeyDown={e => handleKeyDown(e, i)}
+              inputMode="numeric"
             />
           ))}
         </div>
 
         <p className="twofa-timer">
-          ⏱ {Math.floor(time / 60)}:{String(time % 60).padStart(2, "0")}
+          El código expira en <strong>{fmt(time)}</strong>
         </p>
 
-        <p className="twofa-attempts">
-          Intentos restantes: <span>{intentos}</span>
-        </p>
+        {intentos < 5 && (
+          <p className="twofa-attempts">Intentos restantes: <span>{intentos}</span></p>
+        )}
 
         {error && <p className="twofa-error">{error}</p>}
 
         <button
           onClick={verify}
-          disabled={code.some((c) => c === "") || loading}
+          disabled={code.some(c => c === "") || loading}
           className="twofa-button"
         >
-          {loading ? "Verificando..." : "Verificar"}
+          {loading ? "Verificando..." : "🔒 Verificar código"}
         </button>
+
+        <button className="twofa-resend" onClick={handleResend}>
+          🔄 Reenviar código
+        </button>
+
+        <p className="twofa-hint">
+          ¿No recibió el código? Verifique su dispositivo o reenvíelo.
+        </p>
       </div>
     </div>
   );

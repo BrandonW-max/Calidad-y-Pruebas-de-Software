@@ -1,79 +1,112 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { calcularNomina, enviarComprobante, descargarComprobante } from "../services/api";
+import {
+  calcularNomina,
+  getNominasPorPeriodo,
+  enviarComprobante,
+  descargarComprobante,
+} from "../services/api";
+
+const MESES = [
+  { v: "01", l: "Enero" }, { v: "02", l: "Febrero" }, { v: "03", l: "Marzo" },
+  { v: "04", l: "Abril" }, { v: "05", l: "Mayo" },    { v: "06", l: "Junio" },
+  { v: "07", l: "Julio" }, { v: "08", l: "Agosto" },  { v: "09", l: "Septiembre" },
+  { v: "10", l: "Octubre" }, { v: "11", l: "Noviembre" }, { v: "12", l: "Diciembre" },
+];
+
+const anioActual = new Date().getFullYear();
+const ANIOS = [anioActual - 1, anioActual, anioActual + 1];
 
 export default function CalculoNomina() {
-  const [params, setParams] = useState({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" });
-  const [nominas, setNominas]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [mensaje, setMensaje]   = useState("");
-  const [error, setError]       = useState("");
-  const [modalDetalle, setModalDetalle] = useState(null);
-  const [modalEmail, setModalEmail]     = useState(null);
+  const [mes,    setMes]    = useState(String(new Date().getMonth() + 1).padStart(2, "0"));
+  const [anio,   setAnio]   = useState(String(anioActual));
+  const [loading, setLoading] = useState(false);
+  const [calculando, setCalculando] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [historial, setHistorial] = useState([]);
+  const [mensaje,   setMensaje]   = useState("");
+  const [error,     setError]     = useState("");
+  const [enviando,  setEnviando]  = useState({});
 
-  const totales = nominas.reduce(
-    (acc, n) => ({
-      bruto:      acc.bruto      + parseFloat(n.sueldoBruto ?? 0),
-      neto:       acc.neto       + parseFloat(n.sueldoNeto ?? 0),
-      descuentos: acc.descuentos + parseFloat(n.descuentoTardanzas ?? 0) + parseFloat(n.descuentoLey ?? 0),
-    }),
-    { bruto: 0, neto: 0, descuentos: 0 }
-  );
+  const periodo = `${anio}-${mes}`;
 
-  const handleCalcular = async (e) => {
-    e.preventDefault();
+  const handleCalcular = async () => {
+    setCalculando(true);
+    setError("");
+    setMensaje("");
+    try {
+      const data = await calcularNomina(mes, anio);
+      setResultado(data);
+      setHistorial(h => {
+        const entry = { ...data, periodo, timestamp: new Date().toISOString() };
+        return [entry, ...h.filter(x => x.periodo !== periodo)].slice(0, 10);
+      });
+      setMensaje("Nómina calculada correctamente");
+    } catch {
+      setError("Error al calcular la nómina. Verifique el período.");
+    } finally {
+      setCalculando(false);
+    }
+  };
+
+  const handleCargarPeriodo = async () => {
     setLoading(true);
     setError("");
     setMensaje("");
-    setNominas([]);
     try {
-      const dto = {
-        fechaInicio:   params.fechaInicio,
-        fechaFin:      params.fechaFin,
-        idEmpleado:    params.idEmpleado    ? parseInt(params.idEmpleado)    : null,
-        idDepartamento: params.idDepartamento ? parseInt(params.idDepartamento) : null,
-      };
-      const data = await calcularNomina(dto);
-      setNominas(Array.isArray(data) ? data : [data]);
-      setMensaje("Nómina calculada correctamente. Revise el detalle a continuación.");
-    } catch (err) {
-      setError(err?.message || "Error al calcular la nómina. Verifique los registros de asistencia.");
+      const data = await getNominasPorPeriodo(mes, anio);
+      if (Array.isArray(data) && data.length > 0) {
+        setResultado(data);
+        setMensaje(`Se cargaron ${data.length} registros del período ${periodo}`);
+      } else {
+        setError(`No hay nóminas registradas para ${periodo}. Calcule primero.`);
+      }
+    } catch {
+      setError("Error al cargar el período");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEnviarComprobante = async (id) => {
+  const handleEnviarComprobante = async (idNomina) => {
+    setEnviando(v => ({ ...v, [idNomina]: true }));
+    setMensaje("");
+    setError("");
     try {
-      await enviarComprobante(id);
-      setMensaje("Comprobante enviado al correo del empleado correctamente");
+      await enviarComprobante(idNomina);
+      setMensaje(`Comprobante enviado correctamente (Nómina #${idNomina})`);
     } catch {
-      setMensaje("Error al enviar el comprobante");
+      setError("Error al enviar el comprobante");
+    } finally {
+      setEnviando(v => ({ ...v, [idNomina]: false }));
     }
   };
 
-  const handleDescargar = async (id) => {
+  const handleDescargar = async (idNomina) => {
+    setMensaje("");
+    setError("");
     try {
-      const res = await descargarComprobante(id);
-      const blob = await res.blob();
+      const blob = await descargarComprobante(idNomina);
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
       a.href     = url;
-      a.download = `comprobante_${id}.pdf`;
+      a.download = `comprobante_nomina_${idNomina}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setMensaje("Error al descargar el comprobante");
+      setError("Error al descargar el comprobante");
     }
   };
 
-  const limpiar = () => {
-    setParams({ fechaInicio: "", fechaFin: "", idEmpleado: "", idDepartamento: "" });
-    setNominas([]);
-    setMensaje("");
-    setError("");
-  };
+  const fmtS = (v) => v != null ? `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}` : "—";
+
+  const resultList = resultado
+    ? (Array.isArray(resultado) ? resultado : [resultado])
+    : [];
+
+  const totalNeto  = resultList.reduce((sum, n) => sum + Number(n.sueldoNeto  ?? n.totalNeto  ?? 0), 0);
+  const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoBase  ?? n.sueldo     ?? 0), 0);
 
   return (
     <div className="dashboard">
@@ -84,294 +117,175 @@ export default function CalculoNomina() {
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Cálculo de Nómina</span>
             <h1>Cálculo de Nómina</h1>
+            <p style={{ margin: 0, fontSize: "13px", color: "var(--text-3)" }}>
+              Gestiona los pagos mensuales y descuentos de los empleados.
+            </p>
           </div>
-          <span className="role-pill role-pill-rrhh">ECU-04</span>
         </header>
 
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        {/* ── PARÁMETROS ── */}
-        <div className="section-card">
-          <h2>⚙️ Parámetros de Cálculo</h2>
-          <div className="alert alert-info">
-            Seleccione el período y, opcionalmente, filtre por departamento o empleado específico.
-            El sistema validará la integridad de los registros de asistencia antes de calcular.
-          </div>
-          <form onSubmit={handleCalcular}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Fecha Inicio *</label>
-                <input
-                  type="date"
-                  value={params.fechaInicio}
-                  onChange={(e) => setParams({ ...params, fechaInicio: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Fecha Fin *</label>
-                <input
-                  type="date"
-                  value={params.fechaFin}
-                  onChange={(e) => setParams({ ...params, fechaFin: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>ID Departamento (opcional)</label>
-                <input
-                  type="number"
-                  placeholder="Todos los departamentos"
-                  value={params.idDepartamento}
-                  onChange={(e) => setParams({ ...params, idDepartamento: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>ID Empleado (opcional)</label>
-                <input
-                  type="number"
-                  placeholder="Todos los empleados activos"
-                  value={params.idEmpleado}
-                  onChange={(e) => setParams({ ...params, idEmpleado: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "⏳ Calculando..." : "💰 Calcular Nómina"}
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={limpiar}>
-                Limpiar
-              </button>
-            </div>
-          </form>
-        </div>
+        <div className="nomina-layout">
 
-        {/* ── RESUMEN ── */}
-        {nominas.length > 0 && (
-          <>
-            <div className="stats-row">
-              <div className="stat-box accent-blue">
-                <div className="stat-icon">👥</div>
-                <div className="stat-info">
-                  <div className="stat-value">{nominas.length}</div>
-                  <div className="stat-label">Empleados Procesados</div>
-                </div>
-              </div>
-              <div className="stat-box accent-green">
-                <div className="stat-icon">💵</div>
-                <div className="stat-info">
-                  <div className="stat-value">S/ {totales.bruto.toFixed(2)}</div>
-                  <div className="stat-label">Total Bruto</div>
-                </div>
-              </div>
-              <div className="stat-box accent-red">
-                <div className="stat-icon">➖</div>
-                <div className="stat-info">
-                  <div className="stat-value">S/ {totales.descuentos.toFixed(2)}</div>
-                  <div className="stat-label">Total Descuentos</div>
-                </div>
-              </div>
-              <div className="stat-box accent-teal">
-                <div className="stat-icon">💰</div>
-                <div className="stat-info">
-                  <div className="stat-value">S/ {totales.neto.toFixed(2)}</div>
-                  <div className="stat-label">Total Neto a Pagar</div>
-                </div>
-              </div>
-            </div>
+          {/* ── COLUMNA IZQUIERDA ── */}
+          <div className="nomina-left">
 
             <div className="section-card">
-              <h2>📄 Detalle de Nómina — {params.fechaInicio} al {params.fechaFin}</h2>
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Empleado</th>
-                      <th>Período</th>
-                      <th>Sueldo Base</th>
-                      <th>H. Extra</th>
-                      <th>Bonificaciones</th>
-                      <th>Descuentos</th>
-                      <th>Bruto</th>
-                      <th>Neto</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nominas.map((n) => {
-                      const bonif = (
-                        parseFloat(n.bonifFamiliar      ?? 0) +
-                        parseFloat(n.bonifTurnoNocturno ?? 0) +
-                        parseFloat(n.bonifGuardia       ?? 0) +
-                        parseFloat(n.bonifRiesgo        ?? 0) +
-                        parseFloat(n.bonifCargo         ?? 0)
-                      ).toFixed(2);
-                      const desc = (
-                        parseFloat(n.descuentoTardanzas ?? 0) +
-                        parseFloat(n.descuentoLey       ?? 0)
-                      ).toFixed(2);
-                      return (
-                        <tr key={n.idNomina}>
-                          <td><strong>{n.nombreEmpleado}</strong></td>
-                          <td>{n.periodo}</td>
-                          <td>S/ {parseFloat(n.sueldoBase ?? 0).toFixed(2)}</td>
-                          <td>{n.totalHorasExtra ?? 0}h</td>
-                          <td>S/ {bonif}</td>
-                          <td style={{ color: "#ef4444" }}>- S/ {desc}</td>
-                          <td>S/ {parseFloat(n.sueldoBruto ?? 0).toFixed(2)}</td>
-                          <td><strong style={{ color: "#10b981" }}>S/ {parseFloat(n.sueldoNeto ?? 0).toFixed(2)}</strong></td>
+              <h2>Configuración del Período</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Mes</label>
+                  <select value={mes} onChange={e => setMes(e.target.value)}>
+                    {MESES.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Año</label>
+                  <select value={anio} onChange={e => setAnio(e.target.value)}>
+                    {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="nomina-periodo-badge">
+                📅 Período seleccionado: <strong>{MESES.find(m => m.v === mes)?.l} {anio}</strong>
+              </div>
+              <div className="form-actions">
+                <button className="btn btn-success" onClick={handleCalcular} disabled={calculando}>
+                  {calculando ? "Calculando..." : "⚙️ Calcular Nómina"}
+                </button>
+                <button className="btn btn-secondary" onClick={handleCargarPeriodo} disabled={loading}>
+                  {loading ? "Cargando..." : "📋 Cargar Período"}
+                </button>
+              </div>
+            </div>
+
+            {resultList.length > 0 && (
+              <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "20px 20px 10px" }}>
+                  <h2 style={{ margin: 0 }}>
+                    Resultados — {MESES.find(m => m.v === mes)?.l} {anio}
+                    <span className="badge badge-success" style={{ marginLeft: "10px", fontSize: "12px" }}>
+                      {resultList.length} empleado(s)
+                    </span>
+                  </h2>
+                </div>
+                <div className="table-wrapper" style={{ marginBottom: 0 }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Empleado</th>
+                        <th>Sueldo Base</th>
+                        <th>Bonificaciones</th>
+                        <th>Descuentos</th>
+                        <th>Sueldo Neto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultList.map((n, i) => (
+                        <tr key={n.idNomina ?? i}>
+                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{n.idNomina ?? i + 1}</td>
                           <td>
-                            <span className="badge badge-info">{n.estadoPago ?? "Calculada"}</span>
+                            <strong>{n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
                           </td>
-                          <td style={{ display: "flex", gap: "6px" }}>
-                            <button className="btn btn-purple btn-sm" onClick={() => setModalDetalle(n)}>
-                              🔍 Ver
-                            </button>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleDescargar(n.idNomina)}>
-                              📄 PDF
-                            </button>
-                            <button className="btn btn-info btn-sm" onClick={() => setModalEmail(n.idNomina)}>
-                              ✉️ Email
-                            </button>
+                          <td>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
+                          <td style={{ color: "var(--success)" }}>{fmtS(n.bonificaciones ?? n.totalBonificaciones)}</td>
+                          <td style={{ color: "#ef4444" }}>{fmtS(n.descuentos ?? n.totalDescuentos)}</td>
+                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto ?? n.totalNeto)}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <button className="btn btn-secondary btn-sm"
+                                onClick={() => handleDescargar(n.idNomina)}>
+                                ⬇ PDF
+                              </button>
+                              <button className="btn btn-primary btn-sm"
+                                onClick={() => handleEnviarComprobante(n.idNomina)}
+                                disabled={enviando[n.idNomina]}>
+                                {enviando[n.idNomina] ? "..." : "📧 Email"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ background: "#f8fafc", fontWeight: 600 }}>
+                        <td colSpan={2} style={{ padding: "10px 12px", fontSize: "13px" }}>
+                          TOTALES ({resultList.length} empleados)
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>{fmtS(totalBruto)}</td>
+                        <td></td>
+                        <td></td>
+                        <td style={{ padding: "10px 12px", color: "var(--primary)" }}>{fmtS(totalNeto)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {resultList.length === 0 && (
+              <div className="section-card">
+                <div className="empty-state">
+                  <div className="empty-state-icon">📊</div>
+                  <p>Seleccione un período y calcule o cargue la nómina para ver los resultados.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── COLUMNA DERECHA ── */}
+          <div className="nomina-right">
+            <div className="section-card">
+              <h2>Estado del Período</h2>
+              <div className="nomina-status-item">
+                <span>Período actual:</span>
+                <strong>{MESES.find(m => m.v === mes)?.l} {anio}</strong>
+              </div>
+              <div className="nomina-status-item">
+                <span>Total empleados:</span>
+                <strong>{resultList.length > 0 ? resultList.length : "—"}</strong>
+              </div>
+              <div className="nomina-status-item">
+                <span>Total neto a pagar:</span>
+                <strong style={{ color: "var(--primary)" }}>{resultList.length > 0 ? fmtS(totalNeto) : "—"}</strong>
+              </div>
+              <div className="nomina-status-item">
+                <span>Estado:</span>
+                <span className={`badge ${resultado ? "badge-success" : "badge-gray"}`}>
+                  {resultado ? "Calculado" : "Pendiente"}
+                </span>
               </div>
             </div>
+
+            {historial.length > 0 && (
+              <div className="section-card">
+                <h2>Historial Reciente</h2>
+                {historial.map((h, i) => (
+                  <div key={i} className="nomina-hist-item">
+                    <span className="nomina-hist-periodo">{h.periodo}</span>
+                    <span className="badge badge-success" style={{ fontSize: "11px" }}>Calculado</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="section-card">
-              <h2>ℹ️ Desglose de Bonificaciones</h2>
-              <div className="alert alert-info">
-                Las bonificaciones consideradas en el cálculo son: familiar (por hijos), turno nocturno, guardias, riesgo hospitalario y cargo/productividad.
-                Los descuentos corresponden a tardanzas acumuladas y descuentos de ley aplicables.
-              </div>
+              <h2>Guía Rápida</h2>
+              <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "var(--text-2)", lineHeight: "1.9" }}>
+                <li>Seleccione mes y año del período.</li>
+                <li>Presione <strong>Calcular Nómina</strong> para procesar.</li>
+                <li>Revise los resultados en la tabla.</li>
+                <li>Descargue o envíe comprobantes individualmente.</li>
+              </ol>
             </div>
-          </>
-        )}
+          </div>
+
+        </div>
       </main>
-
-      {/* ── MODAL DETALLE NÓMINA ── */}
-      {modalDetalle && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalDetalle(null)}>
-          <div className="modal-box modal-box-wide">
-            <div className="modal-header">
-              <div>
-                <h3>📄 Detalle de Nómina — {modalDetalle.nombreEmpleado}</h3>
-                <p>Período: {modalDetalle.periodo} · Estado: {modalDetalle.estadoPago ?? "Calculada"}</p>
-              </div>
-              <button className="modal-close" onClick={() => setModalDetalle(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="stats-row" style={{ marginBottom: "20px" }}>
-                <div className="stat-box accent-blue">
-                  <div className="stat-info">
-                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoBase ?? 0).toFixed(2)}</div>
-                    <div className="stat-label">Sueldo Base</div>
-                  </div>
-                </div>
-                <div className="stat-box accent-orange">
-                  <div className="stat-info">
-                    <div className="stat-value">{modalDetalle.totalHorasExtra ?? 0}h</div>
-                    <div className="stat-label">Horas Extra</div>
-                  </div>
-                </div>
-                <div className="stat-box accent-green">
-                  <div className="stat-info">
-                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoBruto ?? 0).toFixed(2)}</div>
-                    <div className="stat-label">Sueldo Bruto</div>
-                  </div>
-                </div>
-                <div className="stat-box accent-teal">
-                  <div className="stat-info">
-                    <div className="stat-value">S/ {parseFloat(modalDetalle.sueldoNeto ?? 0).toFixed(2)}</div>
-                    <div className="stat-label">Sueldo Neto</div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="modal-section-title">Desglose de Bonificaciones</p>
-              <div className="table-wrapper" style={{ marginBottom: "16px" }}>
-                <table>
-                  <thead><tr><th>Tipo de Bonificación</th><th>Monto (S/)</th></tr></thead>
-                  <tbody>
-                    <tr><td>Bonificación Familiar (por hijos)</td><td>S/ {parseFloat(modalDetalle.bonifFamiliar ?? 0).toFixed(2)}</td></tr>
-                    <tr><td>Turno Nocturno</td><td>S/ {parseFloat(modalDetalle.bonifTurnoNocturno ?? 0).toFixed(2)}</td></tr>
-                    <tr><td>Guardia Hospitalaria</td><td>S/ {parseFloat(modalDetalle.bonifGuardia ?? 0).toFixed(2)}</td></tr>
-                    <tr><td>Riesgo Hospitalario</td><td>S/ {parseFloat(modalDetalle.bonifRiesgo ?? 0).toFixed(2)}</td></tr>
-                    <tr><td>Cargo / Productividad</td><td>S/ {parseFloat(modalDetalle.bonifCargo ?? 0).toFixed(2)}</td></tr>
-                    <tr style={{ background: "#f0fdf4" }}>
-                      <td><strong>Total Bonificaciones</strong></td>
-                      <td><strong>S/ {(
-                        parseFloat(modalDetalle.bonifFamiliar ?? 0) +
-                        parseFloat(modalDetalle.bonifTurnoNocturno ?? 0) +
-                        parseFloat(modalDetalle.bonifGuardia ?? 0) +
-                        parseFloat(modalDetalle.bonifRiesgo ?? 0) +
-                        parseFloat(modalDetalle.bonifCargo ?? 0)
-                      ).toFixed(2)}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="modal-section-title">Descuentos Aplicados</p>
-              <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>Tipo de Descuento</th><th>Monto (S/)</th></tr></thead>
-                  <tbody>
-                    <tr><td>Descuento por Tardanzas</td><td style={{ color: "#ef4444" }}>- S/ {parseFloat(modalDetalle.descuentoTardanzas ?? 0).toFixed(2)}</td></tr>
-                    <tr><td>Descuentos de Ley</td><td style={{ color: "#ef4444" }}>- S/ {parseFloat(modalDetalle.descuentoLey ?? 0).toFixed(2)}</td></tr>
-                    <tr style={{ background: "#fff1f2" }}>
-                      <td><strong>Total Descuentos</strong></td>
-                      <td><strong style={{ color: "#ef4444" }}>- S/ {(
-                        parseFloat(modalDetalle.descuentoTardanzas ?? 0) +
-                        parseFloat(modalDetalle.descuentoLey ?? 0)
-                      ).toFixed(2)}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalDetalle(null)}>Cerrar</button>
-              <button className="btn btn-info" onClick={() => { setModalEmail(modalDetalle.idNomina); setModalDetalle(null); }}>✉️ Enviar por Email</button>
-              <button className="btn btn-danger" onClick={() => handleDescargar(modalDetalle.idNomina)}>📄 Descargar PDF</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL CONFIRMACIÓN EMAIL ── */}
-      {modalEmail && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalEmail(null)}>
-          <div className="modal-box">
-            <div className="modal-header">
-              <div>
-                <h3>✉️ Enviar Comprobante por Correo</h3>
-                <p>Nómina #{modalEmail}</p>
-              </div>
-              <button className="modal-close" onClick={() => setModalEmail(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: "14px", color: "#475569" }}>
-                Se enviará el comprobante de pago al correo electrónico registrado del empleado. ¿Desea continuar?
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalEmail(null)}>Cancelar</button>
-              <button className="btn btn-info" onClick={async () => { await handleEnviarComprobante(modalEmail); setModalEmail(null); }}>
-                ✉️ Confirmar y Enviar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

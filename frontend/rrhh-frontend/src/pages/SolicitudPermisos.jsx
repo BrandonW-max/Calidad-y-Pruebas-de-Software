@@ -4,674 +4,521 @@ import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
   registrarSolicitud,
+  getSolicitudesPorEmpleado,
+  getSolicitudesPorEstado,
   revisarSolicitudRRHH,
   decidirSolicitudGerencia,
-  getSolicitudesPorEstado,
-  getSolicitudesPorEmpleado,
-  getCurrentUserId,
+  getIdEmpleado,
+  getUser,
 } from "../services/api";
 
-const ESTADOS_BADGE = {
-  PENDIENTE: "badge-gray",
-  PROCESADO: "badge-purple",
-  APROBADA:  "badge-success",
-  RECHAZADA: "badge-danger",
-  OBSERVADO: "badge-warning",
-};
-
-const ESTADOS_LABEL = {
-  PENDIENTE: "Pendiente",
-  PROCESADO: "Enviado a Gerencia",
-  APROBADA:  "Aprobada",
-  RECHAZADA: "Rechazada",
-  OBSERVADO: "Con Observación",
-};
-
-function getRolFromPath(pathname) {
-  if (pathname.startsWith("/empleado")) return "EMPLEADO";
-  if (pathname.startsWith("/gerencia")) return "GERENCIA";
-  return "RRHH";
+function FlowBar({ step }) {
+  const steps = ["EMPLEADO", "RRHH", "GERENCIA", "RESULTADO"];
+  return (
+    <div className="sol-flow-bar">
+      {steps.map((s, i) => (
+        <div key={s} className={`sol-flow-step ${i === step ? "active" : i < step ? "done" : ""}`}>
+          <div className="sol-flow-dot">{i < step ? "✓" : i + 1}</div>
+          <span>{s}</span>
+          {i < steps.length - 1 && <div className="sol-flow-line" />}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export default function SolicitudPermisos() {
-  const location = useLocation();
-  const rol = getRolFromPath(location.pathname);
+const TIPO_LABELS = {
+  VACACIONES: "Vacaciones",
+  PERMISO:    "Permiso",
+  LICENCIA:   "Licencia",
+  OTROS:      "Otros",
+};
 
-  const defaultTab = rol === "GERENCIA" ? "gerencia"
-                   : rol === "EMPLEADO" ? "nueva"
-                   : "pendientes";
+const estadoBadge = (estado) => {
+  const m = {
+    PENDIENTE:   "badge-sol-pendiente",
+    EN_REVISION: "badge-sol-gerencia",
+    APROBADO:    "badge-sol-aprobada",
+    RECHAZADO:   "badge-sol-rechazada",
+    PROCESADO:   "badge-sol-gerencia",
+  };
+  return m[estado] ?? "badge-gray";
+};
 
-  const [tabActiva, setTabActiva]     = useState(defaultTab);
+/* ══════════════════════════════════════════════════════════
+   VISTA EMPLEADO
+══════════════════════════════════════════════════════════ */
+function VistaEmpleado() {
+  const idEmpleado = getIdEmpleado();
   const [solicitudes, setSolicitudes] = useState([]);
-  const [loading, setLoading]         = useState(false);
-  const [mensaje, setMensaje]         = useState("");
-  const [error, setError]             = useState("");
-
-  const [nuevaForm, setNuevaForm] = useState({
-    tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "",
+  const [loading,  setLoading]  = useState(false);
+  const [mensaje,  setMensaje]  = useState("");
+  const [error,    setError]    = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [tabActiva, setTabActiva] = useState("lista");
+  const [form, setForm] = useState({
+    tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "",
   });
 
-  // Modals
-  const [modalObservar, setModalObservar]             = useState({ open: false, id: null, obs: "" });
-  const [modalEnviarGerencia, setModalEnviarGerencia] = useState({ open: false, id: null });
-  const [modalAprobar, setModalAprobar]               = useState({ open: false, id: null });
-  const [modalRechazo, setModalRechazo]               = useState({ open: false, id: null, respuesta: "" });
-  const [modalDetalle, setModalDetalle]               = useState(null);
-
-  const estadoParaTab = {
-    pendientes:     "PENDIENTE",
-    gerencia:       "PROCESADO",
-  };
-
-  useEffect(() => {
-    const estado = estadoParaTab[tabActiva];
-    if (estado) cargarSolicitudes(estado);
-    if (tabActiva === "misSolicitudes") cargarMisSolicitudes();
-    if (tabActiva === "historial") cargarHistorial();
-  }, [tabActiva]);
-
-  useEffect(() => {
-    const intervalo = setInterval(() => {
-      const estado = estadoParaTab[tabActiva];
-      if (estado) cargarSolicitudes(estado);
-      if (tabActiva === "misSolicitudes") cargarMisSolicitudes();
-      if (tabActiva === "historial") cargarHistorial();
-    }, 30000);
-    return () => clearInterval(intervalo);
-  }, [tabActiva]);
-
-  const cargarSolicitudes = async (estado) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await getSolicitudesPorEstado(estado);
-      setSolicitudes(Array.isArray(data) ? data : []);
-    } catch {
-      setError("No se pudieron cargar las solicitudes");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => { if (idEmpleado) cargarMisSolicitudes(); }, [idEmpleado]);
 
   const cargarMisSolicitudes = async () => {
     setLoading(true);
     setError("");
     try {
-      const idUsuario = getCurrentUserId();
-      const data = await getSolicitudesPorEmpleado(idUsuario);
+      const data = await getSolicitudesPorEmpleado(idEmpleado);
       setSolicitudes(Array.isArray(data) ? data : []);
-    } catch {
-      setError("No se pudieron cargar tus solicitudes");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("No se pudieron cargar tus solicitudes."); }
+    finally  { setLoading(false); }
   };
 
-  const cargarHistorial = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [aprobadas, rechazadas] = await Promise.all([
-        getSolicitudesPorEstado("APROBADA"),
-        getSolicitudesPorEstado("RECHAZADA"),
-      ]);
-      setSolicitudes([...(Array.isArray(aprobadas) ? aprobadas : []), ...(Array.isArray(rechazadas) ? rechazadas : [])]);
-    } catch {
-      setError("No se pudo cargar el historial");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleNuevaSolicitud = async (e) => {
+  const handleEnviar = async (e) => {
     e.preventDefault();
-    setMensaje("");
+    if (!idEmpleado) { setError("No se pudo obtener tu ID de empleado. Contacta a RRHH."); return; }
+    setEnviando(true); setMensaje(""); setError("");
     try {
-      await registrarSolicitud(nuevaForm);
-      setMensaje("Solicitud registrada correctamente en estado PENDIENTE");
-      setNuevaForm({ tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "" });
-    } catch {
-      setMensaje("Error al registrar la solicitud. Verifique los datos ingresados.");
-    }
+      await registrarSolicitud({ idEmpleado, tipo: form.tipo, fechaInicio: form.fechaInicio, fechaFin: form.fechaFin, descripcion: form.descripcion });
+      setMensaje("Solicitud enviada correctamente. RRHH la revisará pronto.");
+      setForm({ tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "" });
+      setTabActiva("lista");
+      cargarMisSolicitudes();
+    } catch { setError("Error al enviar la solicitud. Intente de nuevo."); }
+    finally  { setEnviando(false); }
   };
-
-  // RRHH — Enviar a Gerencia (modal de confirmación)
-  const abrirEnviarGerencia = (id) => setModalEnviarGerencia({ open: true, id });
-  const confirmarEnviarGerencia = async () => {
-    try {
-      await revisarSolicitudRRHH(modalEnviarGerencia.id, true, "");
-      setMensaje("Solicitud enviada a Gerencia correctamente");
-      setModalEnviarGerencia({ open: false, id: null });
-      cargarSolicitudes("PENDIENTE");
-    } catch {
-      setMensaje("Error al enviar la solicitud a Gerencia");
-      setModalEnviarGerencia({ open: false, id: null });
-    }
-  };
-
-  // RRHH — Observar (modal)
-  const handleObservar = (id) => setModalObservar({ open: true, id, obs: "" });
-  const confirmarObservar = async () => {
-    if (!modalObservar.obs.trim()) return;
-    try {
-      await revisarSolicitudRRHH(modalObservar.id, false, modalObservar.obs);
-      setMensaje("Solicitud devuelta al empleado con observación");
-      setModalObservar({ open: false, id: null, obs: "" });
-      cargarSolicitudes("PENDIENTE");
-    } catch {
-      setMensaje("Error al observar la solicitud");
-      setModalObservar({ open: false, id: null, obs: "" });
-    }
-  };
-
-  // Gerencia — Aprobar (modal de confirmación)
-  const handleAprobar = (id) => setModalAprobar({ open: true, id });
-  const confirmarAprobar = async () => {
-    try {
-      await decidirSolicitudGerencia(modalAprobar.id, true, "");
-      setMensaje("Solicitud aprobada correctamente. El saldo de vacaciones ha sido actualizado.");
-      setModalAprobar({ open: false, id: null });
-      cargarSolicitudes("PROCESADO");
-    } catch {
-      setMensaje("Error al aprobar la solicitud");
-      setModalAprobar({ open: false, id: null });
-    }
-  };
-
-  // Gerencia — Rechazar (modal con motivo)
-  const handleRechazar = (id) => setModalRechazo({ open: true, id, respuesta: "" });
-  const confirmarRechazo = async () => {
-    if (!modalRechazo.respuesta.trim()) return;
-    try {
-      await decidirSolicitudGerencia(modalRechazo.id, false, modalRechazo.respuesta);
-      setMensaje("Solicitud rechazada. El empleado recibirá una notificación con el motivo.");
-      setModalRechazo({ open: false, id: null, respuesta: "" });
-      cargarSolicitudes("PROCESADO");
-    } catch {
-      setMensaje("Error al rechazar la solicitud");
-      setModalRechazo({ open: false, id: null, respuesta: "" });
-    }
-  };
-
-  const diasSolicitados = () => {
-    if (!nuevaForm.fechaInicio || !nuevaForm.fechaFin) return "—";
-    const inicio = new Date(nuevaForm.fechaInicio);
-    const fin = new Date(nuevaForm.fechaFin);
-    if (fin < inicio) return "—";
-    let count = 0;
-    const current = new Date(inicio);
-    while (current <= fin) {
-      const day = current.getDay();
-      if (day !== 0 && day !== 6) count++;
-      current.setDate(current.getDate() + 1);
-    }
-    return `${count} día${count !== 1 ? "s" : ""}`;
-  };
-
-  /* ─── Tabla reutilizable ─── */
-  const TablaSolicitudes = ({ cols, renderAcciones }) => (
-    <div className="table-wrapper">
-      {loading ? (
-        <div className="loading-text">Cargando solicitudes...</div>
-      ) : (
-        <table>
-          <thead>
-            <tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr>
-          </thead>
-          <tbody>
-            {solicitudes.length === 0 ? (
-              <tr>
-                <td colSpan={cols.length}>
-                  <div className="empty-state">
-                    <div className="empty-state-icon">📅</div>
-                    <p>No hay solicitudes para mostrar</p>
-                  </div>
-                </td>
-              </tr>
-            ) : solicitudes.map((s) => (
-              <tr key={s.idSolicitud}>
-                <td>{s.idSolicitud}</td>
-                <td><strong>{s.nombreEmpleado ?? `Empleado ${s.idEmpleado}`}</strong></td>
-                <td>{s.tipoSolicitud?.replace("_", " ")}</td>
-                <td>{s.fechaInicio}</td>
-                <td>{s.fechaFin}</td>
-                <td>{s.diasSolicitados}</td>
-                <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {s.motivo}
-                </td>
-                <td>
-                  <span className={`badge ${ESTADOS_BADGE[s.estado] ?? "badge-gray"}`}>
-                    {ESTADOS_LABEL[s.estado] ?? s.estado}
-                  </span>
-                </td>
-                {renderAcciones && (
-                  <td style={{ display: "flex", gap: "6px" }}>
-                    <button className="btn btn-secondary btn-sm" onClick={() => setModalDetalle(s)}>
-                      🔍 Ver
-                    </button>
-                    {renderAcciones(s)}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-
-  /* ─── Formulario nueva solicitud (reutilizable) ─── */
-  const FormSolicitud = ({ titulo, alerta }) => (
-    <div className="section-card">
-      <h2>{titulo}</h2>
-      <div className="alert alert-info">{alerta}</div>
-      <form onSubmit={handleNuevaSolicitud}>
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Tipo de Solicitud *</label>
-            <select
-              value={nuevaForm.tipoSolicitud}
-              onChange={(e) => setNuevaForm({ ...nuevaForm, tipoSolicitud: e.target.value })}
-              required
-            >
-              <option value="">Seleccione una opción</option>
-              <option value="VACACIONES">Vacaciones</option>
-              <option value="PERMISO_PERSONAL">Permiso personal</option>
-              <option value="PERMISO_MEDICO">Permiso médico</option>
-              <option value="OTROS">Otros</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Fecha de Inicio *</label>
-            <input
-              type="date"
-              value={nuevaForm.fechaInicio}
-              onChange={(e) => setNuevaForm({ ...nuevaForm, fechaInicio: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Fecha de Fin *</label>
-            <input
-              type="date"
-              value={nuevaForm.fechaFin}
-              onChange={(e) => setNuevaForm({ ...nuevaForm, fechaFin: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Días Totales</label>
-            <input value={diasSolicitados()} readOnly style={{ background: "#f8fafc", cursor: "default" }} />
-          </div>
-          <div className="form-group form-full">
-            <label>Motivo de la solicitud *</label>
-            <textarea
-              value={nuevaForm.motivo}
-              onChange={(e) => setNuevaForm({ ...nuevaForm, motivo: e.target.value })}
-              placeholder="Describa el motivo de su solicitud..."
-              required
-            />
-          </div>
-        </div>
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary">📤 Registrar Solicitud</button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setNuevaForm({ tipoSolicitud: "", fechaInicio: "", fechaFin: "", motivo: "" })}
-          >
-            Limpiar
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-
-  /* ─── Config de encabezado por rol ─── */
-  const headerCfg = {
-    EMPLEADO: { breadcrumb: "Mi Portal / Mis Solicitudes",                    title: "Solicitudes de Permisos y Vacaciones", cls: "header-empleado", pill: "role-pill-empleado" },
-    GERENCIA: { breadcrumb: "Gerencia / Solicitudes",                         title: "Decisión de Solicitudes",             cls: "header-gerencia", pill: "role-pill-gerencia" },
-    RRHH:     { breadcrumb: "RRHH / Solicitudes de Permisos y Vacaciones",    title: "Gestión de Solicitudes",              cls: "header-rrhh",     pill: "role-pill-rrhh"     },
-  }[rol];
 
   return (
     <div className="dashboard">
-      <Sidebar rol={rol} />
-
+      <Sidebar rol="EMPLEADO" />
       <main className="main-content">
-
-        <header className={`main-header ${headerCfg.cls}`}>
+        <header className="main-header header-empleado">
           <div className="header-left">
-            <span className="page-breadcrumb">{headerCfg.breadcrumb}</span>
-            <h1>{headerCfg.title}</h1>
+            <span className="page-breadcrumb">Dashboard / Mis Solicitudes</span>
+            <h1>Solicitud de Permisos y Licencias</h1>
           </div>
-          <span className={`role-pill ${headerCfg.pill}`}>ECU-05</span>
+          <span className="role-pill role-pill-empleado">Empleado</span>
         </header>
 
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        {/* ══ VISTA EMPLEADO ══ */}
-        {rol === "EMPLEADO" && (
-          <>
-            <div className="tab-bar">
-              <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`} onClick={() => setTabActiva("nueva")}>
-                ➕ Nueva Solicitud
-              </button>
-              <button className={`tab ${tabActiva === "misSolicitudes" ? "active" : ""}`} onClick={() => setTabActiva("misSolicitudes")}>
-                📋 Mis Solicitudes
-              </button>
+        <FlowBar step={0} />
+
+        <div className="tab-bar">
+          <button className={`tab ${tabActiva === "lista" ? "active" : ""}`}
+            onClick={() => { setTabActiva("lista"); cargarMisSolicitudes(); }}>
+            📋 Mis Solicitudes
+          </button>
+          <button className={`tab ${tabActiva === "nueva" ? "active" : ""}`}
+            onClick={() => setTabActiva("nueva")}>
+            ➕ Nueva Solicitud
+          </button>
+        </div>
+
+        {tabActiva === "lista" && (
+          <div className="section-card">
+            <h2>Mis Solicitudes</h2>
+            <div className="table-wrapper">
+              {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Estado</th><th>Observación</th></tr>
+                  </thead>
+                  <tbody>
+                    {solicitudes.length === 0 ? (
+                      <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
+                    ) : solicitudes.map(s => (
+                      <tr key={s.idSolicitud ?? s.id}>
+                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
+                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                        <td>{s.fechaInicio ?? "—"}</td>
+                        <td>{s.fechaFin ?? "—"}</td>
+                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                        <td>{s.comentarioRRHH ?? s.comentario ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-
-            {tabActiva === "nueva" && (
-              <FormSolicitud
-                titulo="➕ Registrar Nueva Solicitud"
-                alerta="Complete todos los campos. Su solicitud pasará primero por validación de RRHH y luego será evaluada por Gerencia."
-              />
-            )}
-
-            {tabActiva === "misSolicitudes" && (
-              <div className="section-card">
-                <h2>📋 Mis Solicitudes</h2>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Acciones"]}
-                  renderAcciones={() => null}
-                />
-              </div>
-            )}
-          </>
+          </div>
         )}
 
-        {/* ══ VISTA GERENCIA ══ */}
-        {rol === "GERENCIA" && (
-          <>
-            <div className="tab-bar">
-              <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
-                ⏳ Por Aprobar
-              </button>
-              <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
-                📋 Historial
-              </button>
-            </div>
-
-            {tabActiva === "gerencia" && (
-              <div className="section-card">
-                <h2>⏳ Solicitudes Enviadas por RRHH — Requieren su Decisión</h2>
-                <div className="alert alert-info">
-                  Estas solicitudes ya fueron validadas por RRHH. Revise el detalle de cada una y tome su decisión.
-                  Al rechazar, deberá ingresar el motivo que será notificado al empleado.
-                </div>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Decisión"]}
-                  renderAcciones={(s) => (
-                    <>
-                      <button className="btn btn-success btn-sm" onClick={() => handleAprobar(s.idSolicitud)}>
-                        ✅ Aprobar
-                      </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleRechazar(s.idSolicitud)}>
-                        ❌ Rechazar
-                      </button>
-                    </>
-                  )}
-                />
+        {tabActiva === "nueva" && (
+          <div className="sol-emp-layout">
+            <div className="section-card">
+              <h2>➕ Nueva Solicitud de Permiso</h2>
+              <div className="alert alert-info" style={{ marginBottom: 16 }}>
+                Las solicitudes pasan por revisión de RRHH y luego Gerencia (según el tipo).
               </div>
-            )}
-
-            {tabActiva === "historial" && (
-              <div className="section-card">
-                <h2>📋 Historial de Solicitudes Resueltas</h2>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
-                  renderAcciones={() => null}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ══ VISTA RRHH ══ */}
-        {rol === "RRHH" && (
-          <>
-            <div className="tab-bar">
-              <button className={`tab ${tabActiva === "pendientes" ? "active" : ""}`} onClick={() => setTabActiva("pendientes")}>
-                📥 Pendientes (RRHH)
-              </button>
-              <button className={`tab ${tabActiva === "gerencia" ? "active" : ""}`} onClick={() => setTabActiva("gerencia")}>
-                📤 Enviadas a Gerencia
-              </button>
-              <button className={`tab ${tabActiva === "historial" ? "active" : ""}`} onClick={() => setTabActiva("historial")}>
-                📋 Historial
-              </button>
-            </div>
-
-            {tabActiva === "pendientes" && (
-              <div className="section-card">
-                <h2>📥 Solicitudes Pendientes de Validación RRHH</h2>
-                <div className="alert alert-info">
-                  Valide los datos de cada solicitud. Si todo es correcto, envíe a Gerencia.
-                  Si hay inconsistencias, devuelva al empleado con una observación.
-                </div>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Acción RRHH"]}
-                  renderAcciones={(s) => (
-                    <>
-                      <button className="btn btn-primary btn-sm" onClick={() => abrirEnviarGerencia(s.idSolicitud)}>
-                        📤 Enviar a Gerencia
-                      </button>
-                      <button className="btn btn-warning btn-sm" onClick={() => handleObservar(s.idSolicitud)}>
-                        👁 Observar
-                      </button>
-                    </>
-                  )}
-                />
-              </div>
-            )}
-
-            {tabActiva === "gerencia" && (
-              <div className="section-card">
-                <h2>📤 Solicitudes Enviadas a Gerencia — En espera de decisión</h2>
-                <div className="alert alert-info">
-                  Estas solicitudes ya fueron validadas por RRHH y están pendientes de la decisión de Gerencia.
-                </div>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
-                  renderAcciones={() => null}
-                />
-              </div>
-            )}
-
-            {tabActiva === "historial" && (
-              <div className="section-card">
-                <h2>📋 Historial de Solicitudes Aprobadas</h2>
-                <TablaSolicitudes
-                  cols={["#", "Empleado", "Tipo", "Inicio", "Fin", "Días", "Motivo", "Estado", "Detalle"]}
-                  renderAcciones={() => null}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ══ MODAL: VER DETALLE ══ */}
-        {modalDetalle && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalDetalle(null)}>
-            <div className="modal-box">
-              <div className="modal-header">
-                <div>
-                  <h3>📋 Detalle de Solicitud #{modalDetalle.idSolicitud}</h3>
-                  <p>{modalDetalle.nombreEmpleado ?? `Empleado ${modalDetalle.idEmpleado}`}</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalDetalle(null)}>×</button>
-              </div>
-              <div className="modal-body">
+              <form onSubmit={handleEnviar}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Tipo</label>
-                    <p style={{ fontWeight: 600 }}>{modalDetalle.tipoSolicitud?.replace("_", " ")}</p>
+                    <label>Tipo de Solicitud *</label>
+                    <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
+                      {Object.entries(TIPO_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" />
+                  <div className="form-group">
+                    <label>Fecha de Inicio *</label>
+                    <input type="date" value={form.fechaInicio}
+                      onChange={e => setForm({ ...form, fechaInicio: e.target.value })} required />
                   </div>
                   <div className="form-group">
-                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Estado</label>
-                    <span className={`badge ${ESTADOS_BADGE[modalDetalle.estado] ?? "badge-gray"}`}>
-                      {ESTADOS_LABEL[modalDetalle.estado] ?? modalDetalle.estado}
-                    </span>
+                    <label>Fecha de Fin *</label>
+                    <input type="date" value={form.fechaFin}
+                      onChange={e => setForm({ ...form, fechaFin: e.target.value })} required />
                   </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Fecha Inicio</label>
-                    <p style={{ fontWeight: 600 }}>{modalDetalle.fechaInicio}</p>
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Fecha Fin</label>
-                    <p style={{ fontWeight: 600 }}>{modalDetalle.fechaFin}</p>
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Días Solicitados</label>
-                    <p style={{ fontWeight: 700, fontSize: "20px", color: "#2563eb" }}>{modalDetalle.diasSolicitados}</p>
+                  <div className="form-group form-full">
+                    <label>Motivo / Descripción *</label>
+                    <textarea rows={4} value={form.descripcion}
+                      onChange={e => setForm({ ...form, descripcion: e.target.value })}
+                      placeholder="Describa el motivo de su solicitud de permiso..." required />
                   </div>
                 </div>
-                <div className="form-group" style={{ marginTop: "8px" }}>
-                  <label style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.4px", color: "#94a3b8" }}>Motivo</label>
-                  <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "12px 14px", fontSize: "13.5px", color: "#1e293b", border: "1px solid #e2e8f0" }}>
-                    {modalDetalle.motivo || "—"}
-                  </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary" disabled={enviando}>
+                    {enviando ? "Enviando..." : "📤 Enviar Solicitud"}
+                  </button>
+                  <button type="button" className="btn btn-secondary"
+                    onClick={() => setForm({ tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "" })}>
+                    Limpiar
+                  </button>
                 </div>
-                {modalDetalle.observacionRrhh && (
-                  <div className="alert alert-warning" style={{ marginTop: "12px" }}>
-                    <strong>Observación RRHH:</strong> {modalDetalle.observacionRrhh}
-                  </div>
-                )}
-                {modalDetalle.respuesta && (
-                  <div className="alert alert-info" style={{ marginTop: "12px" }}>
-                    <strong>Respuesta Gerencia:</strong> {modalDetalle.respuesta}
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalDetalle(null)}>Cerrar</button>
+              </form>
+            </div>
+
+            <div className="notif-panel">
+              <div className="section-card">
+                <h2>⚡ ¿Cómo funciona?</h2>
+                <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "var(--text-2)", lineHeight: "2" }}>
+                  <li>Completa el formulario con los datos de tu permiso.</li>
+                  <li>RRHH revisa y valida la información.</li>
+                  <li>Si requiere aprobación de Gerencia, pasa al siguiente nivel.</li>
+                  <li>Recibes la notificación con la decisión final.</li>
+                </ol>
+                <div className="alert alert-warning" style={{ marginTop: 12 }}>
+                  <strong>Nota:</strong> Las vacaciones deben solicitarse con al menos 5 días de anticipación.
+                </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* ══ MODAL: OBSERVAR ══ */}
-        {modalObservar.open && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalObservar({ open: false, id: null, obs: "" })}>
-            <div className="modal-box">
-              <div className="modal-header">
-                <div>
-                  <h3>👁 Devolver con Observación</h3>
-                  <p>Solicitud #{modalObservar.id} — será devuelta al empleado.</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalObservar({ open: false, id: null, obs: "" })}>×</button>
-              </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Motivo de la observación *</label>
-                  <textarea
-                    rows={3}
-                    value={modalObservar.obs}
-                    onChange={(e) => setModalObservar({ ...modalObservar, obs: e.target.value })}
-                    placeholder="Explique qué debe corregir o completar el empleado..."
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalObservar({ open: false, id: null, obs: "" })}>Cancelar</button>
-                <button className="btn btn-warning" onClick={confirmarObservar} disabled={!modalObservar.obs.trim()}>
-                  👁 Enviar Observación
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ MODAL: ENVIAR A GERENCIA ══ */}
-        {modalEnviarGerencia.open && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalEnviarGerencia({ open: false, id: null })}>
-            <div className="modal-box">
-              <div className="modal-header">
-                <div>
-                  <h3>📤 Enviar a Gerencia</h3>
-                  <p>Solicitud #{modalEnviarGerencia.id}</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalEnviarGerencia({ open: false, id: null })}>×</button>
-              </div>
-              <div className="modal-body">
-                <p style={{ fontSize: "14px", color: "#475569" }}>
-                  ¿Desea enviar esta solicitud a Gerencia para su aprobación?
-                  La solicitud cambiará de estado a <strong>"Enviado a Gerencia"</strong>.
-                </p>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalEnviarGerencia({ open: false, id: null })}>Cancelar</button>
-                <button className="btn btn-primary" onClick={confirmarEnviarGerencia}>📤 Confirmar Envío</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ MODAL: APROBAR ══ */}
-        {modalAprobar.open && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalAprobar({ open: false, id: null })}>
-            <div className="modal-box">
-              <div className="modal-header">
-                <div>
-                  <h3>✅ Aprobar Solicitud</h3>
-                  <p>Solicitud #{modalAprobar.id}</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalAprobar({ open: false, id: null })}>×</button>
-              </div>
-              <div className="modal-body">
-                <p style={{ fontSize: "14px", color: "#475569" }}>
-                  ¿Confirma la aprobación de esta solicitud?
-                  El saldo de vacaciones del empleado se actualizará automáticamente y recibirá una notificación.
-                </p>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalAprobar({ open: false, id: null })}>Cancelar</button>
-                <button className="btn btn-success" onClick={confirmarAprobar}>✅ Confirmar Aprobación</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ MODAL: RECHAZAR ══ */}
-        {modalRechazo.open && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalRechazo({ open: false, id: null, respuesta: "" })}>
-            <div className="modal-box">
-              <div className="modal-header">
-                <div>
-                  <h3>❌ Rechazar Solicitud</h3>
-                  <p>Solicitud #{modalRechazo.id} — el empleado recibirá el motivo.</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalRechazo({ open: false, id: null, respuesta: "" })}>×</button>
-              </div>
-              <div className="modal-body">
-                <div className="alert alert-danger" style={{ marginBottom: "14px" }}>
-                  Este motivo será notificado automáticamente al empleado vía el sistema.
-                </div>
-                <div className="form-group">
-                  <label>Motivo de rechazo *</label>
-                  <textarea
-                    rows={3}
-                    value={modalRechazo.respuesta}
-                    onChange={(e) => setModalRechazo({ ...modalRechazo, respuesta: e.target.value })}
-                    placeholder="Explique el motivo del rechazo..."
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalRechazo({ open: false, id: null, respuesta: "" })}>Cancelar</button>
-                <button className="btn btn-danger" onClick={confirmarRechazo} disabled={!modalRechazo.respuesta.trim()}>
-                  ❌ Confirmar Rechazo
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </main>
     </div>
   );
+}
+
+/* ══════════════════════════════════════════════════════════
+   VISTA RRHH
+══════════════════════════════════════════════════════════ */
+function VistaRRHH() {
+  const [solicitudes,   setSolicitudes]   = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [mensaje,       setMensaje]       = useState("");
+  const [error,         setError]         = useState("");
+  const [filtroEstado,  setFiltroEstado]  = useState("PENDIENTE");
+  const [modalRevision, setModalRevision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
+  const [procesando,    setProcesando]    = useState(false);
+
+  useEffect(() => { cargarSolicitudes(); }, [filtroEstado]);
+
+  const cargarSolicitudes = async () => {
+    setLoading(true); setError("");
+    try {
+      const data = await getSolicitudesPorEstado(filtroEstado);
+      setSolicitudes(Array.isArray(data) ? data : []);
+    } catch { setError("No se pudieron cargar las solicitudes"); }
+    finally  { setLoading(false); }
+  };
+
+  const contarPorEstado = (e) => solicitudes.filter(s => s.estado === e).length;
+
+  const handleRevisar = async () => {
+    if (!modalRevision.decision || !modalRevision.comentario.trim()) return;
+    setProcesando(true);
+    try {
+      await revisarSolicitudRRHH(modalRevision.solicitud.idSolicitud ?? modalRevision.solicitud.id, {
+        decision: modalRevision.decision, comentario: modalRevision.comentario,
+      });
+      setMensaje(`Solicitud ${modalRevision.decision === "APROBAR" ? "aprobada" : "devuelta"} correctamente`);
+      setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
+      cargarSolicitudes();
+    } catch {
+      setError("Error al procesar la revisión");
+      setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
+    } finally { setProcesando(false); }
+  };
+
+  const stats = [
+    { label: "Pendientes",  value: contarPorEstado("PENDIENTE"),  color: "#f59e0b" },
+    { label: "En revisión", value: solicitudes.length,            color: "#3b82f6" },
+    { label: "Aprobadas",   value: contarPorEstado("APROBADO"),   color: "#10b981" },
+    { label: "Rechazadas",  value: contarPorEstado("RECHAZADO"),  color: "#ef4444" },
+  ];
+
+  return (
+    <div className="dashboard">
+      <Sidebar rol="RRHH" />
+      <main className="main-content">
+        <header className="main-header header-rrhh">
+          <div className="header-left">
+            <span className="page-breadcrumb">RRHH / Solicitud de Permisos</span>
+            <h1>Solicitud de Permisos y Licencias</h1>
+          </div>
+          <span className="role-pill role-pill-rrhh">RRHH</span>
+        </header>
+
+        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+
+        <FlowBar step={1} />
+
+        <div className="emp-stats-grid" style={{ marginBottom: 24 }}>
+          {stats.map(s => (
+            <div key={s.label} className="rrhh-stat-card" style={{ borderLeft: `4px solid ${s.color}` }}>
+              <div className="rrhh-stat-label">{s.label}</div>
+              <div className="rrhh-stat-value" style={{ color: s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {["PENDIENTE", "EN_REVISION", "APROBADO", "RECHAZADO"].map(e => (
+                <button key={e} className={`tab ${filtroEstado === e ? "active" : ""}`}
+                  style={{ margin: 0 }} onClick={() => setFiltroEstado(e)}>{e}</button>
+              ))}
+              <button className="btn btn-secondary btn-sm" style={{ marginLeft: "auto" }}
+                onClick={cargarSolicitudes}>🔄 Actualizar</button>
+            </div>
+          </div>
+          <div className="table-wrapper" style={{ marginBottom: 0 }}>
+            {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                  {solicitudes.length === 0 ? (
+                    <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
+                  ) : solicitudes.map(s => (
+                    <tr key={s.idSolicitud ?? s.id}>
+                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
+                      <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                      <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                      <td>{s.fechaInicio ?? "—"}</td>
+                      <td>{s.fechaFin ?? "—"}</td>
+                      <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
+                      <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                      <td>
+                        {s.estado === "PENDIENTE" && (
+                          <button className="btn btn-primary btn-sm"
+                            onClick={() => setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" })}>
+                            Revisar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {modalRevision.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalRevision({ ...modalRevision, open: false })}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>📋 Revisar Solicitud #{modalRevision.solicitud?.idSolicitud ?? modalRevision.solicitud?.id}</h3>
+                <p>{TIPO_LABELS[modalRevision.solicitud?.tipo] ?? modalRevision.solicitud?.tipo} — {modalRevision.solicitud?.nombreEmpleado ?? modalRevision.solicitud?.idEmpleado}</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Decisión *</label>
+                <select value={modalRevision.decision}
+                  onChange={e => setModalRevision({ ...modalRevision, decision: e.target.value })}>
+                  <option value="">Seleccione</option>
+                  <option value="APROBAR">✅ Aprobar y pasar a Gerencia</option>
+                  <option value="DEVOLVER">↩ Devolver al empleado</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Comentario *</label>
+                <textarea rows={3} value={modalRevision.comentario}
+                  onChange={e => setModalRevision({ ...modalRevision, comentario: e.target.value })}
+                  placeholder="Ingrese su observación o motivo de decisión..." />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalRevision({ ...modalRevision, open: false })}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleRevisar}
+                disabled={!modalRevision.decision || !modalRevision.comentario.trim() || procesando}>
+                {procesando ? "Procesando..." : "Confirmar Revisión"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   VISTA GERENCIA
+══════════════════════════════════════════════════════════ */
+function VistaGerencia() {
+  const [solicitudes,   setSolicitudes]   = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [mensaje,       setMensaje]       = useState("");
+  const [error,         setError]         = useState("");
+  const [modalDecision, setModalDecision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
+  const [procesando,    setProcesando]    = useState(false);
+  const user = getUser();
+
+  useEffect(() => { cargarSolicitudes(); }, []);
+
+  const cargarSolicitudes = async () => {
+    setLoading(true); setError("");
+    try {
+      const data = await getSolicitudesPorEstado("EN_REVISION");
+      setSolicitudes(Array.isArray(data) ? data : []);
+    } catch { setError("No se pudieron cargar las solicitudes"); }
+    finally  { setLoading(false); }
+  };
+
+  const handleDecidir = async () => {
+    if (!modalDecision.decision || !modalDecision.comentario.trim()) return;
+    setProcesando(true);
+    try {
+      await decidirSolicitudGerencia(
+        modalDecision.solicitud.idSolicitud ?? modalDecision.solicitud.id,
+        { decision: modalDecision.decision, comentario: modalDecision.comentario }
+      );
+      setMensaje(`Solicitud ${modalDecision.decision === "APROBAR" ? "aprobada" : "rechazada"} correctamente`);
+      setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
+      cargarSolicitudes();
+    } catch {
+      setError("Error al procesar la decisión");
+      setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
+    } finally { setProcesando(false); }
+  };
+
+  return (
+    <div className="ger-wrap">
+      <div className="ger-topbar">
+        <div className="emp-topbar-brand">
+          <div className="emp-topbar-plus">✚</div>
+          <span className="emp-topbar-text">HOSPITAL SAN GABRIEL</span>
+        </div>
+        <div className="emp-topbar-right">
+          <span className="emp-topbar-username">{user?.username ?? "Gerente"}</span>
+          <span className="role-pill role-pill-gerencia">Gerencia</span>
+        </div>
+      </div>
+
+      <main style={{ padding: "24px" }}>
+        <header className="main-header" style={{ marginBottom: 0, padding: 0, background: "none", borderBottom: "none" }}>
+          <div className="header-left">
+            <span className="page-breadcrumb">Gerencia / Solicitudes de Permisos</span>
+            <h1>Decisión Final — Solicitudes de Permisos</h1>
+          </div>
+          <button className="btn btn-secondary" onClick={cargarSolicitudes}>🔄 Actualizar</button>
+        </header>
+
+        {mensaje && <div className="alert alert-success" style={{ marginTop: 16 }}>✅ {mensaje}</div>}
+        {error   && <div className="alert alert-warning" style={{ marginTop: 16 }}>⚠️ {error}</div>}
+
+        <FlowBar step={2} />
+
+        <div className="section-card" style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+          <div className="table-wrapper" style={{ marginBottom: 0 }}>
+            {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Rev. RRHH</th><th>Estado</th><th>Decisión</th></tr>
+                </thead>
+                <tbody>
+                  {solicitudes.length === 0 ? (
+                    <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
+                  ) : solicitudes.map(s => (
+                    <tr key={s.idSolicitud ?? s.id}>
+                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
+                      <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                      <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                      <td>{s.fechaInicio ?? "—"}</td>
+                      <td>{s.fechaFin ?? "—"}</td>
+                      <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
+                      <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.comentarioRRHH ?? "—"}</td>
+                      <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                      <td>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <button className="btn btn-success btn-sm"
+                            onClick={() => setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" })}>
+                            ✅ Aprobar
+                          </button>
+                          <button className="btn btn-danger btn-sm"
+                            onClick={() => setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" })}>
+                            ❌ Rechazar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {modalDecision.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDecision({ ...modalDecision, open: false })}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>{modalDecision.decision === "APROBAR" ? "✅ Aprobar" : "❌ Rechazar"} Solicitud</h3>
+                <p>#{modalDecision.solicitud?.idSolicitud ?? modalDecision.solicitud?.id} — {modalDecision.solicitud?.nombreEmpleado ?? modalDecision.solicitud?.idEmpleado}</p>
+              </div>
+              <button className="modal-close" onClick={() => setModalDecision({ ...modalDecision, open: false })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Observación / Comentario de Gerencia *</label>
+                <textarea rows={3} value={modalDecision.comentario}
+                  onChange={e => setModalDecision({ ...modalDecision, comentario: e.target.value })}
+                  placeholder="Ingrese su decisión y motivo..." autoFocus />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalDecision({ ...modalDecision, open: false })}>Cancelar</button>
+              <button
+                className={modalDecision.decision === "APROBAR" ? "btn btn-success" : "btn btn-danger"}
+                onClick={handleDecidir}
+                disabled={!modalDecision.comentario.trim() || procesando}>
+                {procesando ? "Procesando..." : (modalDecision.decision === "APROBAR" ? "✅ Confirmar Aprobación" : "❌ Confirmar Rechazo")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   ROUTER
+══════════════════════════════════════════════════════════ */
+export default function SolicitudPermisos() {
+  const location = useLocation();
+  const path = location.pathname;
+  if (path.startsWith("/gerencia")) return <VistaGerencia />;
+  if (path.startsWith("/rrhh"))     return <VistaRRHH />;
+  return <VistaEmpleado />;
 }

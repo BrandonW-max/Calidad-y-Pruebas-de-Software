@@ -118,3 +118,98 @@
   background: #adb5bd;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════════════════════
+   NUEVO DISEÑO (ZIP) — clases usadas en TwoFA.jsx
+══════════════════════════════════════════════════════ */
+.twofa-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.twofa-card {
+  background: #ffffff;
+  width: 420px;
+  max-width: 100%;
+  padding: 40px 36px 32px;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  text-align: center;
+  animation: slideUp 0.25s ease-out;
+}
+
+.twofa-lock-wrap {
+  font-size: 40px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.twofa-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.twofa-subtitle {
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.twofa-info-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #1d4ed8;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.twofa-code-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.twofa-resend {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: none;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.twofa-resend:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.twofa-hint {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}

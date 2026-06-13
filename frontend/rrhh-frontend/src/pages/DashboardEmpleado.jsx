@@ -2,172 +2,156 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { getSolicitudesPorEmpleado, getCurrentUserId } from "../services/api";
+import { getUser, clearSession, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
 
 export default function DashboardEmpleado() {
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [leidas, setLeidas] = useState(() => JSON.parse(sessionStorage.getItem("notifLeidas") || "[]"));
+  const user = getUser();
+  const idEmpleado = getIdEmpleado();
 
-  const marcarLeida = (id) => {
-    if (!leidas.includes(id)) {
-      const nuevas = [...leidas, id];
-      setLeidas(nuevas);
-      sessionStorage.setItem("notifLeidas", JSON.stringify(nuevas));
-    }
-  };
-
-  const dismissNotif = (id) => {
-    setNotificaciones((prev) => prev.filter((n) => n.idSolicitud !== id));
-  };
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
+  const [asistenciaHoy,         setAsistenciaHoy]         = useState(null);
+  const [vacacionesDias,        setVacacionesDias]        = useState(null);
+  const [hora, setHora] = useState(new Date());
 
   useEffect(() => {
-    const id = getCurrentUserId();
-    if (!id) return;
-    const fetchNotifs = () => {
-      getSolicitudesPorEmpleado(id).then((data) => {
-        setNotificaciones((Array.isArray(data) ? data : [])
-          .filter((s) => s.estado === "APROBADA" || s.estado === "RECHAZADA")
-          .slice(0, 5));
-      }).catch(() => {});
-    };
-    fetchNotifs();
-    const intervalo = setInterval(fetchNotifs, 30000);
-    return () => clearInterval(intervalo);
+    const t = setInterval(() => setHora(new Date()), 60000);
+    return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    if (idEmpleado) cargarDatos();
+  }, [idEmpleado]);
+
+  const cargarDatos = async () => {
+    try {
+      const solicitudes = await getSolicitudesPorEmpleado(idEmpleado);
+      if (Array.isArray(solicitudes)) {
+        const pendientes = solicitudes.filter(
+          s => s.estado === "PENDIENTE" || s.estado === "PROCESADO"
+        ).length;
+        setSolicitudesPendientes(pendientes);
+      }
+    } catch { /* silently fail */ }
+  };
+
+  const handleLogout = () => { clearSession(); window.location.href = "/"; };
+
+  const horaFmt = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const displayName = user?.username || "Usuario";
+
   return (
     <div className="dashboard">
       <Sidebar rol="EMPLEADO" />
 
       <main className="main-content">
-        <header className="main-header header-empleado">
-          <div className="header-left">
-            <span className="page-breadcrumb">Portal del Empleado</span>
-            <h1>Bienvenido</h1>
-          </div>
-          <span className="role-pill role-pill-empleado">Mi Cuenta</span>
-        </header>
 
-        <div className="stats-row">
-          <div className="stat-box accent-teal">
-            <div className="stat-icon">📅</div>
-            <div className="stat-info">
-              <div className="stat-value">—</div>
-              <div className="stat-label">Días Asistidos (Mes)</div>
-            </div>
+        {/* ── TOP BAR ── */}
+        <div className="emp-topbar">
+          <div className="emp-topbar-brand">
+            <div className="emp-topbar-plus">✚</div>
+            <span className="emp-topbar-text">HOSPITAL SAN GABRIEL</span>
           </div>
-          <div className="stat-box accent-orange">
-            <div className="stat-icon">⏰</div>
-            <div className="stat-info">
-              <div className="stat-value">—</div>
-              <div className="stat-label">Tardanzas (Mes)</div>
-            </div>
-          </div>
-          <div className="stat-box accent-green">
-            <div className="stat-icon">🌴</div>
-            <div className="stat-info">
-              <div className="stat-value">—</div>
-              <div className="stat-label">Días de Vacaciones</div>
-            </div>
-          </div>
-          <div className="stat-box accent-blue">
-            <div className="stat-icon">📋</div>
-            <div className="stat-info">
-              <div className="stat-value">—</div>
-              <div className="stat-label">Solicitudes Activas</div>
-            </div>
+          <div className="emp-topbar-right">
+            <span className="emp-topbar-username">{displayName}</span>
+            <span className="role-pill role-pill-empleado">Empleado</span>
+            <div className="emp-topbar-avatar">👤</div>
+            <button className="emp-topbar-logout" onClick={handleLogout}>
+              Cerrar Sesión →
+            </button>
           </div>
         </div>
 
-        <div className="cards-grid">
-          <Link to="/empleado/asistencia" className="card">
-            <span className="card-icon">📋</span>
-            <h3>Mi Asistencia</h3>
-            <p>Consultar registros de asistencia y justificaciones</p>
-          </Link>
-          <Link to="/empleado/solicitudes" className="card">
-            <span className="card-icon">📅</span>
-            <h3>Mis Solicitudes</h3>
-            <p>Solicitar permisos y vacaciones</p>
-          </Link>
-        </div>
+        <h1 className="emp-welcome-title">Bienvenido</h1>
 
-        <div className="section-card">
-          <h2>📋 Asistencia Reciente</h2>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Entrada</th>
-                  <th>Salida</th>
-                  <th>Horas Trabajadas</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={5}>
-                    <div className="empty-state">
-                      <div className="empty-state-icon">📋</div>
-                      <p>Los registros de asistencia se mostrarán aquí cuando el sistema esté conectado.</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* ── TARJETAS DE RESUMEN ── */}
+        <div className="emp-stats-grid">
 
-        <div className="section-card">
-          <h2>ℹ️ Información importante</h2>
-          <div className="alert alert-info">
-            🖐️ Tu registro de entrada y salida se realiza mediante el <strong>dispositivo biométrico</strong> de huella dactilar ubicado en la entrada.
-          </div>
-          <div className="alert alert-warning">
-            Si tienes una tardanza, dispones de <strong>1 día</strong> para registrar tu justificación desde la sección "Mi Asistencia".
-          </div>
-        </div>
-
-        {notificaciones.length > 0 && (
-          <div className="section-card">
-            <h2>🔔 Notificaciones Recientes
-              {notificaciones.filter(n => !leidas.includes(n.idSolicitud)).length > 0 && (
-                <span className="badge badge-danger" style={{ marginLeft: "8px" }}>
-                  {notificaciones.filter(n => !leidas.includes(n.idSolicitud)).length} nueva(s)
+          {/* Mi Asistencia Hoy */}
+          <div className="emp-stat-card emp-stat-teal">
+            <div className="emp-stat-card-header">
+              <div className="emp-stat-icon emp-stat-icon-teal">🕐</div>
+              <h3>Mi Asistencia Hoy</h3>
+            </div>
+            <div className="emp-asist-body">
+              <div className="emp-asist-col">
+                <div className="emp-asist-sub">Hora de Entrada</div>
+                <div className="emp-asist-time">{asistenciaHoy?.horaEntrada || horaFmt}</div>
+                <span className="badge badge-success" style={{ fontSize: "11px", marginTop: "4px" }}>
+                  A tiempo
                 </span>
-              )}
-            </h2>
-            {notificaciones.map((s) => {
-              const esNueva = !leidas.includes(s.idSolicitud);
-              return (
-                <Link
-                  key={s.idSolicitud}
-                  to="/empleado/solicitudes"
-                  onClick={() => marcarLeida(s.idSolicitud)}
-                  className={`alert ${s.estado === "APROBADA" ? "alert-success" : "alert-danger"}`}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", textDecoration: "none", cursor: "pointer", ...(esNueva ? { borderLeft: "4px solid #2563eb" } : {}) }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <strong>{s.estado === "APROBADA" ? "✅" : "❌"} Solicitud {s.estado === "APROBADA" ? "Aprobada" : "Rechazada"}</strong>
-                    {esNueva && <span className="badge badge-info" style={{ marginLeft: "8px" }}>Nuevo</span>}
-                    <p style={{ margin: "4px 0 0", fontSize: "13px" }}>
-                      {s.tipoSolicitud?.replace("_", " ")} — {s.fechaInicio} al {s.fechaFin}
-                      {s.respuesta && <span> — Respuesta: {s.respuesta}</span>}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); marcarLeida(s.idSolicitud); dismissNotif(s.idSolicitud); }}
-                    style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#94a3b8", padding: "0 4px" }}
-                    title="Descartar"
-                  >
-                    ×
-                  </button>
-                </Link>
-              );
-            })}
-            <Link to="/empleado/solicitudes" style={{ fontSize: "13px" }}>Ver todas mis solicitudes →</Link>
+              </div>
+              <div className="emp-asist-col">
+                <div className="emp-asist-sub">Hora de Salida</div>
+                <div className="emp-asist-time emp-asist-muted">—:—</div>
+                <div className="emp-asist-remaining">
+                  {asistenciaHoy?.restante || "Jornada en curso"}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Mis Solicitudes Pendientes */}
+          <div className="emp-stat-card emp-stat-orange">
+            <div className="emp-stat-card-header" style={{ position: "relative" }}>
+              <div className="emp-stat-icon emp-stat-icon-orange">📋</div>
+              <h3>Mis Solicitudes Pendientes</h3>
+              {solicitudesPendientes !== null && solicitudesPendientes > 0 && (
+                <span className="emp-count-badge emp-count-orange">{solicitudesPendientes}</span>
+              )}
+            </div>
+            <div className="emp-stat-center-body">
+              <div className="emp-stat-circle emp-circle-orange">📋</div>
+              <span className="emp-stat-center-label">Solicitudes Pendientes</span>
+            </div>
+          </div>
+
+          {/* Mis Vacaciones Disponibles */}
+          <div className="emp-stat-card emp-stat-green">
+            <div className="emp-stat-card-header" style={{ position: "relative" }}>
+              <div className="emp-stat-icon emp-stat-icon-green">🌴</div>
+              <h3>Mis Vacaciones Disponibles</h3>
+              {vacacionesDias !== null && (
+                <span className="emp-count-badge emp-count-green">{vacacionesDias}</span>
+              )}
+            </div>
+            <div className="emp-stat-center-body">
+              <div className="emp-stat-circle emp-circle-green">📋</div>
+              <span className="emp-stat-center-label">Días Disponibles</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── ACCESOS DIRECTOS ── */}
+        <div className="section-card">
+          <h2>Accesos Directos</h2>
+          <div className="emp-accesos-grid">
+
+            <Link to="/empleado/asistencia" className="emp-acceso-item">
+              <div className="emp-acceso-icon emp-acceso-blue">🕐</div>
+              <span className="emp-acceso-label">Registrar Asistencia</span>
+            </Link>
+
+            <Link to="/empleado/solicitudes" className="emp-acceso-item">
+              <div className="emp-acceso-icon emp-acceso-sand">📋</div>
+              <span className="emp-acceso-label">Solicitar Permiso</span>
+            </Link>
+
+            <Link to="/empleado/nomina" className="emp-acceso-item">
+              <div className="emp-acceso-icon emp-acceso-blue">💲</div>
+              <span className="emp-acceso-label">Mi Nómina</span>
+            </Link>
+
+            <Link to="/empleado/solicitudes" className="emp-acceso-item" style={{ position: "relative" }}>
+              <div className="emp-acceso-icon emp-acceso-sand" style={{ position: "relative" }}>
+                🔔
+                <span className="emp-notif-dot">1</span>
+              </div>
+              <span className="emp-acceso-label">Ver Notificaciones</span>
+            </Link>
+
+          </div>
+        </div>
+
       </main>
     </div>
   );
