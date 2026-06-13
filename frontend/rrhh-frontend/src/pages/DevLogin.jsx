@@ -2,9 +2,10 @@
  * ╔══════════════════════════════════════════════════════════════╗
  * ║  ARCHIVO DE PRUEBA — ELIMINAR ANTES DE PRODUCCIÓN           ║
  * ║  Ruta: /dev                                                  ║
- * ║  Propósito: simular sesión sin backend para probar UI        ║
+ * ║  Propósito: simular sesión + datos sin backend               ║
  * ╚══════════════════════════════════════════════════════════════╝
  */
+import { useState } from "react";
 import { saveSession, clearSession } from "../services/api";
 
 const USUARIOS_PRUEBA = [
@@ -76,10 +77,26 @@ const btnStyle = (color) => ({
 });
 
 export default function DevLogin() {
+  const [mockActivo, setMockActivo] = useState(
+    sessionStorage.getItem('devMode') === 'true'
+  );
+
   const handleAcceder = (u) => {
+    sessionStorage.setItem('devMode', 'true');
     clearSession();
     saveSession(u.token, u.rol, u.username, u.idEmpleado);
     window.location.href = u.redirect;
+  };
+
+  const toggleMock = () => {
+    if (mockActivo) {
+      sessionStorage.removeItem('devMode');
+      setMockActivo(false);
+    } else {
+      sessionStorage.setItem('devMode', 'true');
+      setMockActivo(true);
+      window.location.reload(); // recarga para que el interceptor se active
+    }
   };
 
   return (
@@ -150,9 +167,48 @@ export default function DevLogin() {
           ))}
         </div>
 
+        {/* MOCK TOGGLE */}
+        <div style={{
+          marginTop: "24px",
+          background: mockActivo ? "#f0fdf4" : "#fef9c3",
+          border: `2px solid ${mockActivo ? "#86efac" : "#fde047"}`,
+          borderRadius: "10px",
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}>
+          <div>
+            <strong style={{ color: mockActivo ? "#15803d" : "#854d0e", fontSize: "13px" }}>
+              {mockActivo ? "✅ Datos de prueba ACTIVOS" : "⚠️ Datos de prueba INACTIVOS"}
+            </strong>
+            <p style={{ margin: "3px 0 0", fontSize: "12px", color: mockActivo ? "#166534" : "#713f12" }}>
+              {mockActivo
+                ? "El interceptor mockea todas las llamadas al backend con datos falsos."
+                : "Las páginas llamarán al backend real (localhost:8080). Los botones de acceso activan el mock."}
+            </p>
+          </div>
+          <button onClick={toggleMock} style={{
+            padding: "9px 18px",
+            background: mockActivo ? "#dc2626" : "#16a34a",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+          }}>
+            {mockActivo ? "Desactivar mock" : "Activar mock"}
+          </button>
+        </div>
+
         {/* INFO TOKENS */}
         <div style={{
-          marginTop: "28px",
+          marginTop: "16px",
           background: "#f1f5f9",
           borderRadius: "10px",
           padding: "14px 18px",
@@ -166,13 +222,9 @@ export default function DevLogin() {
             <li>EMPLEADO → <code>placeholder-token-empleado</code> (idEmpleado: 1)</li>
             <li>GERENCIA → <code>placeholder-token-gerencia</code></li>
           </ul>
-          <p style={{ margin: "8px 0 0" }}>
-            ⚠️ Las llamadas al backend fallarán con 401/403 porque estos tokens no son reales.
-            Úsalo solo para verificar la navegación, layout y lógica de UI.
-          </p>
         </div>
 
-        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "12px", color: "#94a3b8" }}>
+        <p style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "#94a3b8" }}>
           Para volver aquí: <code>/dev</code> · Para cerrar sesión: usa el botón dentro del panel.
         </p>
       </div>
