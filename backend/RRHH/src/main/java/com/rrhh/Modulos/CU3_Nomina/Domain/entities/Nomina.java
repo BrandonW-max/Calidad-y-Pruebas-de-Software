@@ -8,11 +8,9 @@ import com.rrhh.Shared.prototype.Prototype;
 
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class Nomina implements Prototype<Nomina> {
 
     private Integer idNomina;
@@ -56,8 +54,9 @@ public class Nomina implements Prototype<Nomina> {
                   BigDecimal bonifGuardia, BigDecimal bonifRiesgo, BigDecimal bonifCargo,
                   BigDecimal descuentoTardanzas, BigDecimal descuentoLey,
                   BigDecimal asignacionFamiliar, BigDecimal sueldoBruto,
-                  BigDecimal sueldoNeto, String estadoPago,
-                  Long idEmpleado, Long calculadoPor, List<DetalleNomina> detalles) {
+                  BigDecimal sueldoNeto, String estadoPago, Integer version,
+                  Integer nominaAnteriorId, Long idEmpleado, Long calculadoPor,
+                  List<DetalleNomina> detalles) {
         this.idNomina = idNomina;
         this.periodo = periodo;
         this.fechaInicio = fechaInicio;
@@ -78,6 +77,8 @@ public class Nomina implements Prototype<Nomina> {
         this.sueldoBruto = sueldoBruto;
         this.sueldoNeto = sueldoNeto;
         this.estadoPago = estadoPago;
+        this.version = version;
+        this.nominaAnteriorId = nominaAnteriorId;
         this.idEmpleado = idEmpleado;
         this.calculadoPor = calculadoPor;
         this.detalles = detalles;

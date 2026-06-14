@@ -7,6 +7,7 @@ import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 
 @Repository
@@ -25,7 +26,7 @@ public class RegistroAsistenciaRepositoryImpl implements IRegistroAsistenciaRepo
     @Override
     public RegistroAsistencia guardar(RegistroAsistencia registroAsistencia) {
         RegistroAsistenciaModel model = mapper.crearModeloDesdeDominio(registroAsistencia);
-        RegistroAsistenciaModel guardado = jpaRegistroAsistenciaRepository.save(model);
+        RegistroAsistenciaModel guardado = jpaRegistroAsistenciaRepository.save(Objects.requireNonNull(model));
         return mapper.crearDominioDesdeModelo(guardado);
     }
 
@@ -37,7 +38,7 @@ public class RegistroAsistenciaRepositoryImpl implements IRegistroAsistenciaRepo
 
     @Override
     public Optional<RegistroAsistencia> buscarPorId(Integer idRegistro) {
-        return jpaRegistroAsistenciaRepository.findById(idRegistro)
+        return jpaRegistroAsistenciaRepository.findById(Objects.requireNonNull(idRegistro))
                 .map(mapper::crearDominioDesdeModelo);
     }
 }

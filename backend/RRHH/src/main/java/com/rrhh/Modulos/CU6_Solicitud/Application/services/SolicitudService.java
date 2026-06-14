@@ -18,6 +18,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,7 +56,7 @@ public class SolicitudService implements ISolicitudService {
 
         int diasSolicitados = calcularDiasLaborables(request.getFechaInicio(), request.getFechaFin());
 
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(idEmpleado)
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado))
             .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado."));
         if (!"ACTIVO".equals(empleado.getEstado())) {
             throw new IllegalStateException("El empleado no esta activo en el sistema.");
@@ -111,7 +112,7 @@ public class SolicitudService implements ISolicitudService {
         solicitud.setActualizadoEl(LocalDateTime.now());
 
         Solicitud actualizada = solicitudRepository.guardar(solicitud);
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(actualizada.getIdEmpleado()).orElse(null);
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(actualizada.getIdEmpleado())).orElse(null);
 
         HistorialAuditoriaModel log = new HistorialAuditoriaModel();
         log.setTablaAfectada("SOLICITUD");
@@ -141,7 +142,7 @@ public class SolicitudService implements ISolicitudService {
 
             // RNF86: Descontar saldo de vacaciones
             if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
-                jpaEmpleadoRepository.findById(solicitud.getIdEmpleado()).ifPresent(emp -> {
+                jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).ifPresent(emp -> {
                     int saldoActual = emp.getSaldoVacaciones() != null ? emp.getSaldoVacaciones() : DIAS_VACACIONES_ANUALES;
                     int dias = solicitud.getDiasSolicitados() != null ? solicitud.getDiasSolicitados() : 0;
                     emp.setSaldoVacaciones(Math.max(0, saldoActual - dias));
@@ -163,7 +164,7 @@ public class SolicitudService implements ISolicitudService {
         solicitud.setActualizadoEl(LocalDateTime.now());
 
         Solicitud actualizada = solicitudRepository.guardar(solicitud);
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(actualizada.getIdEmpleado()).orElse(null);
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(actualizada.getIdEmpleado())).orElse(null);
 
         HistorialAuditoriaModel log = new HistorialAuditoriaModel();
         log.setTablaAfectada("SOLICITUD");
@@ -181,7 +182,7 @@ public class SolicitudService implements ISolicitudService {
     public List<SolicitudResponseDTO> listarPorEstado(String estado) {
         return solicitudRepository.buscarPorEstado(estado).stream()
             .map(s -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(s.getIdEmpleado()).orElse(null);
+                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(s.getIdEmpleado())).orElse(null);
                 return mapearAResponse(s, emp);
             })
             .collect(Collectors.toList());
@@ -191,7 +192,7 @@ public class SolicitudService implements ISolicitudService {
     public List<SolicitudResponseDTO> listarPorEmpleado(Long idEmpleado) {
         return solicitudRepository.buscarPorEmpleado(idEmpleado).stream()
             .map(s -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(idEmpleado).orElse(null);
+                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
                 return mapearAResponse(s, emp);
             })
             .collect(Collectors.toList());
@@ -201,7 +202,7 @@ public class SolicitudService implements ISolicitudService {
     public SolicitudResponseDTO buscarPorId(Integer idSolicitud) {
         Solicitud solicitud = solicitudRepository.buscarPorId(idSolicitud)
             .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(solicitud.getIdEmpleado()).orElse(null);
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).orElse(null);
         return mapearAResponse(solicitud, empleado);
     }
 
@@ -226,7 +227,7 @@ public class SolicitudService implements ISolicitudService {
         clon.setActualizadoEl(LocalDateTime.now());
 
         Solicitud guardada = solicitudRepository.guardar(clon);
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(idEmpleado).orElse(null);
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
         return mapearAResponse(guardada, empleado);
     }
 
@@ -236,7 +237,7 @@ public class SolicitudService implements ISolicitudService {
             .filter(s -> s.getFechaDecision() != null)
             .sorted((a, b) -> b.getFechaDecision().compareTo(a.getFechaDecision()))
             .map(s -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(s.getIdEmpleado()).orElse(null);
+                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(s.getIdEmpleado())).orElse(null);
                 return mapearAResponse(s, emp);
             })
             .collect(Collectors.toList());

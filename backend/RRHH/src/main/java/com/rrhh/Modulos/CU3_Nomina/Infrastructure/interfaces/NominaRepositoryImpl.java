@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,14 +34,14 @@ public class NominaRepositoryImpl implements INominaRepository {
     @Override
     public Nomina guardar(Nomina nomina) {
         NominaModel model = mapearAModel(nomina);
-        NominaModel guardado = jpaNominaRepository.save(model);
+        NominaModel guardado = jpaNominaRepository.save(Objects.requireNonNull(model));
         nomina.setIdNomina(guardado.getIdNomina());
         return nomina;
     }
 
     @Override
     public Optional<Nomina> buscarPorId(Integer idNomina) {
-        return jpaNominaRepository.findById(idNomina)
+        return jpaNominaRepository.findById(Objects.requireNonNull(idNomina))
             .map(this::mapearAEntidad);
     }
 

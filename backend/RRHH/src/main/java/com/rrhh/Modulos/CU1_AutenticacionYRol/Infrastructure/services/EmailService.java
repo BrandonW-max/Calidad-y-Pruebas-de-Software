@@ -1,6 +1,5 @@
 package com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -8,13 +7,18 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 import jakarta.mail.internet.MimeMessage;
 
+import java.util.Objects;
+
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
 
     public void enviarCorreoRecuperacion(
             String destinatario,
@@ -48,7 +52,7 @@ public class EmailService {
         MimeMessage mensaje = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mensaje, true);
 
-        helper.setTo(destinatario);
+        helper.setTo(Objects.requireNonNull(destinatario));
         helper.setSubject("Comprobante de Nomina - " + periodo + " - Hospital San Gabriel");
 
         helper.setText(
@@ -60,7 +64,7 @@ public class EmailService {
 
         helper.addAttachment(
                 "Comprobante_Nomina_" + periodo + "_" + nombreEmpleado.replace(" ", "_") + ".pdf",
-                new ByteArrayResource(pdf)
+                new ByteArrayResource(Objects.requireNonNull(pdf))
         );
 
         mailSender.send(mensaje);

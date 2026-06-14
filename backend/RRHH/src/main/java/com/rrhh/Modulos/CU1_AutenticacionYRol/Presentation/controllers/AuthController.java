@@ -18,9 +18,10 @@ import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Objects;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -30,11 +31,14 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(ApiRoutes.AUTH_BASE)
 public class AuthController {
 
-    @Autowired
-    private IAuthService authService;
+    private final IAuthService authService;
 
-    @Autowired
-    private RecoveryService recoveryService;
+    private final RecoveryService recoveryService;
+
+    public AuthController(IAuthService authService, RecoveryService recoveryService) {
+        this.authService = authService;
+        this.recoveryService = recoveryService;
+    }
 
     @PostMapping(ApiRoutes.LOGIN)
     public ResponseEntity<AuthResponseDTO> login(
@@ -127,7 +131,7 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .contentType(
-                        org.springframework.http.MediaType.IMAGE_PNG
+                        Objects.requireNonNull(org.springframework.http.MediaType.IMAGE_PNG)
                 )
                 .header(
                         "Content-Disposition",

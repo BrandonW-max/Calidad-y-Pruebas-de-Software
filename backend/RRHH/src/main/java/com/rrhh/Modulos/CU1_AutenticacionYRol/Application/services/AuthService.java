@@ -11,7 +11,6 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.TwoFactorS
 import java.util.List;
 
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.rrhh.Shared.security.HashService;
@@ -19,20 +18,23 @@ import com.rrhh.Shared.security.HashService;
 @Service
 public class AuthService implements IAuthService {
 
-    @Autowired
-    private JwtConfig jwtConfig;
+    private final JwtConfig jwtConfig;
 
-    @Autowired
-    private TwoFactorService twoFactorService;
+    private final TwoFactorService twoFactorService;
 
-    @Autowired
-    private IUsuarioRepository usuarioRepository;
+    private final IUsuarioRepository usuarioRepository;
 
-    @Autowired
-    private IHistorialRepository historialRepository;
+    private final IHistorialRepository historialRepository;
 
-    @Autowired
-    private HashService hashService;
+    private final HashService hashService;
+
+    public AuthService(JwtConfig jwtConfig, TwoFactorService twoFactorService, IUsuarioRepository usuarioRepository, IHistorialRepository historialRepository, HashService hashService) {
+        this.jwtConfig = jwtConfig;
+        this.twoFactorService = twoFactorService;
+        this.usuarioRepository = usuarioRepository;
+        this.historialRepository = historialRepository;
+        this.hashService = hashService;
+    }
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO dto, String ip) {

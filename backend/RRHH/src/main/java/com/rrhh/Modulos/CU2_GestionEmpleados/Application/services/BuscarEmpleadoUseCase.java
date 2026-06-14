@@ -8,9 +8,7 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -20,14 +18,17 @@ import java.util.List;
 @Service
 public class BuscarEmpleadoUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
+
+    public BuscarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository) {
+        this.empleadoRepository = empleadoRepository;
+        this.contratoRepository = contratoRepository;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     public List<BuscarEmpleadoResponseDTO> listar() {
 

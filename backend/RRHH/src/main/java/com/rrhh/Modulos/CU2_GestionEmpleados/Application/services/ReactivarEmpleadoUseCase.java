@@ -14,7 +14,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRe
 
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,23 +22,26 @@ import java.util.List;
 @Service
 public class ReactivarEmpleadoUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private ISancionRepository sancionRepository;
+    private final ISancionRepository sancionRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    @Autowired
-    private JpaUsuarioRepository jpaUsuarioRepository;
+    private final JpaUsuarioRepository jpaUsuarioRepository;
+
+    public ReactivarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, ISancionRepository sancionRepository, IUsuarioGestionRepository usuarioRepository, IContratoRepository contratoRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, JpaUsuarioRepository jpaUsuarioRepository) {
+        this.empleadoRepository = empleadoRepository;
+        this.sancionRepository = sancionRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.contratoRepository = contratoRepository;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+        this.jpaUsuarioRepository = jpaUsuarioRepository;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(

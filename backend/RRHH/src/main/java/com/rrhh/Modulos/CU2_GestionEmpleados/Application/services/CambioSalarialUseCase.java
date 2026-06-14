@@ -11,7 +11,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,20 +20,23 @@ import java.math.BigDecimal;
 @Service
 public class CambioSalarialUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    @Value("${rrhh.salario-minimo}")
-    private BigDecimal salarioMinimo;
+    private final BigDecimal salarioMinimo;
+
+    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, @Value("${rrhh.salario-minimo}") BigDecimal salarioMinimo) {
+        this.empleadoRepository = empleadoRepository;
+        this.contratoRepository = contratoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+        this.salarioMinimo = salarioMinimo;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(

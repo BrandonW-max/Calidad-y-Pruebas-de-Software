@@ -5,18 +5,21 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.ISancionRepositor
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.mappers.SancionMapper;
 import com.rrhh.Shared.persistence.SancionModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class SancionRepositoryImpl implements ISancionRepository {
 
-    @Autowired
-    private JpaSancionRepository jpaRepository;
+    private final JpaSancionRepository jpaRepository;
+
+    public SancionRepositoryImpl(JpaSancionRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public Sancion save(Sancion sancion) {
@@ -25,7 +28,7 @@ public class SancionRepositoryImpl implements ISancionRepository {
                 SancionMapper.toModel(sancion);
 
         SancionModel saved =
-                jpaRepository.save(model);
+                jpaRepository.save(Objects.requireNonNull(model));
 
         return SancionMapper.toDomain(saved);
     }

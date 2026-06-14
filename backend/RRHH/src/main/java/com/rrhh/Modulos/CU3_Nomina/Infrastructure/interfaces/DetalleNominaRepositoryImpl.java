@@ -8,6 +8,7 @@ import com.rrhh.Shared.persistence.NominaModel;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Repository
@@ -22,7 +23,7 @@ public class DetalleNominaRepositoryImpl implements IDetalleNominaRepository {
     @Override
     public DetalleNomina guardar(DetalleNomina detalle) {
         DetalleNominaModel model = mapearAModel(detalle);
-        jpaDetalleNominaRepository.save(model);
+        jpaDetalleNominaRepository.save(Objects.requireNonNull(model));
         return detalle;
     }
 
@@ -31,7 +32,7 @@ public class DetalleNominaRepositoryImpl implements IDetalleNominaRepository {
         List<DetalleNominaModel> models = detalles.stream()
             .map(this::mapearAModel)
             .collect(Collectors.toList());
-        jpaDetalleNominaRepository.saveAll(models);
+        jpaDetalleNominaRepository.saveAll(Objects.requireNonNull(models));
         return detalles;
     }
 
@@ -68,7 +69,7 @@ public class DetalleNominaRepositoryImpl implements IDetalleNominaRepository {
         return model;
     }
 
-    public DetalleNomina mapearAEntidad(DetalleNominaModel model) {
+    DetalleNomina mapearAEntidad(DetalleNominaModel model) {
         DetalleNomina detalle = new DetalleNomina();
         detalle.setIdDetalle(model.getIdDetalle());
         detalle.setFecha(model.getFecha());

@@ -6,7 +6,6 @@ import com.rrhh.Shared.export.excel.interfaces.ExcelExporter;
 import com.rrhh.Shared.export.csv.interfaces.CSVExporter;
 import com.rrhh.Shared.export.pdf.implementations.GenericPDFExporter;
 import com.rrhh.Shared.export.excel.implementations.GenericExcelExporter;
-import com.rrhh.Shared.export.csv.implementations.GenericCSVExporter;
 import org.springframework.stereotype.Component;
 
 @Component("solicitudExportFactory")

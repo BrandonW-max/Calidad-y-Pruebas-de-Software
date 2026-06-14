@@ -5,16 +5,19 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialReposi
 import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
 import com.rrhh.Shared.persistence.UsuarioModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Component
 public class HistorialRepositoryImpl implements IHistorialRepository {
 
-    @Autowired
-    private JpaHistorialRepository jpaRepository;
+    private final JpaHistorialRepository jpaRepository;
+
+    public HistorialRepositoryImpl(JpaHistorialRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public void save(Historial historial) {
@@ -60,6 +63,6 @@ public class HistorialRepositoryImpl implements IHistorialRepository {
                 LocalDateTime.now()
         );
 
-        jpaRepository.save(model);
+        jpaRepository.save(Objects.requireNonNull(model));
     }
 }

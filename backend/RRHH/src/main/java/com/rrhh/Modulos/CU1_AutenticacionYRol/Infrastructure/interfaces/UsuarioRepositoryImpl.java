@@ -7,14 +7,18 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.mappers.UsuarioMapp
 
 import com.rrhh.Shared.persistence.UsuarioModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 public class UsuarioRepositoryImpl implements IUsuarioRepository {
 
-    @Autowired
-    private JpaUsuarioRepository jpaRepository;
+    private final JpaUsuarioRepository jpaRepository;
+
+    public UsuarioRepositoryImpl(JpaUsuarioRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public Usuario findByUsername(String username) {
@@ -44,7 +48,7 @@ public Usuario save(Usuario usuario) {
 
     if (usuario.getId() != null) {
 
-        UsuarioModel model = jpaRepository.findById(usuario.getId())
+        UsuarioModel model = jpaRepository.findById(Objects.requireNonNull(usuario.getId()))
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         model.setIntentosFallidos(usuario.getIntentosFallidos());
@@ -66,7 +70,7 @@ public Usuario save(Usuario usuario) {
 
     UsuarioModel model = UsuarioMapper.toModel(usuario);
 
-    UsuarioModel saved = jpaRepository.save(model);
+    UsuarioModel saved = jpaRepository.save(Objects.requireNonNull(model));
 
     return UsuarioMapper.toDomain(saved);
 }

@@ -19,7 +19,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRe
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.factory.IContratoFactory;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,35 +27,38 @@ import com.rrhh.Shared.security.HashService;
 @Service
 public class RegistrarEmpleadoUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private IDepartamentoRepository departamentoRepository;
+    private final IDepartamentoRepository departamentoRepository;
 
-    @Autowired
-    private IRolRepository rolRepository;
+    private final IRolRepository rolRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private NombreUsuarioService nombreUsuarioService;
+    private final NombreUsuarioService nombreUsuarioService;
 
-    @Autowired
-    private RolAsignacionService rolAsignacionService;
+    private final RolAsignacionService rolAsignacionService;
 
-    @Autowired
-    private HashService hashService;
+    private final HashService hashService;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    @Autowired
-    private IContratoFactory contratoFactory;
+    private final IContratoFactory contratoFactory;
+
+    public RegistrarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IRolRepository rolRepository, IUsuarioGestionRepository usuarioRepository, NombreUsuarioService nombreUsuarioService, RolAsignacionService rolAsignacionService, HashService hashService, AuditoriaEmpleadoService auditoriaEmpleadoService, IContratoFactory contratoFactory) {
+        this.empleadoRepository = empleadoRepository;
+        this.contratoRepository = contratoRepository;
+        this.departamentoRepository = departamentoRepository;
+        this.rolRepository = rolRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.nombreUsuarioService = nombreUsuarioService;
+        this.rolAsignacionService = rolAsignacionService;
+        this.hashService = hashService;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+        this.contratoFactory = contratoFactory;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(RegistrarEmpleadoRequestDTO dto) {

@@ -6,7 +6,8 @@
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
-if (sessionStorage.getItem('devMode') === 'true') {
+const mocksActivados = import.meta.env.VITE_ENABLE_MOCKS === 'true' || sessionStorage.getItem('devMode') === 'true';
+if (mocksActivados) {
 
 const DELAY = 280; // ms de latencia simulada
 

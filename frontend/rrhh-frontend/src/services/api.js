@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:8080';
+const BASE = import.meta.env.VITE_API_URL || '';
 
 export const getToken      = () => localStorage.getItem('token');
 export const getUser       = () => JSON.parse(localStorage.getItem('user') || '{}');

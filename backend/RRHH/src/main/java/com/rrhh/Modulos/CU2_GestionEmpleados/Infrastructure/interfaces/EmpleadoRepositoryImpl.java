@@ -5,20 +5,22 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.mappers.EmpleadoMapper;
 import com.rrhh.Shared.persistence.EmpleadoModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class EmpleadoRepositoryImpl implements IEmpleadoRepository {
 
-    @Autowired
-    private JpaEmpleadoRepository jpaRepository;
+    private final JpaEmpleadoRepository jpaRepository;
+
+    public EmpleadoRepositoryImpl(JpaEmpleadoRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public Empleado save(Empleado empleado) {
@@ -27,7 +29,7 @@ public class EmpleadoRepositoryImpl implements IEmpleadoRepository {
                 EmpleadoMapper.toModel(empleado);
 
         EmpleadoModel saved =
-                jpaRepository.save(model);
+                jpaRepository.save(Objects.requireNonNull(model));
 
         return EmpleadoMapper.toDomain(saved);
     }
@@ -35,7 +37,7 @@ public class EmpleadoRepositoryImpl implements IEmpleadoRepository {
     @Override
     public Empleado findById(Long idEmpleado) {
 
-        return jpaRepository.findById(idEmpleado)
+        return jpaRepository.findById(Objects.requireNonNull(idEmpleado))
                 .map(EmpleadoMapper::toDomain)
                 .orElse(null);
     }
@@ -65,7 +67,7 @@ public class EmpleadoRepositoryImpl implements IEmpleadoRepository {
 
     @Override
     public Page<Empleado> findAll(Pageable pageable) {
-        Page<EmpleadoModel> page = jpaRepository.findAll(pageable);
+        Page<EmpleadoModel> page = jpaRepository.findAll(Objects.requireNonNull(pageable));
         return page.map(EmpleadoMapper::toDomain);
     }
 

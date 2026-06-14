@@ -17,33 +17,35 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RegistrarAscensoUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private IDepartamentoRepository departamentoRepository;
+    private final IDepartamentoRepository departamentoRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private IRolRepository rolRepository;
+    private final IRolRepository rolRepository;
 
-    @Autowired
-    private RolAsignacionService rolAsignacionService;
+    private final RolAsignacionService rolAsignacionService;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
+
+    public RegistrarAscensoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService) {
+        this.empleadoRepository = empleadoRepository;
+        this.contratoRepository = contratoRepository;
+        this.departamentoRepository = departamentoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.rolRepository = rolRepository;
+        this.rolAsignacionService = rolAsignacionService;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(

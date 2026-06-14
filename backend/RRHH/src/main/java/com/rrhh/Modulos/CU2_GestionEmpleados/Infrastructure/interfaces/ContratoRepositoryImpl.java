@@ -5,14 +5,18 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.mappers.ContratoMapper;
 import com.rrhh.Shared.persistence.ContratoModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 public class ContratoRepositoryImpl implements IContratoRepository {
 
-    @Autowired
-    private JpaContratoRepository jpaRepository;
+    private final JpaContratoRepository jpaRepository;
+
+    public ContratoRepositoryImpl(JpaContratoRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public Contrato save(Contrato contrato) {
@@ -21,7 +25,7 @@ public class ContratoRepositoryImpl implements IContratoRepository {
                 ContratoMapper.toModel(contrato);
 
         ContratoModel saved =
-                jpaRepository.save(model);
+                jpaRepository.save(Objects.requireNonNull(model));
 
         return ContratoMapper.toDomain(saved);
     }

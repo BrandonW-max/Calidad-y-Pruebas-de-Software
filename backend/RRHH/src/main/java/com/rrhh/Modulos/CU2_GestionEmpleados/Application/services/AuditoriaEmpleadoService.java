@@ -4,17 +4,19 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.entities.Historial;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialRepository;
 import com.rrhh.Shared.security.AuditoriaContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuditoriaEmpleadoService {
 
-    @Autowired
-    private IHistorialRepository historialRepository;
+    private final IHistorialRepository historialRepository;
 
-    @Autowired
-    private AuditoriaContext auditoriaContext;
+    private final AuditoriaContext auditoriaContext;
+
+    public AuditoriaEmpleadoService(IHistorialRepository historialRepository, AuditoriaContext auditoriaContext) {
+        this.historialRepository = historialRepository;
+        this.auditoriaContext = auditoriaContext;
+    }
 
     public void registrar(
             Long idRegistroAfectado,

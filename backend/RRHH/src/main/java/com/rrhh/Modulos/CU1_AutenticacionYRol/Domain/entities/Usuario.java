@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 import com.rrhh.Shared.prototype.Prototype;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Builder
 @NoArgsConstructor
@@ -26,8 +26,7 @@ public class Usuario implements Prototype<Usuario> {
     private boolean dosFAActivado;
     private String secret2FA;
     private String nombreRol;
-
-    // NUEVO: para bloquear login cuando el empleado fue desvinculado
+    @Builder.Default
     private Boolean activo = true;
 
     public Long getId() {

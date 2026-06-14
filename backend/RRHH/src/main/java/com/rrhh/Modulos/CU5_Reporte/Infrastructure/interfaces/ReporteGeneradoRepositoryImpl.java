@@ -7,6 +7,7 @@ import com.rrhh.Shared.persistence.UsuarioModel;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Repository
@@ -21,7 +22,7 @@ public class ReporteGeneradoRepositoryImpl implements IReporteGeneradoRepository
     @Override
     public ReporteGenerado guardar(ReporteGenerado reporte) {
         ReporteGeneradoModel model = mapearAModel(reporte);
-        ReporteGeneradoModel guardado = jpaReporteGeneradoRepository.save(model);
+        ReporteGeneradoModel guardado = jpaReporteGeneradoRepository.save(Objects.requireNonNull(model));
         reporte.setIdReporte(guardado.getIdReporte());
         return reporte;
     }

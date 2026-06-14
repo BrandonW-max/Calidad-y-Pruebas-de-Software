@@ -9,9 +9,9 @@ import java.time.LocalTime;
 
 import com.rrhh.Shared.prototype.Prototype;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Builder
 @NoArgsConstructor
@@ -22,13 +22,19 @@ public class RegistroAsistencia implements Prototype<RegistroAsistencia> {
     private LocalDate fecha;
     private LocalTime horaEntrada;
     private LocalTime horaSalida;
+    @Builder.Default
     private BigDecimal horasTrabajadas = BigDecimal.ZERO;
+    @Builder.Default
     private Integer minutosTardanza = 0;
+    @Builder.Default
     private Integer minutosExtra = 0;
+    @Builder.Default
     private String estado = "PUNTUAL";
     private String tipoUltimoRegistro;
     private String observacion;
+    @Builder.Default
     private LocalDateTime creadoEl = LocalDateTime.now();
+    @Builder.Default
     private LocalDateTime actualizadoEl = LocalDateTime.now();
     private Empleado empleado;
     private Horario horario;

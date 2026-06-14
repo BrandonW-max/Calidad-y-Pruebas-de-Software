@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -261,7 +262,7 @@ public class NominaService implements INominaService {
     public NominaResponseDTO buscarNominaPorId(Integer idNomina) {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
             .orElseThrow(() -> new IllegalArgumentException("Nomina no encontrada con id: " + idNomina));
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(nomina.getIdEmpleado())
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(nomina.getIdEmpleado()))
             .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado."));
         return mapearAResponse(nomina, empleado);
     }
@@ -270,7 +271,7 @@ public class NominaService implements INominaService {
     public List<NominaResponseDTO> buscarPorPeriodo(String periodo) {
         return nominaRepository.buscarPorPeriodo(periodo).stream()
             .map(n -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(n.getIdEmpleado()).orElse(null);
+                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(n.getIdEmpleado())).orElse(null);
                 return mapearAResponse(n, emp);
             })
             .collect(Collectors.toList());
@@ -280,7 +281,7 @@ public class NominaService implements INominaService {
     public List<NominaResponseDTO> buscarPorEmpleado(Long idEmpleado) {
         return nominaRepository.buscarPorEmpleadoYPeriodo(idEmpleado, null).stream()
             .map(n -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(idEmpleado).orElse(null);
+                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
                 return mapearAResponse(n, emp);
             })
             .collect(Collectors.toList());
@@ -454,7 +455,7 @@ public class NominaService implements INominaService {
 
     private List<EmpleadoModel> obtenerEmpleadosActivos(CalcularNominaRequestDTO request) {
         if (request.getIdEmpleado() != null) {
-            return jpaEmpleadoRepository.findById(request.getIdEmpleado())
+            return jpaEmpleadoRepository.findById(Objects.requireNonNull(request.getIdEmpleado()))
                 .filter(e -> "ACTIVO".equals(e.getEstado()))
                 .map(List::of)
                 .orElse(List.of());

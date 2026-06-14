@@ -1,5 +1,7 @@
 package com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services;
 
+import com.rrhh.Shared.persistence.AsignacionHorarioModel;
+import com.rrhh.Shared.persistence.HorarioModel;
 import com.rrhh.Shared.persistence.JustificacionTardanzaModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 import jakarta.persistence.EntityManager;
@@ -9,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -20,6 +23,16 @@ public class JustificacionService {
     @Transactional
     public JustificacionTardanzaModel registrar(Integer idRegistroAsistencia, Long idEmpleado,
                                                  String motivo, String evidenciaUrl) {
+        RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, idRegistroAsistencia);
+        if (r == null) {
+            throw new RuntimeException("Registro de asistencia no encontrado");
+        }
+
+        LocalDate fechaRegistro = r.getFecha();
+        if (LocalDate.now().isAfter(fechaRegistro.plusDays(1))) {
+            throw new RuntimeException("El plazo de justificacion vencio. Solo puedes justificar el mismo dia o el dia siguiente.");
+        }
+
         JustificacionTardanzaModel j = new JustificacionTardanzaModel();
         j.setIdRegistroAsistencia(idRegistroAsistencia);
         j.setIdEmpleado(idEmpleado);
@@ -28,11 +41,8 @@ public class JustificacionService {
         j.setEstado("PENDIENTE");
         j.setFechaJustificacion(LocalDateTime.now());
 
-        RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, idRegistroAsistencia);
-        if (r != null) {
-            r.setObservacion("Justificacion pendiente de aprobacion");
-            em.merge(r);
-        }
+        r.setObservacion("Justificacion pendiente de aprobacion");
+        em.merge(r);
 
         em.persist(j);
         return j;
@@ -58,20 +68,31 @@ public class JustificacionService {
 
         RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
         if (r != null && "APROBADA".equals(decision)) {
+            HorarioModel horario = getHorarioAsignado(j.getIdEmpleado());
+            LocalTime horaProgramada = horario != null ? horario.getHoraEntrada() : LocalTime.of(8, 0);
+
+            r.setHoraEntrada(horaProgramada);
+            r.setHoraSalida(horaProgramada.plusHours(8));
+            r.setHorasTrabajadas(new java.math.BigDecimal("8.00"));
             r.setMinutosTardanza(0);
             r.setEstado("PUNTUAL");
             r.setObservacion("Tardanza justificada y aprobada por RRHH");
-            if (r.getHoraEntrada() != null && r.getHoraSalida() != null) {
-                long minutos = java.time.Duration.between(r.getHoraEntrada(), r.getHoraSalida()).toMinutes();
-                if (minutos > 0) {
-                    r.setHorasTrabajadas(java.math.BigDecimal.valueOf(minutos)
-                            .divide(java.math.BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP));
-                }
-            }
             em.merge(r);
         }
 
         return em.merge(j);
+    }
+
+    private HorarioModel getHorarioAsignado(Long idEmpleado) {
+        List<AsignacionHorarioModel> asignaciones = em.createQuery(
+                "SELECT a FROM AsignacionHorarioModel a WHERE a.empleado.idEmpleado = :idEmpleado AND a.activo = true",
+                AsignacionHorarioModel.class)
+                .setParameter("idEmpleado", idEmpleado)
+                .getResultList();
+        if (!asignaciones.isEmpty() && asignaciones.get(0).getHorario() != null) {
+            return asignaciones.get(0).getHorario();
+        }
+        return null;
     }
 
     public List<JustificacionTardanzaModel> listarPendientes() {

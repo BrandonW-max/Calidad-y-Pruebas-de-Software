@@ -5,14 +5,16 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Rol;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.mappers.RolGestionMapper;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RolRepositoryImpl implements IRolRepository {
 
-    @Autowired
-    private JpaRolRepository jpaRepository;
+    private final JpaRolRepository jpaRepository;
+
+    public RolRepositoryImpl(JpaRolRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public Rol findByNombreRol(String nombreRol) {

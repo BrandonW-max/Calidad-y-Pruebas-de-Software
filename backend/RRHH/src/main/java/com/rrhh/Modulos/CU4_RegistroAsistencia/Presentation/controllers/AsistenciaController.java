@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/asistencia")
@@ -61,9 +62,9 @@ public class AsistenciaController {
     public ResponseEntity<?> justificarTardanza(
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        Long idRegistro = Long.valueOf(body.get("idRegistroAsistencia").toString());
-        String motivo = body.get("motivo").toString();
-        String evidencia = body.getOrDefault("evidenciaUrl", "").toString();
+        Long idRegistro = Long.valueOf(Objects.requireNonNull(body.get("idRegistroAsistencia"), "idRegistroAsistencia es requerido").toString());
+        String motivo = Objects.requireNonNull(body.get("motivo"), "motivo es requerido").toString();
+        String evidencia = Objects.toString(body.get("evidenciaUrl"), "");
         JustificacionTardanzaModel j = justificacionService.registrar(idRegistro.intValue(), user.getIdUsuario(), motivo, evidencia);
         return ResponseEntity.ok(j);
     }
@@ -74,8 +75,8 @@ public class AsistenciaController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        String decision = body.get("decision").toString();
-        String comentario = body.getOrDefault("comentario", "").toString();
+        String decision = Objects.requireNonNull(body.get("decision"), "decision es requerido").toString();
+        String comentario = Objects.toString(body.get("comentario"), "");
         JustificacionTardanzaModel j = justificacionService.revisar(id, decision, user.getIdUsuario(), comentario);
         return ResponseEntity.ok(j);
     }

@@ -6,14 +6,18 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRe
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.mappers.UsuarioGestionMapper;
 import com.rrhh.Shared.persistence.UsuarioModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 public class UsuarioGestionRepositoryImpl implements IUsuarioGestionRepository {
 
-    @Autowired
-    private JpaUsuarioRepository jpaRepository;
+    private final JpaUsuarioRepository jpaRepository;
+
+    public UsuarioGestionRepositoryImpl(JpaUsuarioRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public UsuarioGestion save(UsuarioGestion usuario) {
@@ -22,7 +26,7 @@ public class UsuarioGestionRepositoryImpl implements IUsuarioGestionRepository {
                 UsuarioGestionMapper.toModel(usuario);
 
         UsuarioModel saved =
-                jpaRepository.save(model);
+                jpaRepository.save(Objects.requireNonNull(model));
 
         return UsuarioGestionMapper.toDomain(saved);
     }

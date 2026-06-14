@@ -1,6 +1,5 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
@@ -8,8 +7,11 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRe
 @Service
 public class NombreUsuarioService {
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
+
+    public NombreUsuarioService(IUsuarioGestionRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     private static final String DOMINIO_HOSPITAL = "@hospitalsangabriel.com";
 

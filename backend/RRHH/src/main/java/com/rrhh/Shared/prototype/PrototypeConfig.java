@@ -6,8 +6,6 @@ import com.rrhh.Modulos.CU3_Nomina.Domain.entities.Nomina;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Domain.entities.RegistroAsistencia;
 import com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado;
 import com.rrhh.Modulos.CU6_Solicitud.Domain.entities.Solicitud;
-import com.rrhh.Shared.prototype.PrototypeRegistry;
-
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Configuration;
 

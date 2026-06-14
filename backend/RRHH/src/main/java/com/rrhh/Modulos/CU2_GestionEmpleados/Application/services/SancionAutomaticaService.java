@@ -11,7 +11,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.ISancionRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,17 +21,20 @@ import java.util.List;
 @Service
 public class SancionAutomaticaService {
 
-    @Autowired
-    private ISancionRepository sancionRepository;
+    private final ISancionRepository sancionRepository;
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private IHistorialRepository historialRepository;
+    private final IHistorialRepository historialRepository;
+
+    public SancionAutomaticaService(ISancionRepository sancionRepository, IEmpleadoRepository empleadoRepository, IUsuarioGestionRepository usuarioRepository, IHistorialRepository historialRepository) {
+        this.sancionRepository = sancionRepository;
+        this.empleadoRepository = empleadoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.historialRepository = historialRepository;
+    }
 
     /*
      * Para pruebas puedes usar:

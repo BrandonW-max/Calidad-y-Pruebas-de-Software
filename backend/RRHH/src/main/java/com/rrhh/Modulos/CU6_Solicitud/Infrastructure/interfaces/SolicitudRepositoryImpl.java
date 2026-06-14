@@ -8,6 +8,7 @@ import com.rrhh.Modulos.CU6_Solicitud.Domain.repository.ISolicitudRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -23,14 +24,14 @@ public class SolicitudRepositoryImpl implements ISolicitudRepository {
     @Override
     public Solicitud guardar(Solicitud solicitud) {
         SolicitudModel model = mapearAModel(solicitud);
-        SolicitudModel guardado = jpaSolicitudRepository.save(model);
+        SolicitudModel guardado = jpaSolicitudRepository.save(Objects.requireNonNull(model));
         solicitud.setIdSolicitud(guardado.getIdSolicitud());
         return solicitud;
     }
 
     @Override
     public Optional<Solicitud> buscarPorId(Integer idSolicitud) {
-        return jpaSolicitudRepository.findById(idSolicitud)
+        return jpaSolicitudRepository.findById(Objects.requireNonNull(idSolicitud))
             .map(this::mapearAEntidad);
     }
 

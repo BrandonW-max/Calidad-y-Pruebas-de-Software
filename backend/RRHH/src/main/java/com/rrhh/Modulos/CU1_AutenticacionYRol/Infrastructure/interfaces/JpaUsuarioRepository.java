@@ -2,12 +2,10 @@ package com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces;
 
 import com.rrhh.Shared.persistence.UsuarioModel;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
-@Repository
 public interface JpaUsuarioRepository extends JpaRepository<UsuarioModel, Long> {
 
     Optional<UsuarioModel> findByNombreUsuario(String nombreUsuario);

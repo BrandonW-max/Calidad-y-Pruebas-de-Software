@@ -11,7 +11,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.ISancionRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,20 +20,23 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class RegistrarSancionUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private ISancionRepository sancionRepository;
+    private final ISancionRepository sancionRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
+
+    public RegistrarSancionUseCase(IEmpleadoRepository empleadoRepository, ISancionRepository sancionRepository, IUsuarioGestionRepository usuarioRepository, IContratoRepository contratoRepository, AuditoriaEmpleadoService auditoriaEmpleadoService) {
+        this.empleadoRepository = empleadoRepository;
+        this.sancionRepository = sancionRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.contratoRepository = contratoRepository;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(
@@ -119,6 +121,10 @@ public class RegistrarSancionUseCase {
 
             empleado.suspender();
             empleado = empleadoRepository.save(empleado);
+        }
+
+        if (sancionGuardada == null) {
+            throw new IllegalStateException("La sancion no pudo ser registrada.");
         }
 
         Contrato contrato =

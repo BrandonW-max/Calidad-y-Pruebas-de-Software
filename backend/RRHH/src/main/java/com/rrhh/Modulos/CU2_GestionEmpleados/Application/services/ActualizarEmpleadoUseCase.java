@@ -11,27 +11,29 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IDepartamentoRepo
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ActualizarEmpleadoUseCase {
 
-    @Autowired
-    private IEmpleadoRepository empleadoRepository;
+    private final IEmpleadoRepository empleadoRepository;
 
-    @Autowired
-    private IContratoRepository contratoRepository;
+    private final IContratoRepository contratoRepository;
 
-    @Autowired
-    private IDepartamentoRepository departamentoRepository;
+    private final IDepartamentoRepository departamentoRepository;
 
-    @Autowired
-    private IUsuarioGestionRepository usuarioRepository;
+    private final IUsuarioGestionRepository usuarioRepository;
 
-    @Autowired
-    private AuditoriaEmpleadoService auditoriaEmpleadoService;
+    private final AuditoriaEmpleadoService auditoriaEmpleadoService;
+
+    public ActualizarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService) {
+        this.empleadoRepository = empleadoRepository;
+        this.contratoRepository = contratoRepository;
+        this.departamentoRepository = departamentoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.auditoriaEmpleadoService = auditoriaEmpleadoService;
+    }
 
     @Transactional
     public EmpleadoResponseDTO ejecutar(

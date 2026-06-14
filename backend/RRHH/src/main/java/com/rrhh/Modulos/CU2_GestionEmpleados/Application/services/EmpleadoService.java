@@ -10,7 +10,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarAscensoReq
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarEmpleadoRequestDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarSancionRequestDTO;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,29 +19,32 @@ import java.util.List;
 @Service
 public class EmpleadoService implements IEmpleadoService {
 
-    @Autowired
-    private RegistrarEmpleadoUseCase registrarEmpleadoUseCase;
+    private final RegistrarEmpleadoUseCase registrarEmpleadoUseCase;
 
-    @Autowired
-    private BuscarEmpleadoUseCase buscarEmpleadoUseCase;
+    private final BuscarEmpleadoUseCase buscarEmpleadoUseCase;
 
-    @Autowired
-    private ActualizarEmpleadoUseCase actualizarEmpleadoUseCase;
+    private final ActualizarEmpleadoUseCase actualizarEmpleadoUseCase;
 
-    @Autowired
-    private DesactivarEmpleadoUseCase desactivarEmpleadoUseCase;
+    private final DesactivarEmpleadoUseCase desactivarEmpleadoUseCase;
 
-    @Autowired
-    private RegistrarSancionUseCase registrarSancionUseCase;
+    private final RegistrarSancionUseCase registrarSancionUseCase;
 
-    @Autowired
-    private ReactivarEmpleadoUseCase reactivarEmpleadoUseCase;
+    private final ReactivarEmpleadoUseCase reactivarEmpleadoUseCase;
 
-    @Autowired
-    private RegistrarAscensoUseCase registrarAscensoUseCase;
+    private final RegistrarAscensoUseCase registrarAscensoUseCase;
 
-    @Autowired
-    private CambioSalarialUseCase cambioSalarialUseCase;
+    private final CambioSalarialUseCase cambioSalarialUseCase;
+
+    public EmpleadoService(RegistrarEmpleadoUseCase registrarEmpleadoUseCase, BuscarEmpleadoUseCase buscarEmpleadoUseCase, ActualizarEmpleadoUseCase actualizarEmpleadoUseCase, DesactivarEmpleadoUseCase desactivarEmpleadoUseCase, RegistrarSancionUseCase registrarSancionUseCase, ReactivarEmpleadoUseCase reactivarEmpleadoUseCase, RegistrarAscensoUseCase registrarAscensoUseCase, CambioSalarialUseCase cambioSalarialUseCase) {
+        this.registrarEmpleadoUseCase = registrarEmpleadoUseCase;
+        this.buscarEmpleadoUseCase = buscarEmpleadoUseCase;
+        this.actualizarEmpleadoUseCase = actualizarEmpleadoUseCase;
+        this.desactivarEmpleadoUseCase = desactivarEmpleadoUseCase;
+        this.registrarSancionUseCase = registrarSancionUseCase;
+        this.reactivarEmpleadoUseCase = reactivarEmpleadoUseCase;
+        this.registrarAscensoUseCase = registrarAscensoUseCase;
+        this.cambioSalarialUseCase = cambioSalarialUseCase;
+    }
 
     @Override
     public EmpleadoResponseDTO registrarEmpleado(

@@ -23,9 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import java.util.Objects;
 
 @RestController
 public class NominaController {
@@ -124,7 +122,7 @@ public class NominaController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=Comprobante_Nomina_" + nomina.getPeriodo() + ".pdf")
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_PDF))
                 .body(pdf);
     }
 
@@ -135,7 +133,7 @@ public class NominaController {
             NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
             byte[] pdf = nominaServicePdf.generarComprobantePDF(id);
 
-            var empleadoOpt = jpaEmpleadoRepository.findById(nomina.getIdEmpleado());
+            var empleadoOpt = jpaEmpleadoRepository.findById(Objects.requireNonNull(nomina.getIdEmpleado()));
             if (empleadoOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Empleado no encontrado."));
             }

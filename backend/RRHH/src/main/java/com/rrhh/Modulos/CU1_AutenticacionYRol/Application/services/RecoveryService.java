@@ -11,7 +11,6 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailServi
 import com.rrhh.Shared.persistence.PasswordResetTokenModel;
 import com.rrhh.Shared.persistence.UsuarioModel;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,17 +22,20 @@ import java.util.UUID;
 @Service
 public class RecoveryService {
 
-    @Autowired
-    private JpaUsuarioRepository usuarioRepository;
+    private final JpaUsuarioRepository usuarioRepository;
 
-    @Autowired
-    private JpaPasswordResetTokenRepository tokenRepository;
+    private final JpaPasswordResetTokenRepository tokenRepository;
 
-    @Autowired
-    private EmailService emailService;
+    private final EmailService emailService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
+
+    public RecoveryService(JpaUsuarioRepository usuarioRepository, JpaPasswordResetTokenRepository tokenRepository, EmailService emailService, PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.tokenRepository = tokenRepository;
+        this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Transactional
     public RecoveryResponseDTO solicitarRecuperacion(

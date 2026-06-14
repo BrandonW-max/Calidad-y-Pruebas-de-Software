@@ -13,7 +13,6 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarSancionReq
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.services.IEmpleadoService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.routes.EmpleadoApiRoutes;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -22,14 +21,15 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
-
 @RestController
 @RequestMapping(EmpleadoApiRoutes.EMPLEADO_BASE)
 public class EmpleadoController {
 
-    @Autowired
-    private IEmpleadoService empleadoService;
+    private final IEmpleadoService empleadoService;
+
+    public EmpleadoController(IEmpleadoService empleadoService) {
+        this.empleadoService = empleadoService;
+    }
 
     @PostMapping(EmpleadoApiRoutes.REGISTRAR)
     @PreAuthorize("hasRole('RRHH')")

@@ -10,6 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.rrhh.config.security.AuthenticatedUser;
+
 @RestController
 public class ReporteController {
 
@@ -26,7 +28,7 @@ public class ReporteController {
             @RequestParam(required = false) String formato,
             Authentication authentication) {
         try {
-            Long idUsuario = Long.parseLong(authentication.getName());
+            Long idUsuario = obtenerIdUsuario(authentication);
             ReporteResponseDTO dto = reporteService.generarReporteEmpleados(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("EMPLEADOS", formato,
@@ -46,7 +48,7 @@ public class ReporteController {
             @RequestParam(required = false) String formato,
             Authentication authentication) {
         try {
-            Long idUsuario = Long.parseLong(authentication.getName());
+            Long idUsuario = obtenerIdUsuario(authentication);
             ReporteResponseDTO dto = reporteService.generarReporteAsistencia(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("ASISTENCIA", formato,
@@ -66,7 +68,7 @@ public class ReporteController {
             @RequestParam(required = false) String formato,
             Authentication authentication) {
         try {
-            Long idUsuario = Long.parseLong(authentication.getName());
+            Long idUsuario = obtenerIdUsuario(authentication);
             ReporteResponseDTO dto = reporteService.generarReporteNomina(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("NOMINA", formato,
@@ -86,7 +88,7 @@ public class ReporteController {
             @RequestParam(required = false) String formato,
             Authentication authentication) {
         try {
-            Long idUsuario = Long.parseLong(authentication.getName());
+            Long idUsuario = obtenerIdUsuario(authentication);
             ReporteResponseDTO dto = reporteService.generarReporteSolicitudes(filtro, idUsuario);
             if (formato != null) {
                 byte[] archivo = reporteService.exportarReporte("SOLICITUDES", formato,
@@ -119,5 +121,16 @@ public class ReporteController {
         headers.setContentLength(archivo.length);
 
         return ResponseEntity.ok().headers(headers).body(archivo);
+    }
+
+    private Long obtenerIdUsuario(Authentication authentication) {
+        if (authentication.getPrincipal() instanceof AuthenticatedUser authUser) {
+            return authUser.getIdUsuario();
+        }
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
