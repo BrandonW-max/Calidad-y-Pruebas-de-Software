@@ -186,7 +186,7 @@ body { background: #f0f4f8; }
 /* ── FORGOT PASSWORD LINK ── */
 .login-forgot {
   margin-top: 12px;
-  text-align: right;
+  text-align: center;
 }
 
 .login-forgot-btn {

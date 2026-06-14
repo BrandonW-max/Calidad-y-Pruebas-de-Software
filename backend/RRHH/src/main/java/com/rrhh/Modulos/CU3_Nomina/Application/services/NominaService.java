@@ -13,9 +13,9 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialReposi
 import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.ContratoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import com.rrhh.Shared.config.RRHHProperties;
 import com.rrhh.Shared.persistence.FamiliaInfoModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,32 +33,7 @@ import java.util.stream.Collectors;
 @Service
 public class NominaService implements INominaService {
 
-    @Value("${rrhh.tasa-hora-extra-1_5}")
-    private BigDecimal tasaHoraExtra1_5;
-
-    @Value("${rrhh.tasa-hora-extra-2_0}")
-    private BigDecimal tasaHoraExtra2_0;
-
-    @Value("${rrhh.umbral-horas-dobles}")
-    private int umbralHorasDobles;
-
-    @Value("${rrhh.bonif-familiar}")
-    private BigDecimal tasaBonifFamiliar;
-
-    @Value("${rrhh.bonif-nocturno}")
-    private BigDecimal tasaNocturno;
-
-    @Value("${rrhh.bonif-guardia}")
-    private BigDecimal montoGuardia;
-
-    @Value("${rrhh.bonif-riesgo}")
-    private BigDecimal tasaRiesgo;
-
-    @Value("${rrhh.bonif-cargo}")
-    private BigDecimal tasaCargo;
-
-    @Value("${rrhh.tasa-descuento-ley:0.13}")
-    private BigDecimal tasaDescuentoLey;
+    private final RRHHProperties rrhhProperties;
 
     private static final int MINUTOS_EN_HORA = 60;
     private static final int HORAS_JORNADA_DIARIA = 8;
@@ -75,6 +50,7 @@ public class NominaService implements INominaService {
     private final com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepository jpaFamiliaInfoRepository;
 
     public NominaService(
+            RRHHProperties rrhhProperties,
             INominaRepository nominaRepository,
             IDetalleNominaRepository detalleNominaRepository,
             IHistorialRepository historialRepository,
@@ -84,6 +60,7 @@ public class NominaService implements INominaService {
             com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository,
             com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaContratoRepository jpaContratoRepository,
             com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepository jpaFamiliaInfoRepository) {
+        this.rrhhProperties = rrhhProperties;
         this.nominaRepository = nominaRepository;
         this.detalleNominaRepository = detalleNominaRepository;
         this.historialRepository = historialRepository;
@@ -166,17 +143,17 @@ public class NominaService implements INominaService {
                     .setScale(2, RoundingMode.HALF_UP);
 
                 int cantidadHijos = contarHijos(empleado.getIdEmpleado());
-                BigDecimal bonifFamiliar = sueldoBase.multiply(tasaBonifFamiliar)
+                BigDecimal bonifFamiliar = sueldoBase.multiply(rrhhProperties.getBonifFamiliar())
                     .multiply(BigDecimal.valueOf(cantidadHijos))
                     .setScale(2, RoundingMode.HALF_UP);
 
                 int diasTrabajados = (int) registros.stream()
                     .filter(r -> r.getHoraEntrada() != null && r.getHoraSalida() != null)
                     .count();
-                BigDecimal bonifTurnoNocturno = sueldoBase.multiply(tasaNocturno).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal bonifGuardia = montoGuardia.multiply(BigDecimal.valueOf(diasTrabajados)).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal bonifRiesgo = sueldoBase.multiply(tasaRiesgo).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal bonifCargo = sueldoBase.multiply(tasaCargo).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal bonifTurnoNocturno = sueldoBase.multiply(rrhhProperties.getBonifNocturno()).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal bonifGuardia = rrhhProperties.getBonifGuardia().multiply(BigDecimal.valueOf(diasTrabajados)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal bonifRiesgo = sueldoBase.multiply(rrhhProperties.getBonifRiesgo()).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal bonifCargo = sueldoBase.multiply(rrhhProperties.getBonifCargo()).setScale(2, RoundingMode.HALF_UP);
 
                 BigDecimal sueldoBruto = sueldoBase
                     .add(montoHorasExtra)
@@ -187,7 +164,7 @@ public class NominaService implements INominaService {
                     .add(bonifCargo)
                     .setScale(2, RoundingMode.HALF_UP);
 
-                BigDecimal descuentoLey = sueldoBruto.multiply(tasaDescuentoLey).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal descuentoLey = sueldoBruto.multiply(rrhhProperties.getTasaDescuentoLey()).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal sueldoNeto = sueldoBruto
                     .subtract(descuentoTardanzas)
                     .subtract(descuentoLey)
@@ -326,10 +303,10 @@ public class NominaService implements INominaService {
     private BigDecimal calcularMontoHorasExtra(BigDecimal totalHorasExtra, BigDecimal valorHora) {
         if (totalHorasExtra.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
 
-        BigDecimal umbral = BigDecimal.valueOf(umbralHorasDobles);
+        BigDecimal umbral = BigDecimal.valueOf(rrhhProperties.getUmbralHorasDobles());
 
         if (totalHorasExtra.compareTo(umbral) <= 0) {
-            return valorHora.multiply(tasaHoraExtra1_5)
+            return valorHora.multiply(rrhhProperties.getTasaHoraExtra1_5())
                     .multiply(totalHorasExtra)
                     .setScale(2, RoundingMode.HALF_UP);
         }
@@ -337,9 +314,9 @@ public class NominaService implements INominaService {
         BigDecimal horasBase = umbral;
         BigDecimal horasDobles = totalHorasExtra.subtract(umbral);
 
-        BigDecimal montoBase = valorHora.multiply(tasaHoraExtra1_5)
+        BigDecimal montoBase = valorHora.multiply(rrhhProperties.getTasaHoraExtra1_5())
                 .multiply(horasBase);
-        BigDecimal montoDoble = valorHora.multiply(tasaHoraExtra2_0)
+        BigDecimal montoDoble = valorHora.multiply(rrhhProperties.getTasaHoraExtra2_0())
                 .multiply(horasDobles);
 
         return montoBase.add(montoDoble).setScale(2, RoundingMode.HALF_UP);

@@ -466,11 +466,6 @@ export default function GestionEmpleados() {
               {page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalElements)} de {totalElements} empleados
             </div>
           </div>
-
-          {/* ── BOTTOM INFO BAR ── */}
-          <div className="table-footer-bar">
-            <span>ℹ️ Puede buscar, editar, desactivar y realizar acciones adicionales sobre los empleados.</span>
-          </div>
         </div>
 
       </main>

@@ -11,10 +11,10 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoReposito
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rrhh.Shared.config.RRHHProperties;
 import java.math.BigDecimal;
 
 @Service
@@ -28,14 +28,14 @@ public class CambioSalarialUseCase {
 
     private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    private final BigDecimal salarioMinimo;
+    private final RRHHProperties rrhhProperties;
 
-    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, @Value("${rrhh.salario-minimo}") BigDecimal salarioMinimo) {
+    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties) {
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.usuarioRepository = usuarioRepository;
         this.auditoriaEmpleadoService = auditoriaEmpleadoService;
-        this.salarioMinimo = salarioMinimo;
+        this.rrhhProperties = rrhhProperties;
     }
 
     @Transactional
@@ -81,10 +81,10 @@ public class CambioSalarialUseCase {
             );
         }
 
-        if (dto.getNuevoSueldo().compareTo(salarioMinimo) < 0) {
+        if (dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
             return new EmpleadoResponseDTO(
                     false,
-                    "El nuevo sueldo debe ser mayor o igual al salario minimo legal (S/ " + salarioMinimo + ")",
+                    "El nuevo sueldo debe ser mayor o igual al salario minimo legal (S/ " + rrhhProperties.getSalarioMinimo() + ")",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,
