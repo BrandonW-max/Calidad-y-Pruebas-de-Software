@@ -1,6 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { clearSession } from "../services/api";
+import { clearSession, logout } from "../services/api";
 
 const NAV = {
   RRHH: {
@@ -41,9 +41,16 @@ const NAV = {
 
 export default function Sidebar({ rol }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const config = NAV[rol] || NAV.RRHH;
 
   const isActive = (to) => location.pathname === to;
+
+  const handleLogout = async () => {
+    try { await logout(); } catch {}
+    clearSession();
+    navigate("/", { replace: true });
+  };
 
   return (
     <aside className={`sidebar ${config.themeClass}`}>
@@ -69,7 +76,7 @@ export default function Sidebar({ rol }) {
         ))}
         <div className="nav-logout">
           <button
-            onClick={() => { clearSession(); window.location.href = "/"; }}
+            onClick={handleLogout}
             style={{ background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left", padding: 0 }}
           >
             <span className="nav-icon">🚪</span>

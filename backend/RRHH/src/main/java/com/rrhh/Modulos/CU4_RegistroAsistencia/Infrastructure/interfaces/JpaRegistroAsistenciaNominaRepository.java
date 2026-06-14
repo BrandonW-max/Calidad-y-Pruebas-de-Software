@@ -12,4 +12,6 @@ public interface JpaRegistroAsistenciaNominaRepository extends JpaRepository<Reg
     Optional<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoAndFecha(Integer idEmpleado, LocalDate fecha);
 
     List<RegistroAsistenciaModel> findByFechaAndHoraSalidaIsNull(LocalDate fecha);
+
+    List<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoOrderByFechaDesc(Integer idEmpleado);
 }

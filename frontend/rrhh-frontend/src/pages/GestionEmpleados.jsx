@@ -46,6 +46,7 @@ export default function GestionEmpleados() {
   const [totalElements, setTotalElements] = useState(0);
   const [page,          setPage]          = useState(0);
   const [pageSize,      setPageSize]      = useState(10);
+  const [fetchKey,      setFetchKey]      = useState(0);
 
   // Departamentos (cargados del backend)
   const [departamentos, setDepartamentos] = useState([]);
@@ -71,12 +72,16 @@ export default function GestionEmpleados() {
   const [modalSancion,    setModalSancion]    = useState({ open: false, id: null });
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
+  const [modalSueldo,     setModalSueldo]     = useState(false);
+  const [sueldoForm,      setSueldoForm]      = useState({
+    sueldoBase: "", bonifAsistencia: 0, bonifFamiliar: 0, bonifExtraordinaria: 0,
+    sistemaPensionario: "AFP", descuentoTardanza: 0, otrosDescuentos: 0,
+    horasSemanales: 48, horasExtra: 0,
+  });
 
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
   const dropRef = useRef(null);
-
-  useEffect(() => { cargarEmpleados(); }, [page, pageSize]);
 
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
@@ -90,53 +95,57 @@ export default function GestionEmpleados() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const cargarEmpleados = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await listarEmpleados(page, pageSize);
-      if (data.content) {
-        setEmpleados(data.content);
-        setTotalElements(data.totalElements ?? data.content.length);
-      } else {
-        setEmpleados(Array.isArray(data) ? data : []);
-        setTotalElements(Array.isArray(data) ? data.length : 0);
-      }
-    } catch {
-      setError("No se pudo cargar la lista de empleados");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Efecto unificado: re-fetcha automáticamente al cambiar cualquier filtro, página o pageSize.
+  // El campo de nombre usa debounce de 400ms para no disparar en cada tecla.
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleBuscar = async () => {
-    setLoading(true);
-    setError("");
-    setPage(0);
-    try {
-      let data;
-      if (searchName) {
-        data = await buscarEmpleados(searchName, 0);
-      } else {
-        const idDpto = filterArea
-          ? departamentos.find(d => d.nombre === filterArea)?.idDpto
-          : undefined;
-        data = await buscarEmpleadosAvanzado({ estado: filterEstado, cargo: filterCargo, idDpto });
+    const doFetch = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        let data;
+        if (searchName.trim()) {
+          data = await buscarEmpleados(searchName.trim(), page);
+        } else if (filterArea || filterCargo || filterEstado) {
+          const idDpto = filterArea
+            ? departamentos.find(d => d.nombre === filterArea)?.idDpto
+            : undefined;
+          data = await buscarEmpleadosAvanzado({ estado: filterEstado, cargo: filterCargo, idDpto });
+        } else {
+          data = await listarEmpleados(page, pageSize);
+        }
+        if (!cancelled) {
+          const list = data?.content ?? (Array.isArray(data) ? data : []);
+          setEmpleados(list);
+          setTotalElements(data?.totalElements ?? list.length);
+        }
+      } catch {
+        if (!cancelled) setError("Error al cargar empleados");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      const list = data.content ?? (Array.isArray(data) ? data : []);
-      setEmpleados(list);
-      setTotalElements(data.totalElements ?? list.length);
-    } catch {
-      setError("Error al buscar empleados");
-    } finally {
-      setLoading(false);
+    };
+
+    if (searchName.trim()) {
+      const timer = setTimeout(doFetch, 400);
+      return () => { cancelled = true; clearTimeout(timer); };
     }
+    doFetch();
+    return () => { cancelled = true; };
+  }, [searchName, filterArea, filterCargo, filterEstado, page, pageSize, fetchKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cargarEmpleados = () => setFetchKey(k => k + 1);
+
+  const handleBuscar = () => {
+    if (page !== 0) setPage(0);
+    else setFetchKey(k => k + 1);
   };
 
   const handleLimpiar = () => {
     setSearchName(""); setFilterArea(""); setFilterCargo(""); setFilterEstado(""); setFilterDocType("");
     setPage(0);
-    cargarEmpleados();
+    setFetchKey(k => k + 1);
   };
 
   const handleRegistrar = async (e) => {
@@ -249,6 +258,16 @@ export default function GestionEmpleados() {
   };
 
   const openDropMenu = (id) => { setOpenDrop(openDrop === id ? null : id); };
+
+  const abrirSueldoDetalle = () => {
+    setSueldoForm(f => ({ ...f, sueldoBase: modalEditar?.sueldo ?? "" }));
+    setModalSueldo(true);
+  };
+
+  const aplicarCambioSueldo = () => {
+    setModalEditar(prev => ({ ...prev, sueldo: sueldoForm.sueldoBase }));
+    setModalSueldo(false);
+  };;
 
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
@@ -366,29 +385,34 @@ export default function GestionEmpleados() {
             {loading ? (
               <div className="loading-text">Cargando empleados...</div>
             ) : (
-              <table>
+              <table className="table-empleados">
                 <thead>
                   <tr>
                     <th>Nombre Completo</th>
-                    <th>Tipo Doc / DNI</th>
+                    <th style={{ textAlign: "center" }}>Tipo Doc / DNI</th>
                     <th>Departamento</th>
                     <th>Cargo</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style={{ textAlign: "center" }}>Estado</th>
+                    <th style={{ textAlign: "center" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {empleados.length === 0 ? (
-                    <tr><td colSpan={6}>
-                      <div className="empty-state">
-                        <div className="empty-state-icon">🔍</div>
-                        <p>No se encontraron empleados</p>
-                      </div>
-                    </td></tr>
-                  ) : empleados.map(emp => (
+                  {(() => {
+                    const visibles = filterDocType
+                      ? empleados.filter(e => (e.docIdentidad ?? "DNI") === filterDocType)
+                      : empleados;
+                    if (visibles.length === 0) return (
+                      <tr><td colSpan={6}>
+                        <div className="empty-state">
+                          <div className="empty-state-icon">🔍</div>
+                          <p>No se encontraron empleados</p>
+                        </div>
+                      </td></tr>
+                    );
+                    return visibles.map(emp => (
                     <tr key={emp.idEmpleado}>
                       <td>{emp.nombres} {emp.apellidos}</td>
-                      <td style={{ fontSize: "13px", color: "var(--text-2)" }}>
+                      <td style={{ color: "var(--text-2)" }}>
                         {emp.docIdentidad ?? "DNI"} · {emp.numeroDi}
                       </td>
                       <td>{emp.departamento ?? "—"}</td>
@@ -399,7 +423,7 @@ export default function GestionEmpleados() {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                           <button className="btn btn-secondary btn-sm"
                             onClick={() => setModalEditar({ ...emp })}>
                             ✏️ Editar
@@ -444,7 +468,8 @@ export default function GestionEmpleados() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ));
+                  })()}
                 </tbody>
               </table>
             )}
@@ -616,11 +641,19 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Sueldo Base (S/)</label>
-                    <input type="number" step="0.01" min="0" value={modalEditar.sueldo ?? ""} onChange={e => setModalEditar({ ...modalEditar, sueldo: e.target.value })} />
+                    <button type="button" className="sueldo-detalle-btn" onClick={abrirSueldoDetalle}>
+                      <span className="sueldo-detalle-valor">{formatSueldo(modalEditar.sueldo)}</span>
+                      <span className="sueldo-detalle-hint">Ver estructura salarial →</span>
+                    </button>
                   </div>
                   <div className="form-group">
-                    <label>ID Departamento</label>
-                    <input type="number" value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value })} />
+                    <label>Departamento</label>
+                    <select value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value })}>
+                      <option value="">Seleccione departamento</option>
+                      {departamentos.map(d => (
+                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Correo Electrónico</label>
@@ -784,6 +817,131 @@ export default function GestionEmpleados() {
           </div>
         </div>
       )}
+
+      {/* ══ SUB-MODAL: ESTRUCTURA SALARIAL ══ */}
+      {modalSueldo && modalEditar && (() => {
+        const base      = parseFloat(sueldoForm.sueldoBase       || 0);
+        const bAsist    = parseFloat(sueldoForm.bonifAsistencia   || 0);
+        const bFam      = parseFloat(sueldoForm.bonifFamiliar     || 0);
+        const bExtra    = parseFloat(sueldoForm.bonifExtraordinaria || 0);
+        const bruto     = base + bAsist + bFam + bExtra;
+        const tasaPens  = sueldoForm.sistemaPensionario === "ONP" ? 0.13 : 0.1317;
+        const descPens  = bruto * tasaPens;
+        const descTard  = parseFloat(sueldoForm.descuentoTardanza || 0);
+        const descOtros = parseFloat(sueldoForm.otrosDescuentos   || 0);
+        const totalDesc = descPens + descTard + descOtros;
+        const neto      = bruto - totalDesc;
+        const fmt       = (n) => `S/ ${Number(n).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1100 }}
+            onClick={e => e.target === e.currentTarget && setModalSueldo(false)}>
+            <div className="modal-box modal-box-wide">
+              <div className="modal-header">
+                <div>
+                  <h3>💰 Estructura Salarial</h3>
+                  <p>{modalEditar.nombres} {modalEditar.apellidos} — {modalEditar.cargo ?? "—"}</p>
+                </div>
+                <button className="modal-close" onClick={() => setModalSueldo(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="sueldo-detalle-grid">
+
+                  {/* Columna izquierda: inputs */}
+                  <div className="sueldo-col">
+                    <p className="sueldo-section-title">Jornada</p>
+                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                      <div className="form-group">
+                        <label>Horas semanales</label>
+                        <input type="number" min="0" value={sueldoForm.horasSemanales}
+                          onChange={e => setSueldoForm(f => ({ ...f, horasSemanales: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Horas extra</label>
+                        <input type="number" min="0" value={sueldoForm.horasExtra}
+                          onChange={e => setSueldoForm(f => ({ ...f, horasExtra: e.target.value }))} />
+                      </div>
+                    </div>
+
+                    <p className="sueldo-section-title" style={{ marginTop: "14px" }}>Remuneración</p>
+                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                      <div className="form-group">
+                        <label>Sueldo Base (S/) *</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.sueldoBase}
+                          onChange={e => setSueldoForm(f => ({ ...f, sueldoBase: e.target.value }))} autoFocus />
+                      </div>
+                      <div className="form-group">
+                        <label>Bonif. asistencia (S/)</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifAsistencia}
+                          onChange={e => setSueldoForm(f => ({ ...f, bonifAsistencia: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Bonif. familiar (S/)</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifFamiliar}
+                          onChange={e => setSueldoForm(f => ({ ...f, bonifFamiliar: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Bonif. extraordinaria (S/)</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifExtraordinaria}
+                          onChange={e => setSueldoForm(f => ({ ...f, bonifExtraordinaria: e.target.value }))} />
+                      </div>
+                    </div>
+
+                    <p className="sueldo-section-title" style={{ marginTop: "14px" }}>Descuentos</p>
+                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                      <div className="form-group">
+                        <label>Sistema pensionario</label>
+                        <select value={sueldoForm.sistemaPensionario}
+                          onChange={e => setSueldoForm(f => ({ ...f, sistemaPensionario: e.target.value }))}>
+                          <option value="AFP">AFP (~13.17%)</option>
+                          <option value="ONP">ONP (13%)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Desc. por tardanza (S/)</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.descuentoTardanza}
+                          onChange={e => setSueldoForm(f => ({ ...f, descuentoTardanza: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Otros descuentos (S/)</label>
+                        <input type="number" step="0.01" min="0" value={sueldoForm.otrosDescuentos}
+                          onChange={e => setSueldoForm(f => ({ ...f, otrosDescuentos: e.target.value }))} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna derecha: resumen */}
+                  <div className="sueldo-resumen">
+                    <p className="sueldo-section-title">Resumen</p>
+                    <div className="sueldo-resumen-row">
+                      <span>Sueldo base</span><span>{fmt(base)}</span>
+                    </div>
+                    <div className="sueldo-resumen-row">
+                      <span>Bonificaciones</span><span>+ {fmt(bAsist + bFam + bExtra)}</span>
+                    </div>
+                    <div className="sueldo-resumen-row sueldo-resumen-subtotal">
+                      <span>Total bruto</span><span>{fmt(bruto)}</span>
+                    </div>
+                    <div className="sueldo-resumen-row sueldo-resumen-neg">
+                      <span>{sueldoForm.sistemaPensionario} ({sueldoForm.sistemaPensionario === "ONP" ? "13%" : "13.17%"})</span>
+                      <span>− {fmt(descPens)}</span>
+                    </div>
+                    <div className="sueldo-resumen-row sueldo-resumen-neg">
+                      <span>Tardanza / otros</span><span>− {fmt(descTard + descOtros)}</span>
+                    </div>
+                    <div className="sueldo-resumen-row sueldo-resumen-neto">
+                      <span>Neto a pagar</span><span>{fmt(neto)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalSueldo(false)}>Cancelar</button>
+                <button className="btn btn-success" onClick={aplicarCambioSueldo}>✅ Aplicar sueldo base</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

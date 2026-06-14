@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { getUser, clearSession, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
+import { getUser, clearSession, logout, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
 
 export default function DashboardEmpleado() {
+  const navigate = useNavigate();
   const user = getUser();
   const idEmpleado = getIdEmpleado();
 
@@ -34,7 +35,7 @@ export default function DashboardEmpleado() {
     } catch { /* silently fail */ }
   };
 
-  const handleLogout = () => { clearSession(); window.location.href = "/"; };
+  const handleLogout = async () => { try { await logout(); } catch {} clearSession(); navigate("/", { replace: true }); };
 
   const horaFmt = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
   const displayName = user?.username || "Usuario";

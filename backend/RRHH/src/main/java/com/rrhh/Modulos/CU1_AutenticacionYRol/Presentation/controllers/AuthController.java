@@ -3,6 +3,7 @@ package com.rrhh.Modulos.CU1_AutenticacionYRol.Presentation.controllers;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.AuthResponseDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.ChangePasswordRequestDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.LoginRequestDTO;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.MeResponseDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.RecoveryRequestDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.RecoveryResponseDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.ResetPasswordRequestDTO;
@@ -16,9 +17,12 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Presentation.routes.ApiRoutes;
 import com.rrhh.config.security.AuthenticatedUser;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Objects;
@@ -43,7 +47,8 @@ public class AuthController {
     @PostMapping(ApiRoutes.LOGIN)
     public ResponseEntity<AuthResponseDTO> login(
             @Valid @RequestBody LoginRequestDTO request,
-            HttpServletRequest httpRequest
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
     ) {
 
         String clientIp = httpRequest.getRemoteAddr();
@@ -57,12 +62,24 @@ public class AuthController {
                     .body(response);
         }
 
+        if (response.getToken() != null) {
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .path("/")
+                    .maxAge(authService.getJwtExpirationSeconds())
+                    .build();
+            httpResponse.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+        }
+
         return ResponseEntity.ok(response);
     }
 
     @PostMapping(ApiRoutes.VERIFY_2FA)
     public ResponseEntity<TwoFactorResponseDTO> verify(
-            @Valid @RequestBody TwoFactorRequestDTO request
+            @Valid @RequestBody TwoFactorRequestDTO request,
+            HttpServletResponse httpResponse
     ) {
 
         TwoFactorResponseDTO response =
@@ -72,6 +89,17 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(response);
+        }
+
+        if (response.getToken() != null) {
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .path("/")
+                    .maxAge(authService.getJwtExpirationSeconds())
+                    .build();
+            httpResponse.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
         }
 
         return ResponseEntity.ok(response);
@@ -150,6 +178,30 @@ public class AuthController {
                         "0"
                 )
                 .body(qrImage);
+    }
+
+    @GetMapping(ApiRoutes.ME)
+    public ResponseEntity<MeResponseDTO> me() {
+        AuthenticatedUser authUser = (AuthenticatedUser) SecurityContextHolder
+                .getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(new MeResponseDTO(
+                authUser.getUsername(),
+                authUser.getRol(),
+                null
+        ));
+    }
+
+    @PostMapping(ApiRoutes.LOGOUT)
+    public ResponseEntity<Void> logout(HttpServletResponse httpResponse) {
+        ResponseCookie clearCookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE, clearCookie.toString());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(ApiRoutes.CHANGE_PASSWORD)

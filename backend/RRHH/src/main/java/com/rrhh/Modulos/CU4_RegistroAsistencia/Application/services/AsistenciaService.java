@@ -206,6 +206,14 @@ public class AsistenciaService {
         );
     }
 
+    public List<RegistroAsistenciaModel> listarPorEmpleado(Integer idEmpleado) {
+        return registroAsistenciaRepository.findByEmpleado_IdEmpleadoOrderByFechaDesc(idEmpleado);
+    }
+
+    public Optional<RegistroAsistenciaModel> buscarHoy(Integer idEmpleado) {
+        return registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(idEmpleado, LocalDate.now());
+    }
+
     private void registrarLogFallo(Long idEmpleado, String motivo, String ip) {
         Historial log = new Historial(idEmpleado != null ? idEmpleado : 0L, "INTENTO_FALLIDO_ASISTENCIA", ip);
         log.setTablaAfectada("REGISTRO_ASISTENCIA");

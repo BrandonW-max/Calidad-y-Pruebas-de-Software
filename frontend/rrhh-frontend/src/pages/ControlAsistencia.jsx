@@ -5,9 +5,13 @@ import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
   listarJustificacionesEmpleado,
+  listarAsistenciaEmpleado,
+  getAsistenciaHoy,
   registrarManual,
   registrarJustificacion,
   revisarJustificacion,
+  listarEmpleados,
+  buscarEmpleados,
   getIdEmpleado,
   getUser,
 } from "../services/api";
@@ -26,6 +30,8 @@ function VistaEmpleado() {
 
   const [hora, setHora] = useState(new Date());
   const [justificaciones, setJustificaciones] = useState([]);
+  const [asistenciaHoy,   setAsistenciaHoy]   = useState(null);
+  const [historial,       setHistorial]        = useState([]);
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error,   setError]     = useState("");
@@ -47,19 +53,34 @@ function VistaEmpleado() {
     return () => clearInterval(t);
   }, []);
 
-  // Cargar justificaciones del empleado
   useEffect(() => {
-    if (idEmpleado) cargarJustificaciones();
+    if (!idEmpleado) return;
+    cargarJustificaciones();
+    cargarAsistenciaHoy();
+    cargarHistorial();
   }, [idEmpleado]);
 
   const cargarJustificaciones = async () => {
-    setLoading(true);
-    setError("");
     try {
       const data = await listarJustificacionesEmpleado(idEmpleado);
       setJustificaciones(Array.isArray(data) ? data : []);
+    } catch { /* silencioso */ }
+  };
+
+  const cargarAsistenciaHoy = async () => {
+    try {
+      const data = await getAsistenciaHoy(idEmpleado);
+      setAsistenciaHoy(data);
+    } catch { /* silencioso */ }
+  };
+
+  const cargarHistorial = async () => {
+    setLoading(true);
+    try {
+      const data = await listarAsistenciaEmpleado(idEmpleado);
+      setHistorial(Array.isArray(data) ? data : []);
     } catch {
-      setError("No se pudieron cargar las justificaciones");
+      setError("No se pudo cargar el historial");
     } finally {
       setLoading(false);
     }
@@ -191,21 +212,44 @@ function VistaEmpleado() {
             <div className="asist-today-grid">
               <div className="asist-today-item">
                 <label>Entrada</label>
-                <div className="asist-today-val">—:—</div>
-                <span className="badge badge-gray" style={{ marginTop: 4, fontSize: "11px" }}>Pendiente</span>
+                <div className="asist-today-val">
+                  {asistenciaHoy?.horaEntrada
+                    ? asistenciaHoy.horaEntrada.substring(0, 5)
+                    : "—:—"}
+                </div>
+                <span className={`badge ${asistenciaHoy?.horaEntrada ? "badge-success" : "badge-gray"}`}
+                  style={{ marginTop: 4, fontSize: "11px" }}>
+                  {asistenciaHoy?.horaEntrada ? "Registrada" : "Pendiente"}
+                </span>
               </div>
               <div className="asist-today-item">
                 <label>Salida</label>
-                <div className="asist-today-val" style={{ color: "var(--text-3)" }}>—:—</div>
-                <span className="badge badge-gray" style={{ marginTop: 4, fontSize: "11px" }}>Pendiente</span>
+                <div className="asist-today-val" style={{ color: asistenciaHoy?.horaSalida ? "var(--text)" : "var(--text-3)" }}>
+                  {asistenciaHoy?.horaSalida
+                    ? asistenciaHoy.horaSalida.substring(0, 5)
+                    : "—:—"}
+                </div>
+                <span className={`badge ${asistenciaHoy?.horaSalida ? "badge-success" : "badge-gray"}`}
+                  style={{ marginTop: 4, fontSize: "11px" }}>
+                  {asistenciaHoy?.horaSalida ? "Registrada" : "Pendiente"}
+                </span>
               </div>
               <div className="asist-today-item">
-                <label>Jornada</label>
-                <span className="badge badge-info" style={{ fontSize: "11px" }}>En curso</span>
+                <label>Horas trabajadas</label>
+                <span className="badge badge-info" style={{ fontSize: "11px" }}>
+                  {asistenciaHoy?.horasTrabajadas != null
+                    ? `${asistenciaHoy.horasTrabajadas} h`
+                    : asistenciaHoy?.horaEntrada ? "En curso" : "—"}
+                </span>
               </div>
               <div className="asist-today-item">
                 <label>Estado del día</label>
-                <span className="badge badge-success" style={{ fontSize: "11px" }}>Puntual</span>
+                <span className={`badge ${
+                  asistenciaHoy?.estado === "PUNTUAL"  ? "badge-success" :
+                  asistenciaHoy?.estado === "TARDANZA" ? "badge-warning" : "badge-gray"
+                }`} style={{ fontSize: "11px" }}>
+                  {asistenciaHoy?.estado ?? "Sin registro"}
+                </span>
               </div>
             </div>
 
@@ -392,32 +436,50 @@ function VistaEmpleado() {
         <div className="section-card">
           <div className="section-header">
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Asistencia</h2>
-            <button className="btn btn-secondary btn-sm">Ver más historial ↓</button>
+            <button className="btn btn-secondary btn-sm" onClick={cargarHistorial}>🔄 Actualizar</button>
           </div>
           <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Entrada</th>
-                  <th>Salida</th>
-                  <th>Estado</th>
-                  <th>Tipo de jornada</th>
-                  <th>Justificación</th>
-                  <th>Registro</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">
-                      <div className="empty-state-icon">📋</div>
-                      <p>Tu historial de asistencia se mostrará aquí</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {loading ? <div className="loading-text">Cargando historial...</div> : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Horas</th>
+                    <th>Tardanza</th>
+                    <th>Estado</th>
+                    <th>Tipo registro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.length === 0 ? (
+                    <tr><td colSpan={7}>
+                      <div className="empty-state">
+                        <div className="empty-state-icon">📋</div>
+                        <p>No hay registros de asistencia aún</p>
+                      </div>
+                    </td></tr>
+                  ) : historial.map(r => (
+                    <tr key={r.idRegistro}>
+                      <td>{r.fecha}</td>
+                      <td>{r.horaEntrada ? r.horaEntrada.substring(0, 5) : "—"}</td>
+                      <td>{r.horaSalida  ? r.horaSalida.substring(0, 5)  : "—"}</td>
+                      <td>{r.horasTrabajadas != null ? `${r.horasTrabajadas} h` : "—"}</td>
+                      <td>{r.minutosTardanza > 0 ? `${r.minutosTardanza} min` : "—"}</td>
+                      <td>
+                        <span className={`badge ${r.estado === "PUNTUAL" ? "badge-success" : r.estado === "TARDANZA" ? "badge-warning" : "badge-gray"}`}>
+                          {r.estado ?? "—"}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: "12px", color: "var(--text-3)" }}>
+                        {r.tipoUltimoRegistro ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -521,14 +583,21 @@ function VistaRRHH() {
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
-  const [tabActiva, setTabActiva] = useState("manual");
   const [modalRechazar, setModalRechazar] = useState({ open: false, id: null, comentario: "" });
 
   const [manualForm, setManualForm] = useState({
     idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "",
   });
+  const [empleados,       setEmpleados]       = useState([]);
+  const [busquedaNombre,  setBusquedaNombre]  = useState("");
+  const [empleadoSelec,   setEmpleadoSelec]   = useState(null);
+  const [sugerencias,     setSugerencias]     = useState([]);
+  const [mostrarSugere,   setMostrarSugere]   = useState(false);
 
-  useEffect(() => { cargarJustificaciones(); }, []);
+  useEffect(() => {
+    cargarJustificaciones();
+    listarEmpleados(0, 100).then(d => setEmpleados(d.content ?? [])).catch(() => {});
+  }, []);
 
   const cargarJustificaciones = async () => {
     setLoading(true);
@@ -541,6 +610,27 @@ function VistaRRHH() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBuscarEmpleado = (valor) => {
+    setBusquedaNombre(valor);
+    setEmpleadoSelec(null);
+    setManualForm(f => ({ ...f, idEmpleado: "" }));
+    if (valor.trim().length < 2) { setSugerencias([]); setMostrarSugere(false); return; }
+    const filtro = valor.toLowerCase();
+    const hits = empleados.filter(e =>
+      `${e.nombres} ${e.apellidos}`.toLowerCase().includes(filtro)
+    ).slice(0, 8);
+    setSugerencias(hits);
+    setMostrarSugere(true);
+  };
+
+  const seleccionarEmpleado = (emp) => {
+    setEmpleadoSelec(emp);
+    setBusquedaNombre(`${emp.nombres} ${emp.apellidos}`);
+    setManualForm(f => ({ ...f, idEmpleado: emp.idEmpleado }));
+    setSugerencias([]);
+    setMostrarSugere(false);
   };
 
   const handleRegistrarManual = async (e) => {
@@ -562,7 +652,7 @@ function VistaRRHH() {
 
   const handleAprobar = async (id) => {
     try {
-      await revisarJustificacion(id, "APROBADO", "");
+      await revisarJustificacion(id, "APROBADA", "");
       setMensaje("Justificación aprobada correctamente");
       cargarJustificaciones();
     } catch {
@@ -573,7 +663,7 @@ function VistaRRHH() {
   const handleConfirmarRechazo = async () => {
     if (!modalRechazar.comentario.trim()) return;
     try {
-      await revisarJustificacion(modalRechazar.id, "RECHAZADO", modalRechazar.comentario);
+      await revisarJustificacion(modalRechazar.id, "RECHAZADA", modalRechazar.comentario);
       setMensaje("Justificación rechazada correctamente");
       setModalRechazar({ open: false, id: null, comentario: "" });
       cargarJustificaciones();
@@ -607,28 +697,103 @@ function VistaRRHH() {
           </div>
         </div>
 
-        <div className="tab-bar">
-          <button className={`tab ${tabActiva === "manual" ? "active" : ""}`} onClick={() => setTabActiva("manual")}>
-            ✏️ Registro Manual (Corrección)
-          </button>
-          <button className={`tab ${tabActiva === "justificaciones" ? "active" : ""}`} onClick={() => { setTabActiva("justificaciones"); cargarJustificaciones(); }}>
-            📋 Justificaciones Pendientes
-          </button>
+        {/* ── SECCIÓN 1: JUSTIFICACIONES PENDIENTES ── */}
+        <div className="section-card">
+          <div className="section-header" style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, border: "none", padding: 0 }}>
+              📋 Justificaciones Pendientes
+              {justificaciones.length > 0 && (
+                <span style={{
+                  marginLeft: 10, background: "#fef3c7", color: "#92400e",
+                  fontSize: "12px", fontWeight: 700, padding: "2px 8px",
+                  borderRadius: 20, verticalAlign: "middle",
+                }}>
+                  {justificaciones.length}
+                </span>
+              )}
+            </h2>
+            <button className="btn btn-secondary btn-sm" onClick={cargarJustificaciones}>🔄 Actualizar</button>
+          </div>
+            <div className="alert alert-info">
+              Revise cada justificación y decida si aprobarla o rechazarla.
+            </div>
+            <div className="table-wrapper">
+              {loading ? <div className="loading-text">Cargando justificaciones...</div> : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Empleado</th><th>Fecha Registro</th><th>Motivo</th><th>Estado</th><th>Decisión</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {justificaciones.length === 0 ? (
+                      <tr><td colSpan={6}>
+                        <div className="empty-state">
+                          <div className="empty-state-icon">✅</div>
+                          <p>No hay justificaciones pendientes de revisión</p>
+                        </div>
+                      </td></tr>
+                    ) : justificaciones.map(j => (
+                      <tr key={j.id ?? j.idJustificacion}>
+                        <td>{j.id ?? j.idJustificacion}</td>
+                        <td>{j.idEmpleado}</td>
+                        <td>{j.fechaRegistro ?? "—"}</td>
+                        <td>{j.motivo}</td>
+                        <td><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
+                        <td style={{ display: "inline-flex", gap: "6px" }}>
+                          <button className="btn btn-success btn-sm" onClick={() => handleAprobar(j.id ?? j.idJustificacion)}>✅ Aprobar</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => setModalRechazar({ open: true, id: j.id ?? j.idJustificacion, comentario: "" })}>❌ Rechazar</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
         </div>
 
-        {tabActiva === "manual" && (
-          <div className="section-card">
-            <h2>✏️ Registro Manual de Asistencia — Corrección</h2>
+        {/* ── SECCIÓN 2: REGISTRO MANUAL ── */}
+        <div className="section-card">
+          <div className="section-header" style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, border: "none", padding: 0 }}>✏️ Registro Manual de Asistencia</h2>
+            <span style={{ fontSize: "12px", color: "var(--text-3)" }}>Corrección · requiere solicitud previa del empleado</span>
+          </div>
             <div className="alert alert-warning">
-              ⚠️ Esta acción requiere que el empleado haya solicitado la corrección previamente. Quedará registrada en el log de auditoría.
+              ⚠️ Esta acción quedará registrada en el log de auditoría.
             </div>
             <form onSubmit={handleRegistrarManual}>
               <div className="form-grid">
-                <div className="form-group">
-                  <label>ID Empleado *</label>
-                  <input type="number" value={manualForm.idEmpleado}
-                    onChange={e => setManualForm({ ...manualForm, idEmpleado: e.target.value })}
-                    placeholder="ID del empleado" required />
+                <div className="form-group" style={{ position: "relative" }}>
+                  <label>Empleado *</label>
+                  <input
+                    type="text"
+                    value={busquedaNombre}
+                    onChange={e => handleBuscarEmpleado(e.target.value)}
+                    onFocus={() => sugerencias.length > 0 && setMostrarSugere(true)}
+                    onBlur={() => setTimeout(() => setMostrarSugere(false), 150)}
+                    placeholder="Buscar por nombre..."
+                    autoComplete="off"
+                    required={!manualForm.idEmpleado}
+                  />
+                  {/* campo oculto para validación del formulario */}
+                  <input type="hidden" value={manualForm.idEmpleado} required />
+                  {mostrarSugere && sugerencias.length > 0 && (
+                    <div className="emp-autocomplete-drop">
+                      {sugerencias.map(emp => (
+                        <div key={emp.idEmpleado} className="emp-autocomplete-item"
+                          onMouseDown={() => seleccionarEmpleado(emp)}>
+                          <span className="emp-ac-nombre">{emp.nombres} {emp.apellidos}</span>
+                          <span className="emp-ac-sub">{emp.cargo ?? "—"} · {emp.departamento ?? "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {empleadoSelec && (
+                    <div className="emp-selec-tag">
+                      ✅ {empleadoSelec.nombres} {empleadoSelec.apellidos}
+                      <span style={{ color: "var(--text-3)", marginLeft: 6 }}>#{empleadoSelec.idEmpleado}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label>Tipo de Marcación *</label>
@@ -658,11 +823,24 @@ function VistaRRHH() {
               </div>
             </form>
           </div>
-        )}
 
-        {tabActiva === "justificaciones" && (
-          <div className="section-card">
-            <h2>📋 Justificaciones de Tardanza — Pendientes de Revisión</h2>
+        {/* ── SECCIÓN 2: JUSTIFICACIONES PENDIENTES ── */}
+        <div className="section-card">
+          <div className="section-header" style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, border: "none", padding: 0 }}>
+              📋 Justificaciones Pendientes
+              {justificaciones.length > 0 && (
+                <span style={{
+                  marginLeft: 10, background: "#fef3c7", color: "#92400e",
+                  fontSize: "12px", fontWeight: 700, padding: "2px 8px",
+                  borderRadius: 20, verticalAlign: "middle",
+                }}>
+                  {justificaciones.length}
+                </span>
+              )}
+            </h2>
+            <button className="btn btn-secondary btn-sm" onClick={cargarJustificaciones}>🔄 Actualizar</button>
+          </div>
             <div className="alert alert-info">
               Revise cada justificación y decida si aprobarla o rechazarla.
             </div>
@@ -699,11 +877,7 @@ function VistaRRHH() {
                 </table>
               )}
             </div>
-            <div className="form-actions" style={{ marginTop: "12px" }}>
-              <button className="btn btn-secondary" onClick={cargarJustificaciones}>🔄 Actualizar</button>
-            </div>
           </div>
-        )}
       </main>
 
       {/* ── MODAL: RECHAZAR JUSTIFICACIÓN ── */}

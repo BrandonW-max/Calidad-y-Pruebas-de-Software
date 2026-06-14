@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.ResponseCookie;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,14 +36,29 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+        String token = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                if ("jwt".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (token == null) {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
+            }
+        }
+
+        if (token == null || token.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        String token = authHeader.substring(7);
 
         if (!jwtConfig.tokenValido(token)) {
             filterChain.doFilter(request, response);
@@ -106,6 +122,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (tiempoRestante > 0 && tiempoRestante < 1000 * 60 * 5) {
             String nuevoToken = jwtConfig.refrescarToken(token);
             response.setHeader("X-New-Token", nuevoToken);
+            ResponseCookie jwtCookie =
+                    ResponseCookie.from("jwt", nuevoToken)
+                            .httpOnly(true)
+                            .secure(false)
+                            .sameSite("Lax")
+                            .path("/")
+                            .maxAge(jwtConfig.getExpirationTime() / 1000)
+                            .build();
+            response.addHeader("Set-Cookie", jwtCookie.toString());
         }
 
         filterChain.doFilter(request, response);

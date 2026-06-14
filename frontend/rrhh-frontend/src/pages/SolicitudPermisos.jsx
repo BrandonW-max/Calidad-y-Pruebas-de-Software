@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -410,6 +410,7 @@ function VistaRRHH() {
    VISTA GERENCIA
 ══════════════════════════════════════════════════════════ */
 function VistaGerencia() {
+  const navigateGer = useNavigate();
   const [solicitudes,   setSolicitudes]   = useState([]);
   const [solAprobadas,  setSolAprobadas]  = useState([]);
   const [loading,       setLoading]       = useState(false);
@@ -459,7 +460,7 @@ function VistaGerencia() {
           <span className="emp-topbar-text">HOSPITAL SAN GABRIEL</span>
         </div>
         <div className="emp-topbar-right">
-          <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = "/gerencia"}>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigateGer("/gerencia")}>
             ← Inicio
           </button>
           <span className="emp-topbar-username">{user?.username ?? "Gerente"}</span>

@@ -401,6 +401,42 @@ table td {
 table tr:last-child td { border-bottom: none; }
 table tr:hover td { background: #f8fafc; }
 
+/* ══ TABLA GESTIÓN EMPLEADOS ══ */
+.table-empleados { table-layout: fixed; }
+
+.table-empleados th,
+.table-empleados td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Nombre Completo */
+.table-empleados th:nth-child(1),
+.table-empleados td:nth-child(1) { width: 20%; }
+
+/* Tipo Doc / DNI */
+.table-empleados th:nth-child(2),
+.table-empleados td:nth-child(2) { width: 13%; text-align: center; }
+
+/* Departamento */
+.table-empleados th:nth-child(3),
+.table-empleados td:nth-child(3) { width: 17%; }
+
+/* Cargo */
+.table-empleados th:nth-child(4),
+.table-empleados td:nth-child(4) { width: 22%; }
+
+/* Estado */
+.table-empleados th:nth-child(5),
+.table-empleados td:nth-child(5) { width: 10%; text-align: center; }
+
+/* Acciones */
+.table-empleados th:nth-child(6),
+.table-empleados td:nth-child(6) { width: 18%; text-align: center; overflow: visible; }
+
 /* ══ BADGE ══ */
 .badge {
   display: inline-flex;
@@ -1002,6 +1038,65 @@ table tr:hover td { background: #f8fafc; }
 
 /* modal-box-wide override */
 .modal-box-wide { max-width: 780px; }
+
+/* ══ BOTÓN SUELDO DETALLE ══ */
+.sueldo-detalle-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: #f8fafc; cursor: pointer; text-align: left; gap: 8px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.sueldo-detalle-btn:hover { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,.12); }
+.sueldo-detalle-valor { font-size: 14px; font-weight: 700; color: var(--text); }
+.sueldo-detalle-hint  { font-size: 11.5px; color: var(--primary); font-weight: 500; white-space: nowrap; }
+
+/* ══ SUB-MODAL ESTRUCTURA SALARIAL ══ */
+.sueldo-detalle-grid {
+  display: grid; grid-template-columns: 1fr 220px; gap: 24px; align-items: start;
+}
+.sueldo-col { display: flex; flex-direction: column; }
+.sueldo-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--text-3); margin: 0 0 8px;
+  padding-bottom: 5px; border-bottom: 1px solid var(--border);
+}
+.sueldo-resumen {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.sueldo-resumen-row {
+  display: flex; justify-content: space-between; font-size: 13px;
+  color: var(--text-2);
+}
+.sueldo-resumen-neg span:last-child { color: #dc2626; }
+.sueldo-resumen-subtotal {
+  border-top: 1px solid var(--border); padding-top: 8px;
+  font-weight: 600; color: var(--text);
+}
+.sueldo-resumen-neto {
+  border-top: 2px solid var(--primary); padding-top: 8px; margin-top: 4px;
+  font-size: 15px; font-weight: 700; color: var(--primary);
+}
+@media (max-width: 640px) { .sueldo-detalle-grid { grid-template-columns: 1fr; } }
+
+/* ══ AUTOCOMPLETE EMPLEADO ══ */
+.emp-autocomplete-drop {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 200;
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; max-height: 260px; overflow-y: auto;
+}
+.emp-autocomplete-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 13px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+  transition: background .1s;
+}
+.emp-autocomplete-item:last-child { border-bottom: none; }
+.emp-autocomplete-item:hover { background: #eff6ff; }
+.emp-ac-nombre { font-size: 13px; font-weight: 600; color: var(--text); }
+.emp-ac-sub    { font-size: 11.5px; color: var(--text-3); }
+.emp-selec-tag {
+  margin-top: 5px; font-size: 12px; color: #16a34a; font-weight: 500;
+}
 
 /* header-rrhh / header-empleado */
 .header-rrhh, .header-empleado { flex-direction: row; align-items: flex-start; }

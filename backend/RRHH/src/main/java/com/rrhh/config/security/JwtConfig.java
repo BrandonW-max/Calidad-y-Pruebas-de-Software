@@ -19,6 +19,10 @@ public class JwtConfig {
 
     private final long expirationTime = 1000 * 60 * 15;
 
+    public long getExpirationTime() {
+        return expirationTime;
+    }
+
     public JwtConfig(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
     }

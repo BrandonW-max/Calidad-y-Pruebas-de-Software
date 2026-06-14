@@ -1,6 +1,6 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getUser, clearSession, enable2FA, verify2FA, saveSession } from "./services/api";
+import { getUser, clearSession, enable2FA, verify2FA, saveSession, getMe } from "./services/api";
 import Login from "./pages/Login";
 import Acceso403 from "./pages/Acceso403";
 import DashboardRRHH from "./pages/DashboardRRHH";
@@ -14,6 +14,9 @@ import GenerarReportes from "./pages/GenerarReportes";
 import NominaEmpleado from "./pages/NominaEmpleado";
 import GerenciaJustificaciones from "./pages/GerenciaJustificaciones";
 import DevLogin from "./pages/DevLogin"; // ELIMINAR ANTES DE PRODUCCIÓN
+import ErrorBoundary from "./components/ErrorBoundary";
+
+const DASH = { RRHH: '/rrhh', EMPLEADO: '/empleado', GERENCIA: '/gerencia' };
 
 /* ── Autocorrector de URL ────────────────────────────────────────
    URL inexistente + usuario logueado → redirige a su dashboard.
@@ -21,16 +24,16 @@ import DevLogin from "./pages/DevLogin"; // ELIMINAR ANTES DE PRODUCCIÓN
    URLs de otro rol son capturadas antes por ProtectedRoute → 403.
 ──────────────────────────────────────────────────────────────── */
 function AutoRedirect() {
+  const navigate = useNavigate();
   const user = getUser();
-  const DASH = { RRHH: '/rrhh', EMPLEADO: '/empleado', GERENCIA: '/gerencia' };
 
   useEffect(() => {
-    if (!user?.token) { window.location.href = '/'; return; }
-    const t = setTimeout(() => { window.location.href = DASH[user.rol] ?? '/'; }, 2000);
+    if (!user?.rol) { navigate('/', { replace: true }); return; }
+    const t = setTimeout(() => { navigate(DASH[user.rol] ?? '/', { replace: true }); }, 2000);
     return () => clearTimeout(t);
-  }, []);
+  }, [navigate, user?.rol]);
 
-  if (!user?.token) return null;
+  if (!user?.rol) return null;
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
@@ -94,7 +97,7 @@ function Setup2FAModal() {
     finally { setLoading(false); }
   };
 
-  if (!visible || !user?.token) return null;
+  if (!visible || !user?.rol) return null;
 
   const overlay = {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
@@ -220,17 +223,31 @@ function Setup2FAModal() {
 
 function ProtectedRoute({ children, requiredRole }) {
   const user = getUser();
-  if (!user?.token) return <Navigate to="/" replace />;
+  if (!user?.rol) return <Navigate to="/" replace />;
   if (requiredRole && user.rol !== requiredRole) return <Acceso403 />;
   return children;
 }
 
 function App() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const user = getUser();
+    if (!user?.rol) {
+      getMe()
+        .then(data => {
+          saveSession(null, data.rol, data.username, data.idEmpleado ?? null);
+          navigate(DASH[data.rol] ?? '/', { replace: true });
+        })
+        .catch(() => {});
+    }
+  }, [navigate]);
+
   useEffect(() => {
     let timer;
     const reset = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => { clearSession(); window.location.href = '/'; }, 15 * 60 * 1000);
+      timer = setTimeout(() => { clearSession(); navigate('/', { replace: true }); }, 15 * 60 * 1000);
     };
     ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.addEventListener(e, reset));
     reset();
@@ -238,10 +255,10 @@ function App() {
       clearTimeout(timer);
       ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.removeEventListener(e, reset));
     };
-  }, []);
+  }, [navigate]);
 
   return (
-    <>
+    <ErrorBoundary>
     <Setup2FAModal />
     <Routes>
       {/* Auth */}
@@ -272,7 +289,7 @@ function App() {
       {/* Catch-all: URL inexistente → autocorrector */}
       <Route path="*" element={<AutoRedirect />} />
     </Routes>
-    </>
+    </ErrorBoundary>
   );
 }
 

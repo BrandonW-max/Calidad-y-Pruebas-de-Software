@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { getUser, clearSession } from "../services/api";
+import { getUser, clearSession, logout } from "../services/api";
 import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
 
@@ -7,17 +7,18 @@ export default function Acceso403() {
   const navigate = useNavigate();
   const user = getUser();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await logout(); } catch {}
     clearSession();
-    window.location.href = "/";
+    navigate("/", { replace: true });
   };
 
   const handleHome = () => {
     const rol = user.rol;
-    if (rol === "RRHH") window.location.href = "/rrhh";
-    else if (rol === "EMPLEADO") window.location.href = "/empleado";
-    else if (rol === "GERENCIA") window.location.href = "/gerencia";
-    else window.location.href = "/";
+    if (rol === "RRHH") navigate("/rrhh", { replace: true });
+    else if (rol === "EMPLEADO") navigate("/empleado", { replace: true });
+    else if (rol === "GERENCIA") navigate("/gerencia", { replace: true });
+    else navigate("/", { replace: true });
   };
 
   return (

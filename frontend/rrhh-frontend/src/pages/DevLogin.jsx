@@ -6,6 +6,7 @@
  * ╚══════════════════════════════════════════════════════════════╝
  */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { saveSession, clearSession } from "../services/api";
 
 const USUARIOS_PRUEBA = [
@@ -77,6 +78,7 @@ const btnStyle = (color) => ({
 });
 
 export default function DevLogin() {
+  const navigate = useNavigate();
   const [mockActivo, setMockActivo] = useState(
     sessionStorage.getItem('devMode') === 'true'
   );
@@ -85,7 +87,7 @@ export default function DevLogin() {
     sessionStorage.setItem('devMode', 'true');
     clearSession();
     saveSession(u.token, u.rol, u.username, u.idEmpleado);
-    window.location.href = u.redirect;
+    navigate(u.redirect, { replace: true });
   };
 
   const toggleMock = () => {

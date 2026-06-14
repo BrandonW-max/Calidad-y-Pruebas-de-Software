@@ -225,6 +225,11 @@ public class AuthService implements IAuthService {
         );
     }
 
+    @Override
+    public long getJwtExpirationSeconds() {
+        return jwtConfig.getExpirationTime() / 1000;
+    }
+
     private List<String> getPermisosPorRol(String nombreRol) {
         return List.of(
             switch (nombreRol.toUpperCase()) {

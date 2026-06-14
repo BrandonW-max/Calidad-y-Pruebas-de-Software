@@ -15,4 +15,8 @@ public class ApiRoutes {
     public static final String ENABLE_2FA = "/enable-2fa/{username}";
 
     public static final String CHANGE_PASSWORD = "/change-password";
+
+    public static final String ME = "/me";
+
+    public static final String LOGOUT = "/logout";
 }

@@ -22,7 +22,7 @@ public class CierreJornadaService {
         this.repository = repository;
     }
 
-    @Scheduled(cron = "0 */5 * * * *")
+    @Scheduled(cron = "0 0 22 * * *")
     public void cerrarJornadasAbiertas() {
         LocalDate hoy = LocalDate.now();
         LocalTime horaCierre = LocalTime.of(22, 0);

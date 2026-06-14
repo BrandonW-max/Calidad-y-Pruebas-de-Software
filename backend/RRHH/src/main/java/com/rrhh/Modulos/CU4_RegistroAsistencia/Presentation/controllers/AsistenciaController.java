@@ -13,9 +13,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/asistencia")
@@ -37,20 +39,6 @@ public class AsistenciaController {
             HttpServletRequest httpRequest) {
         String ip = httpRequest.getRemoteAddr();
         MarcarAsistenciaResponseDTO response = asistenciaService.marcarAsistencia(request, ip);
-        if (!response.isSuccess()) {
-            return ResponseEntity.badRequest().body(response);
-        }
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/manual")
-    @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<MarcarAsistenciaResponseDTO> registrarManual(
-            @RequestBody MarcarAsistenciaManualRequestDTO request,
-            @AuthenticationPrincipal AuthenticatedUser user,
-            HttpServletRequest httpRequest) {
-        String ip = httpRequest.getRemoteAddr();
-        MarcarAsistenciaResponseDTO response = asistenciaService.registrarManual(request, user.getIdUsuario(), ip);
         if (!response.isSuccess()) {
             return ResponseEntity.badRequest().body(response);
         }
@@ -79,6 +67,36 @@ public class AsistenciaController {
         String comentario = Objects.toString(body.get("comentario"), "");
         JustificacionTardanzaModel j = justificacionService.revisar(id, decision, user.getIdUsuario(), comentario);
         return ResponseEntity.ok(j);
+    }
+
+    @GetMapping("/empleado/{idEmpleado}")
+    @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
+    public ResponseEntity<List<RegistroAsistenciaModel>> listarPorEmpleado(
+            @PathVariable Integer idEmpleado) {
+        return ResponseEntity.ok(asistenciaService.listarPorEmpleado(idEmpleado));
+    }
+
+    @GetMapping("/hoy/{idEmpleado}")
+    @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
+    public ResponseEntity<RegistroAsistenciaModel> buscarHoy(
+            @PathVariable Integer idEmpleado) {
+        Optional<RegistroAsistenciaModel> registro = asistenciaService.buscarHoy(idEmpleado);
+        return registro.map(ResponseEntity::ok)
+                       .orElse(ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/manual")
+    @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
+    public ResponseEntity<MarcarAsistenciaResponseDTO> registrarManual(
+            @RequestBody MarcarAsistenciaManualRequestDTO request,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest) {
+        String ip = httpRequest.getRemoteAddr();
+        MarcarAsistenciaResponseDTO response = asistenciaService.registrarManual(request, user.getIdUsuario(), ip);
+        if (!response.isSuccess()) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/justificaciones/pendientes")

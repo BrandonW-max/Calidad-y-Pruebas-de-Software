@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
 import { login, saveSession, getUser } from "../services/api";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [username, setUsername]     = useState("");
   const [password, setPassword]     = useState("");
   const [showPwd,  setShowPwd]      = useState(false);
@@ -18,13 +20,13 @@ export default function Login() {
 
   useEffect(() => {
     const user = getUser();
-    if (user?.token && user?.rol) redirectByRole(user.rol);
+    if (user?.rol) redirectByRole(user.rol);
   }, []);
 
   const redirectByRole = (role) => {
-    if      (role === "GERENCIA") window.location.href = "/gerencia";
-    else if (role === "RRHH")     window.location.href = "/rrhh";
-    else if (role === "EMPLEADO") window.location.href = "/empleado";
+    if      (role === "GERENCIA") navigate("/gerencia", { replace: true });
+    else if (role === "RRHH")     navigate("/rrhh", { replace: true });
+    else if (role === "EMPLEADO") navigate("/empleado", { replace: true });
     else setMensaje("Rol de usuario no reconocido.");
   };
 
