@@ -139,10 +139,16 @@ export const revisarJustificacion = (id, decision, comentario = '') =>
 
 // ── NÓMINA ────────────────────────────────────────────────────────────────────
 // ECU-04: calcular nómina por mes y año
-export const calcularNomina = (mes, anio) =>
-  f(`${BASE}/api/nomina/calcular`, {
-    method: 'POST', headers: h(), body: JSON.stringify({ mes, anio }),
+export const calcularNomina = (mes, anio) => {
+  const mesStr = String(mes).padStart(2, '0');
+  const anioStr = String(anio);
+  const ultimoDia = new Date(Number(anioStr), Number(mesStr), 0).getDate();
+  const fechaInicio = `${anioStr}-${mesStr}-01`;
+  const fechaFin = `${anioStr}-${mesStr}-${String(ultimoDia).padStart(2, '0')}`;
+  return f(`${BASE}/api/nomina/calcular`, {
+    method: 'POST', headers: h(), body: JSON.stringify({ fechaInicio, fechaFin }),
   }).then(json);
+};
 
 // ECU-04: cargar nóminas de un período ya calculado
 export const getNominasPorPeriodo = (mes, anio) =>

@@ -28,7 +28,7 @@ public class CierreJornadaService {
         LocalTime horaCierre = LocalTime.of(22, 0);
 
         List<RegistroAsistenciaModel> abiertos =
-                repository.findByFechaAndHoraSalidaIsNull(hoy);
+                repository.findByFechaAndHoraSalidaIsNullAndTipoRegistro(hoy, "ORIGINAL");
 
         List<RegistroAsistenciaModel> cerrados = new ArrayList<>();
 

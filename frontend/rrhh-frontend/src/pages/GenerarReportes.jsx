@@ -12,7 +12,11 @@ const TIPOS_REPORTE = [
   { id: "solicitudes", label: "Reporte de Solicitudes", icon: "📋", desc: "Permisos y licencias solicitadas, aprobadas o rechazadas.",                      color: "#8b5cf6" },
 ];
 
-const FORMATOS = ["PDF", "XLSX", "CSV"];
+const FORMATOS = [
+  { v: "PDF",   l: "PDF" },
+  { v: "EXCEL", l: "XLSX" },
+  { v: "CSV",   l: "CSV" },
+];
 
 const MESES = [
   { v: "01", l: "Enero" }, { v: "02", l: "Febrero" }, { v: "03", l: "Marzo" },
@@ -58,7 +62,7 @@ export default function GenerarReportes() {
       return;
     }
 
-    if (formato === "XLSX") {
+    if (formato === "EXCEL") {
       const ws = XLSX.utils.json_to_sheet(resultado);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, tipoActual?.label ?? tipoSeleccionado);
@@ -113,13 +117,20 @@ export default function GenerarReportes() {
     e.preventDefault();
     setGenerando(true); setMensaje(""); setError(""); setResultado(null);
 
+    let inicio = fechaIni || undefined;
+    let fin    = fechaFin || undefined;
+
+    if (tipoSeleccionado === "nomina" || tipoSeleccionado === "asistencia") {
+      const ultimoDia = new Date(Number(anio), Number(mes), 0).getDate();
+      inicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
+      fin    = `${anio}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+    }
+
     const params = {
       tipo:    tipoSeleccionado,
       formato,
-      mes:        (tipoSeleccionado === "nomina" || tipoSeleccionado === "asistencia") ? mes       : undefined,
-      anio:       (tipoSeleccionado === "nomina" || tipoSeleccionado === "asistencia") ? anio      : undefined,
-      fechaInicio: fechaIni || undefined,
-      fechaFin:    fechaFin || undefined,
+      fechaInicio: inicio,
+      fechaFin:    fin,
       estado:     (tipoSeleccionado === "solicitudes" || tipoSeleccionado === "empleados") ? estado || undefined : undefined,
     };
 
@@ -139,7 +150,8 @@ export default function GenerarReportes() {
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
         a.href     = url;
-        a.download = `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${formato.toLowerCase()}`;
+        const ext = formato === "EXCEL" ? "xlsx" : formato.toLowerCase();
+        a.download = `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${ext}`;
         a.click();
         URL.revokeObjectURL(url);
         setMensaje("Reporte generado y descargado correctamente.");
@@ -225,7 +237,7 @@ export default function GenerarReportes() {
                   <div className="form-group">
                     <label>Formato de Exportación</label>
                     <select value={formato} onChange={e => setFormato(e.target.value)}>
-                      {FORMATOS.map(f => <option key={f} value={f}>{f}</option>)}
+                      {FORMATOS.map(f => <option key={f.v} value={f.v}>{f.l}</option>)}
                     </select>
                   </div>
 

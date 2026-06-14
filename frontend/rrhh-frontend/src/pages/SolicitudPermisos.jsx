@@ -14,37 +14,53 @@ import {
 
 const STEP_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
-function FlowBar({ step }) {
+const ESTADO_FLOW_STEP = {
+  PENDIENTE:   0,
+  EN_REVISION: 1,
+  APROBADO:    3,
+  RECHAZADO:   3,
+  PROCESADO:   3,
+};
+
+function FlowBar({ estadoSolicitud }) {
   const steps = ["EMPLEADO", "RRHH", "GERENCIA", "RESULTADO"];
+  const activeUpTo = estadoSolicitud != null ? (ESTADO_FLOW_STEP[estadoSolicitud] ?? -1) : -1;
+  const hasSelection = estadoSolicitud != null;
+
   return (
     <div className="sol-flow-bar">
       {steps.map((s, i) => {
-        const color   = STEP_COLORS[i];
-        const isActive = i === step;
-        const isDone   = i < step;
-        const lit      = isActive || isDone;
+        const baseColor = STEP_COLORS[i];
+        const color = (hasSelection && i === 3 && estadoSolicitud === "RECHAZADO") ? "#ef4444" : baseColor;
+        const lit = hasSelection && i <= activeUpTo;
         return (
           <div key={s} className="sol-flow-step">
             <div
               className="sol-flow-dot"
               style={{
-                background: lit ? color : "#f1f5f9",
+                background: lit ? color : "#f8fafc",
                 color:      lit ? "#fff" : color,
                 border:     `2px solid ${color}`,
-                opacity:    lit ? 1 : 0.45,
                 fontWeight: 700,
+                opacity:    hasSelection && !lit ? 0.35 : 1,
+                transition: "all 0.3s",
               }}
             >
-              {isDone ? "✓" : i + 1}
+              {i + 1}
             </div>
             <span style={{
-              color:      isActive ? color : isDone ? "#16a34a" : "var(--text-3)",
-              fontWeight: isActive ? 700 : 500,
+              color:      lit ? color : "var(--text-3)",
+              fontWeight: hasSelection && i === activeUpTo ? 700 : 600,
+              opacity:    hasSelection && !lit ? 0.35 : 1,
+              transition: "all 0.3s",
             }}>
               {s}
             </span>
             {i < steps.length - 1 && (
-              <div className="sol-flow-line" style={{ background: isDone ? "#22c55e" : "var(--border)" }} />
+              <div className="sol-flow-line" style={{
+                background: hasSelection && i < activeUpTo ? "#22c55e" : "var(--border)",
+                transition: "background 0.3s",
+              }} />
             )}
           </div>
         );
@@ -52,6 +68,13 @@ function FlowBar({ step }) {
     </div>
   );
 }
+
+const ESTADO_TAB_CONFIG = {
+  PENDIENTE:   { label: "Pendiente",   icon: "⏳", color: "#d97706", bg: "#fef3c7", activeBg: "#f59e0b" },
+  EN_REVISION: { label: "En Revisión", icon: "🔍", color: "#2563eb", bg: "#dbeafe", activeBg: "#3b82f6" },
+  APROBADO:    { label: "Aprobado",    icon: "✅", color: "#16a34a", bg: "#dcfce7", activeBg: "#22c55e" },
+  RECHAZADO:   { label: "Rechazado",   icon: "❌", color: "#dc2626", bg: "#fee2e2", activeBg: "#ef4444" },
+};
 
 const TIPO_LABELS = {
   VACACIONES: "Vacaciones",
@@ -82,6 +105,7 @@ function VistaEmpleado() {
   const [error,    setError]    = useState("");
   const [enviando, setEnviando] = useState(false);
   const [tabActiva, setTabActiva] = useState("lista");
+  const [solicitudActiva, setSolicitudActiva] = useState(null);
   const [form, setForm] = useState({
     tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "",
   });
@@ -107,7 +131,7 @@ function VistaEmpleado() {
     }
     setEnviando(true); setMensaje(""); setError("");
     try {
-      await registrarSolicitud({ idEmpleado, tipo: form.tipo, fechaInicio: form.fechaInicio, fechaFin: form.fechaFin, descripcion: form.descripcion });
+      await registrarSolicitud({ tipoSolicitud: form.tipo, fechaInicio: form.fechaInicio, fechaFin: form.fechaFin, motivo: form.descripcion });
       setMensaje("Solicitud enviada correctamente. RRHH la revisará pronto.");
       setForm({ tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "" });
       setTabActiva("lista");
@@ -131,7 +155,7 @@ function VistaEmpleado() {
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <FlowBar step={0} />
+        <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
         <div className="tab-bar">
           <button className={`tab ${tabActiva === "lista" ? "active" : ""}`}
@@ -162,16 +186,22 @@ function VistaEmpleado() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
-                    ) : solicitudes.map(s => (
-                      <tr key={s.idSolicitud ?? s.id}>
-                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
-                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                        <td>{s.fechaInicio ?? "—"}</td>
-                        <td>{s.fechaFin ?? "—"}</td>
-                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                        <td>{s.comentarioRRHH ?? s.comentario ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
-                      </tr>
-                    ))}
+                    ) : solicitudes.map(s => {
+                      const id = s.idSolicitud ?? s.id;
+                      const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                      return (
+                        <tr key={id}
+                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td>{s.fechaInicio ?? "—"}</td>
+                          <td>{s.fechaFin ?? "—"}</td>
+                          <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                          <td>{s.observacionRrhh ?? s.comentarioRRHH ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -254,6 +284,7 @@ function VistaRRHH() {
   const [mensaje,       setMensaje]       = useState("");
   const [error,         setError]         = useState("");
   const [filtroEstado,  setFiltroEstado]  = useState("PENDIENTE");
+  const [solicitudActiva, setSolicitudActiva] = useState(null);
   const [modalRevision, setModalRevision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,    setProcesando]    = useState(false);
 
@@ -308,7 +339,7 @@ function VistaRRHH() {
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <FlowBar step={1} />
+        <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
         <div className="emp-stats-grid" style={{ marginBottom: 24 }}>
           {stats.map(s => (
@@ -322,10 +353,29 @@ function VistaRRHH() {
         <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["PENDIENTE", "EN_REVISION", "APROBADO", "RECHAZADO"].map(e => (
-                <button key={e} className={`tab ${filtroEstado === e ? "active" : ""}`}
-                  style={{ margin: 0 }} onClick={() => setFiltroEstado(e)}>{e}</button>
-              ))}
+              {["PENDIENTE", "EN_REVISION", "APROBADO", "RECHAZADO"].map(e => {
+                const cfg = ESTADO_TAB_CONFIG[e];
+                const isActive = filtroEstado === e;
+                return (
+                  <button key={e} onClick={() => setFiltroEstado(e)} style={{
+                    padding: "7px 16px",
+                    borderRadius: "20px",
+                    border: `1.5px solid ${cfg.activeBg}`,
+                    background: isActive ? cfg.activeBg : cfg.bg,
+                    color: isActive ? "#fff" : cfg.color,
+                    fontWeight: 600,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.18s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}>
+                    {cfg.icon} {cfg.label}
+                  </button>
+                );
+              })}
               <button className="btn btn-secondary btn-sm" style={{ marginLeft: "auto" }}
                 onClick={cargarSolicitudes}>🔄 Actualizar</button>
             </div>
@@ -339,25 +389,31 @@ function VistaRRHH() {
                 <tbody>
                   {solicitudes.length === 0 ? (
                     <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
-                  ) : solicitudes.map(s => (
-                    <tr key={s.idSolicitud ?? s.id}>
-                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
-                      <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                      <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                      <td>{s.fechaInicio ?? "—"}</td>
-                      <td>{s.fechaFin ?? "—"}</td>
-                      <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
-                      <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                      <td>
-                        {s.estado === "PENDIENTE" && (
-                          <button className="btn btn-primary btn-sm"
-                            onClick={() => setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" })}>
-                            Revisar
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  ) : solicitudes.map(s => {
+                    const id = s.idSolicitud ?? s.id;
+                    const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                    return (
+                      <tr key={id}
+                        onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                        style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                        <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                        <td>{s.fechaInicio ?? "—"}</td>
+                        <td>{s.fechaFin ?? "—"}</td>
+                        <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
+                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                        <td>
+                          {s.estado === "PENDIENTE" && (
+                            <button className="btn btn-primary btn-sm"
+                              onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
+                              Revisar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -371,7 +427,7 @@ function VistaRRHH() {
             <div className="modal-header">
               <div>
                 <h3>📋 Revisar Solicitud #{modalRevision.solicitud?.idSolicitud ?? modalRevision.solicitud?.id}</h3>
-                <p>{TIPO_LABELS[modalRevision.solicitud?.tipo] ?? modalRevision.solicitud?.tipo} — {modalRevision.solicitud?.nombreEmpleado ?? modalRevision.solicitud?.idEmpleado}</p>
+                <p>{TIPO_LABELS[modalRevision.solicitud?.tipoSolicitud] ?? modalRevision.solicitud?.tipoSolicitud} — {modalRevision.solicitud?.nombreEmpleado ?? modalRevision.solicitud?.idEmpleado}</p>
               </div>
               <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}>×</button>
             </div>
@@ -410,15 +466,14 @@ function VistaRRHH() {
    VISTA GERENCIA
 ══════════════════════════════════════════════════════════ */
 function VistaGerencia() {
-  const navigateGer = useNavigate();
   const [solicitudes,   setSolicitudes]   = useState([]);
   const [solAprobadas,  setSolAprobadas]  = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [mensaje,       setMensaje]       = useState("");
   const [error,         setError]         = useState("");
+  const [solicitudActiva, setSolicitudActiva] = useState(null);
   const [modalDecision, setModalDecision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,    setProcesando]    = useState(false);
-  const user = getUser();
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
@@ -453,34 +508,25 @@ function VistaGerencia() {
   };
 
   return (
-    <div className="ger-wrap">
-      <div className="ger-topbar">
-        <div className="emp-topbar-brand">
-          <div className="emp-topbar-plus" style={{ background: "#7c3aed", color: "#fff" }}>✚</div>
-          <span className="emp-topbar-text">HOSPITAL SAN GABRIEL</span>
-        </div>
-        <div className="emp-topbar-right">
-          <button className="btn btn-secondary btn-sm" onClick={() => navigateGer("/gerencia")}>
-            ← Inicio
-          </button>
-          <span className="emp-topbar-username">{user?.username ?? "Gerente"}</span>
-          <span className="role-pill role-pill-gerencia">Gerencia</span>
-        </div>
-      </div>
+    <div className="dashboard">
+      <Sidebar rol="GERENCIA" />
 
-      <main style={{ padding: "24px" }}>
-        <header className="main-header" style={{ marginBottom: 0, padding: 0, background: "none", borderBottom: "none" }}>
+      <main className="main-content">
+        <header className="main-header header-gerencia">
           <div className="header-left">
             <span className="page-breadcrumb">Gerencia / Solicitudes de Permisos</span>
             <h1>Decisión Final — Solicitudes de Permisos</h1>
           </div>
-          <button className="btn btn-secondary" onClick={cargarSolicitudes}>🔄 Actualizar</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="btn btn-secondary" onClick={cargarSolicitudes}>🔄 Actualizar</button>
+            <span className="role-pill role-pill-gerencia">Gestión Ejecutiva</span>
+          </div>
         </header>
 
         {mensaje && <div className="alert alert-success" style={{ marginTop: 16 }}>✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning" style={{ marginTop: 16 }}>⚠️ {error}</div>}
 
-        <FlowBar step={2} />
+        <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
         {/* ── Tabla: En Revisión (decisión pendiente) ── */}
         <div style={{ marginTop: 16 }}>
@@ -498,30 +544,36 @@ function VistaGerencia() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
-                    ) : solicitudes.map(s => (
-                      <tr key={s.idSolicitud ?? s.id}>
-                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{s.idSolicitud ?? s.id}</td>
-                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                        <td>{s.fechaInicio ?? "—"}</td>
-                        <td>{s.fechaFin ?? "—"}</td>
-                        <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.descripcion}</td>
-                        <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.comentarioRRHH ?? "—"}</td>
-                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                        <td>
-                          <div style={{ display: "flex", gap: "4px" }}>
-                            <button className="btn btn-success btn-sm"
-                              onClick={() => setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" })}>
-                              ✅ Aprobar
-                            </button>
-                            <button className="btn btn-danger btn-sm"
-                              onClick={() => setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" })}>
-                              ❌ Rechazar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    ) : solicitudes.map(s => {
+                      const id = s.idSolicitud ?? s.id;
+                      const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                      return (
+                        <tr key={id}
+                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td>{s.fechaInicio ?? "—"}</td>
+                          <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
+                          <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.observacionRrhh ?? "—"}</td>
+                          <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                          <td>
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <button className="btn btn-success btn-sm"
+                                onClick={e => { e.stopPropagation(); setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" }); }}>
+                                ✅ Aprobar
+                              </button>
+                              <button className="btn btn-danger btn-sm"
+                                onClick={e => { e.stopPropagation(); setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" }); }}>
+                                ❌ Rechazar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -550,17 +602,23 @@ function VistaGerencia() {
                     <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Respuesta Gerencia</th></tr>
                   </thead>
                   <tbody>
-                    {solAprobadas.map(s => (
-                      <tr key={s.idSolicitud ?? s.id}>
-                        <td style={{ color: "var(--text-3)", fontSize: 13 }}>{s.idSolicitud ?? s.id}</td>
-                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                        <td>{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                        <td>{s.fechaInicio ?? "—"}</td>
-                        <td>{s.fechaFin ?? "—"}</td>
-                        <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
-                        <td style={{ fontSize: 12, color: "#16a34a" }}>{s.respuestaGerencia ?? "—"}</td>
-                      </tr>
-                    ))}
+                    {solAprobadas.map(s => {
+                      const id = s.idSolicitud ?? s.id;
+                      const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                      return (
+                        <tr key={id}
+                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{id}</td>
+                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td>{s.fechaInicio ?? "—"}</td>
+                          <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
+                          <td style={{ fontSize: 12, color: "#16a34a" }}>{s.respuesta ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

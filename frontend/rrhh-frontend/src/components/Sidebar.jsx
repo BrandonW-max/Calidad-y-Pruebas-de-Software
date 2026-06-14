@@ -34,7 +34,7 @@ const NAV = {
     links: [
       { to: "/gerencia",                  icon: "🏠", label: "Inicio" },
       { to: "/gerencia/solicitudes",      icon: "📅", label: "Solicitudes" },
-      { to: "/gerencia/justificaciones",  icon: "⏰", label: "Justificaciones" },
+      { to: "/gerencia/asistencia",       icon: "📋", label: "Mi Asistencia" },
     ],
   },
 };
@@ -75,10 +75,7 @@ export default function Sidebar({ rol }) {
           </Link>
         ))}
         <div className="nav-logout">
-          <button
-            onClick={handleLogout}
-            style={{ background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left", padding: 0 }}
-          >
+          <button onClick={handleLogout}>
             <span className="nav-icon">🚪</span>
             <span>Cerrar Sesión</span>
           </button>

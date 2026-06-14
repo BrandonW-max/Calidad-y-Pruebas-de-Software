@@ -27,13 +27,35 @@ body{font-family:Arial,sans-serif;font-size:12px;padding:28px;max-width:680px;ma
 `;
 
 export function generarComprobanteHTML(n, logoUrl, accentColor = "#2563eb", _title = "Comprobante de Nómina", entity = "Sistema de Recursos Humanos") {
-  const base     = Number(n.sueldoBase ?? n.sueldo ?? 0);
-  const bonif    = Number(n.bonificaciones ?? n.totalBonificaciones ?? 0);
-  const desc     = Number(n.descuentos ?? n.totalDescuentos ?? 0);
-  const neto     = Number(n.sueldoNeto ?? n.totalNeto ?? 0);
-  const mesNum   = parseInt(n.mes);
-  const mesLabel = !isNaN(mesNum) ? MESES[mesNum - 1] : (n.mes ?? "—");
-  const fam      = n.cantidadFamiliares ?? 3;
+  const base = Number(n.sueldoBase ?? n.sueldo ?? 0);
+  const getBonif = (o) =>
+    (Number(o.bonifFamiliar)      || 0) +
+    (Number(o.bonifTurnoNocturno) || 0) +
+    (Number(o.bonifGuardia)       || 0) +
+    (Number(o.bonifRiesgo)        || 0) +
+    (Number(o.bonifCargo)         || 0);
+  const getDesc = (o) =>
+    (Number(o.descuentoTardanzas) || 0) +
+    (Number(o.descuentoLey)       || 0);
+  const bonif = getBonif(n);
+  const desc  = getDesc(n);
+  const neto  = Number(n.sueldoNeto ?? 0);
+  const periodo = n.periodo ?? `${n.anio}-${n.mes}`;
+  const partes = periodo?.split("-") || [];
+  const mesNum = parseInt(partes[1]);
+  const mesLabel = !isNaN(mesNum) ? MESES[mesNum - 1] : "—";
+  const anio = partes[0] ?? "—";
+  const bonifs = [
+    { label: "Bonif. Familiar",        val: n.bonifFamiliar },
+    { label: "Bonif. Turno Nocturno",  val: n.bonifTurnoNocturno },
+    { label: "Bonif. Guardia",         val: n.bonifGuardia },
+    { label: "Bonif. Riesgo",          val: n.bonifRiesgo },
+    { label: "Bonif. Cargo",           val: n.bonifCargo },
+  ].filter(r => Number(r.val));
+  const descs = [
+    { label: "Descuento Tardanzas", val: n.descuentoTardanzas },
+    { label: "Descuento de Ley",    val: n.descuentoLey },
+  ].filter(r => Number(r.val));
   const fmt      = (v) => `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
 
   return `<!DOCTYPE html><html lang="es"><head>
@@ -43,25 +65,21 @@ export function generarComprobanteHTML(n, logoUrl, accentColor = "#2563eb", _tit
   <img src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
   <div><h1>Hospital San Gabriel</h1><p>${entity}</p></div>
 </div>
-<div class="titulo">BOLETA DE PAGO — ${mesLabel.toUpperCase()} ${n.anio ?? "—"}</div>
+<div class="titulo">BOLETA DE PAGO — ${mesLabel.toUpperCase()} ${anio}</div>
 <div class="grid">
-  <div class="gi"><span class="gl">Empleado</span><span class="gv">${n.empleadoNombre ?? `Empleado #${n.idEmpleado}`}</span></div>
+  <div class="gi"><span class="gl">Empleado</span><span class="gv">${n.empleadoNombre ?? n.nombreEmpleado ?? `Empleado #${n.idEmpleado}`}</span></div>
   <div class="gi"><span class="gl">N° Nómina</span><span class="gv">#${n.idNomina}</span></div>
-  <div class="gi"><span class="gl">Período</span><span class="gv">${mesLabel} ${n.anio ?? "—"}</span></div>
+  <div class="gi"><span class="gl">Período</span><span class="gv">${mesLabel} ${anio}</span></div>
   <div class="gi"><span class="gl">Sueldo Base</span><span class="gv">${fmt(base)}</span></div>
 </div>
 <div class="sec">
   <div class="st gt">+ BONIFICACIONES</div>
-  <div class="row"><span>Bonif. Familiar (${fam} dependientes)</span><span style="color:#15803d">+${fmt(bonif * 0.40)}</span></div>
-  <div class="row"><span>Bonif. Transporte</span><span style="color:#15803d">+${fmt(bonif * 0.35)}</span></div>
-  <div class="row"><span>Bonif. Extraordinaria</span><span style="color:#15803d">+${fmt(bonif * 0.25)}</span></div>
+  ${bonifs.map(r => `<div class="row"><span>${r.label}</span><span style="color:#15803d">+${fmt(r.val)}</span></div>`).join('')}
   <div class="sub"><span>Total Bonificaciones</span><span style="color:#15803d">+${fmt(bonif)}</span></div>
 </div>
 <div class="sec">
   <div class="st rt">— DESCUENTOS</div>
-  <div class="row"><span>AFP (10% sueldo base)</span><span style="color:#b91c1c">-${fmt(desc * 0.50)}</span></div>
-  <div class="row"><span>ESSALUD (3%)</span><span style="color:#b91c1c">-${fmt(desc * 0.30)}</span></div>
-  <div class="row"><span>Impuesto 5ª Categoría</span><span style="color:#b91c1c">-${fmt(desc * 0.20)}</span></div>
+  ${descs.map(r => `<div class="row"><span>${r.label}</span><span style="color:#b91c1c">-${fmt(r.val)}</span></div>`).join('')}
   <div class="sub"><span>Total Descuentos</span><span style="color:#b91c1c">-${fmt(desc)}</span></div>
 </div>
 <div class="total"><span class="tl">SUELDO NETO A PAGAR</span><span class="tv">${fmt(neto)}</span></div>
@@ -71,7 +89,7 @@ export function generarComprobanteHTML(n, logoUrl, accentColor = "#2563eb", _tit
 }
 
 export function abrirComprobante(n, logoUrl, accentColor = "#2563eb", _title, entity) {
-  const html = generarComprobanteHTML(n, logoUrl, accentColor, title, entity);
+  const html = generarComprobanteHTML(n, logoUrl, accentColor, _title, entity);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank");

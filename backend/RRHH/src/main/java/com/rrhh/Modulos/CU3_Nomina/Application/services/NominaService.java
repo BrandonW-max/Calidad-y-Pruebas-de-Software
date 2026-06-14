@@ -102,6 +102,8 @@ public class NominaService implements INominaService {
                         request.getFechaFin()
                     );
 
+                registros = filtrarRegistrosValidos(registros);
+
                 validarDatosAsistencia(registros, empleado);
 
                 ContratoModel contrato = jpaContratoRepository
@@ -559,5 +561,20 @@ public class NominaService implements INominaService {
         }
 
         return dto;
+    }
+
+    private List<RegistroAsistenciaModel> filtrarRegistrosValidos(List<RegistroAsistenciaModel> registros) {
+        Map<LocalDate, List<RegistroAsistenciaModel>> porFecha = registros.stream()
+                .collect(Collectors.groupingBy(RegistroAsistenciaModel::getFecha));
+        return porFecha.values().stream().flatMap(lista -> {
+            boolean tieneCorreccion = lista.stream()
+                    .anyMatch(r -> "CORRECCION".equals(r.getTipoRegistro()));
+            if (tieneCorreccion) {
+                return lista.stream()
+                        .filter(r -> "CORRECCION".equals(r.getTipoRegistro()));
+            }
+            return lista.stream()
+                    .filter(r -> r.getTipoRegistro() == null || "ORIGINAL".equals(r.getTipoRegistro()));
+        }).collect(Collectors.toList());
     }
 }

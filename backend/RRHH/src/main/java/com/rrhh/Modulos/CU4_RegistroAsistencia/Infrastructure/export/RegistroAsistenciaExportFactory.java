@@ -13,12 +13,12 @@ public class RegistroAsistenciaExportFactory implements ExportAbstractFactory {
 
     @Override
     public String[] getHeaders() {
-        return new String[]{"Empleado", "Fecha", "Hora Entrada", "Hora Salida", "Min. Tardanza", "Min. Extra", "Estado"};
+        return new String[]{"Empleado", "Fecha", "Hora Entrada", "Hora Salida", "Min. Tardanza", "Min. Extra", "Estado", "Tipo Registro"};
     }
 
     @Override
     public String[] getKeys() {
-        return new String[]{"empleado", "fecha", "horaEntrada", "horaSalida", "minutosTardanza", "minutosExtra", "estado"};
+        return new String[]{"empleado", "fecha", "horaEntrada", "horaSalida", "minutosTardanza", "minutosExtra", "estado", "tipoRegistro"};
     }
 
     @Override

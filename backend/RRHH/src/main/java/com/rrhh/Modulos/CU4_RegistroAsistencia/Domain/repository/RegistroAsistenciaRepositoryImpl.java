@@ -32,7 +32,8 @@ public class RegistroAsistenciaRepositoryImpl implements IRegistroAsistenciaRepo
 
     @Override
     public Optional<RegistroAsistencia> buscarPorEmpleadoYFecha(Integer idEmpleado, LocalDate fecha) {
-        return jpaRegistroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(idEmpleado, fecha)
+        return jpaRegistroAsistenciaRepository
+                .findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(idEmpleado, fecha, "ORIGINAL")
                 .map(mapper::crearDominioDesdeModelo);
     }
 

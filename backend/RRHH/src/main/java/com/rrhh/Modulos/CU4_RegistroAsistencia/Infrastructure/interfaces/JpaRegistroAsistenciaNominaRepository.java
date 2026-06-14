@@ -9,9 +9,11 @@ import java.util.Optional;
 
 public interface JpaRegistroAsistenciaNominaRepository extends JpaRepository<RegistroAsistenciaModel, Integer> {
 
-    Optional<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoAndFecha(Integer idEmpleado, LocalDate fecha);
+    Optional<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(Integer idEmpleado, LocalDate fecha, String tipoRegistro);
 
-    List<RegistroAsistenciaModel> findByFechaAndHoraSalidaIsNull(LocalDate fecha);
+    List<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoAndFecha(Integer idEmpleado, LocalDate fecha);
+
+    List<RegistroAsistenciaModel> findByFechaAndHoraSalidaIsNullAndTipoRegistro(LocalDate fecha, String tipoRegistro);
 
     List<RegistroAsistenciaModel> findByEmpleado_IdEmpleadoOrderByFechaDesc(Integer idEmpleado);
 }

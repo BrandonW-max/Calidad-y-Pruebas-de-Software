@@ -311,61 +311,61 @@ WHERE e.numero_di = '01234567' AND d.cod_dpto = 'RAD01'
 -- =========================
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'a.garcia', 'a.garcia@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'a.garcia', 'a.garcia@hospitalsangabriel.com', '$2b$10$w/uWN.m..o/zmaKknuDvCe7RHb4hSXd63Pwz7SvLseanwU6UY8Wwq',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '12345678' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'a.garcia');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'c.mendez', 'c.mendez@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'c.mendez', 'c.mendez@hospitalsangabriel.com', '$2b$10$XFy37U71XdxTRwKxuzyiu.eH9Deve05T/xou/Rc1VhSuD9foKlMR6',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '23456789' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'c.mendez');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'm.quispe', 'm.quispe@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'm.quispe', 'm.quispe@hospitalsangabriel.com', '$2b$10$OuikuPA2VBb0PPCbQVSE4OqFMTnhej7bOK1SFucfkxhJImPbXGQ2i',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '34567890' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'm.quispe');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'l.fernandez', 'l.fernandez@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'l.fernandez', 'l.fernandez@hospitalsangabriel.com', '$2b$10$1u5k/3C/LW7WTqN6tQ4fyuYUS4I2ffk4KGNpFfMtkMJiyHYTjPYcO',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '45678901' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'l.fernandez');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'r.vargas', 'r.vargas@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'r.vargas', 'r.vargas@hospitalsangabriel.com', '$2b$10$75Gy2b2GS0J.DJI.XjTxe.Gg5xwnhWe/8aU9TBqk6gvBNZtyW85eG',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '56789012' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'r.vargas');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'p.ramos', 'p.ramos@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'p.ramos', 'p.ramos@hospitalsangabriel.com', '$2b$10$pCphzZWKPbMdem6JtMfX7OhmSX11khgKhQKH/HqWiqFp2xrasmema',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '67890123' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'p.ramos');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'e.castro', 'e.castro@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'e.castro', 'e.castro@hospitalsangabriel.com', '$2b$10$H5B7AagrBptWHe8p9ytmtuIbwwoSsO6FxMJTw0hF5ZxTgcQop7F/S',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '78901234' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'e.castro');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'j.huaman', 'j.huaman@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'j.huaman', 'j.huaman@hospitalsangabriel.com', '$2b$10$M5Y7eof9G0KgKmOsPR1rcuoD5W6utUnoUXJpOG3Iy2GUztYCf1VaG',
        0, false, NULL, false, NULL, false, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '89012345' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'j.huaman');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 's.delgado', 's.delgado@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 's.delgado', 's.delgado@hospitalsangabriel.com', '$2b$10$rXEKDje.fxL6uzdcsuNVDOmq0x6F/fUc1e3113MDuDGy5q1cmikUG',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '90123456' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 's.delgado');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'm.paredes', 'm.paredes@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'm.paredes', 'm.paredes@hospitalsangabriel.com', '$2b$10$wYFL5rtKu8XPQ9cZGreYneksRBzVdIPIbZ.nGK2RVOAqkPK1NbJMS',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '01234567' AND r.nombre_rol = 'EMPLEADO'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'm.paredes');
@@ -421,31 +421,31 @@ FROM empleado e CROSS JOIN departamento d WHERE e.numero_di = '55667700' AND d.c
 -- Contraseña: admin123
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'l.huanca', 'l.huanca@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'l.huanca', 'l.huanca@hospitalsangabriel.com', '$2b$10$LjhcIkAFh.HV6uBFfWUyIO6iIp5g6vAutYzWsNzAaGuyCtTKI1e1C',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '11223300' AND r.nombre_rol = 'RRHH'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'l.huanca');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'm.diaz', 'm.diaz@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'm.diaz', 'm.diaz@hospitalsangabriel.com', '$2b$10$S5ssXTw0Ta0urpx05Ye/QO13mcrcCJI1niFWEKlwOTq2ybyBp36sm',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '22334400' AND r.nombre_rol = 'RRHH'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'm.diaz');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'i.torres', 'i.torres@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'i.torres', 'i.torres@hospitalsangabriel.com', '$2b$10$BWqsqcFtcvrBXr8zI6wsL.PbPTJXR/azq84dwI96feJyLgmB549H6',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '33445500' AND r.nombre_rol = 'RRHH'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'i.torres');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'r.benitez', 'r.benitez@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'r.benitez', 'r.benitez@hospitalsangabriel.com', '$2b$10$vq0pu5UX5kwUymfCcnIRmOJT9VB8FptccpPFUliLtv/vhA49z7EyS',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '44556600' AND r.nombre_rol = 'RRHH'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'r.benitez');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'c.morales', 'c.morales@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'c.morales', 'c.morales@hospitalsangabriel.com', '$2b$10$ozVAQTjeu6NKYJrZwtgZNe79s212DeQ8ose7J6PKLkbRUrCUcbutG',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '55667700' AND r.nombre_rol = 'RRHH'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'c.morales');
@@ -487,19 +487,19 @@ FROM empleado e CROSS JOIN departamento d WHERE e.numero_di = '88990011' AND d.c
 -- Contraseña: admin123
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'f.castillo', 'f.castillo@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'f.castillo', 'f.castillo@hospitalsangabriel.com', '$2b$10$IzZT1F77HDUn5nYszFXeRO7Sav4RFPcDCnGUSQcpwD4c/SQyJNoqK',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '66778800' AND r.nombre_rol = 'GERENCIA'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'f.castillo');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'p.medina', 'p.medina@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'p.medina', 'p.medina@hospitalsangabriel.com', '$2b$10$CAOJiULFFxbiq9bVOGezFOfnmvpl/SaLN2bWWNuX9VuYkS6MG8s/a',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '77889900' AND r.nombre_rol = 'GERENCIA'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'p.medina');
 
 INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
-SELECT 'a.vargas', 'a.vargas@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+SELECT 'a.vargas', 'a.vargas@hospitalsangabriel.com', '$2b$10$XaS9WUSx58M4kYRQnKFrmuLl8BDQMiKmq48jGbT1RIOEPdkgvgLIC',
        0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '88990011' AND r.nombre_rol = 'GERENCIA'
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'a.vargas');

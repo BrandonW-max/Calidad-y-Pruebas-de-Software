@@ -8,6 +8,7 @@ public class MarcarAsistenciaManualRequestDTO {
     private String tipo;
     private LocalDateTime fechaHora;
     private String motivo;
+    private String tipoRegistro = "ORIGINAL";
 
     public Integer getIdEmpleado() { return idEmpleado; }
     public void setIdEmpleado(Integer idEmpleado) { this.idEmpleado = idEmpleado; }
@@ -20,4 +21,7 @@ public class MarcarAsistenciaManualRequestDTO {
 
     public String getMotivo() { return motivo; }
     public void setMotivo(String motivo) { this.motivo = motivo; }
+
+    public String getTipoRegistro() { return tipoRegistro; }
+    public void setTipoRegistro(String tipoRegistro) { this.tipoRegistro = tipoRegistro; }
 }

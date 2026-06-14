@@ -143,13 +143,13 @@ CREATE TABLE registro_asistencia (
     minutos_extra INT DEFAULT 0,
     horas_trabajadas DECIMAL(10,2) DEFAULT 0,
     tipo_ultimo_registro VARCHAR(20),
+    tipo_registro VARCHAR(20) DEFAULT 'ORIGINAL',
     observacion VARCHAR(255),
     estado VARCHAR(30),
     id_empleado BIGINT REFERENCES empleado(id_empleado),
     id_horario BIGINT REFERENCES horario(id_horario),
     creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_asistencia_emp_fecha UNIQUE (id_empleado, fecha)
+    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE nomina (

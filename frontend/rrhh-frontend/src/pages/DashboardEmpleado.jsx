@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { getUser, clearSession, logout, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
+import { getUser, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
 
 export default function DashboardEmpleado() {
-  const navigate = useNavigate();
   const user = getUser();
   const idEmpleado = getIdEmpleado();
 
@@ -35,8 +34,6 @@ export default function DashboardEmpleado() {
     } catch { /* silently fail */ }
   };
 
-  const handleLogout = async () => { try { await logout(); } catch {} clearSession(); navigate("/", { replace: true }); };
-
   const horaFmt = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
   const displayName = user?.username || "Usuario";
 
@@ -56,9 +53,6 @@ export default function DashboardEmpleado() {
             <span className="emp-topbar-username">{displayName}</span>
             <span className="role-pill role-pill-empleado">Empleado</span>
             <div className="emp-topbar-avatar">👤</div>
-            <button className="emp-topbar-logout" onClick={handleLogout}>
-              Cerrar Sesión →
-            </button>
           </div>
         </div>
 

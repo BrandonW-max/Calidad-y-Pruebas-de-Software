@@ -40,6 +40,9 @@ public class RegistroAsistenciaModel {
     @Column(name = "tipo_ultimo_registro", length = 20)
     private String tipoUltimoRegistro;
 
+    @Column(name = "tipo_registro", length = 20)
+    private String tipoRegistro = "ORIGINAL";
+
     @Column(name = "observacion", length = 255)
     private String observacion;
 
@@ -131,6 +134,9 @@ public class RegistroAsistenciaModel {
     public void setTipoUltimoRegistro(String tipoUltimoRegistro) {
         this.tipoUltimoRegistro = tipoUltimoRegistro;
     }
+
+    public String getTipoRegistro() { return tipoRegistro; }
+    public void setTipoRegistro(String tipoRegistro) { this.tipoRegistro = tipoRegistro; }
 
     public String getObservacion() {
         return observacion;

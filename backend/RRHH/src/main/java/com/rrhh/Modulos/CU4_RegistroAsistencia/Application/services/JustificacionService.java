@@ -68,16 +68,23 @@ public class JustificacionService {
 
         RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
         if (r != null && "APROBADA".equals(decision)) {
-            HorarioModel horario = getHorarioAsignado(j.getIdEmpleado());
-            LocalTime horaProgramada = horario != null ? horario.getHoraEntrada() : LocalTime.of(8, 0);
+            int tardanzaOriginal = r.getMinutosTardanza();
+            LocalTime entrada = r.getHoraEntrada() != null ? r.getHoraEntrada() : LocalTime.of(8, 0);
+            LocalTime salida = r.getHoraSalida() != null
+                    ? r.getHoraSalida().plusMinutes(tardanzaOriginal)
+                    : entrada.plusHours(8);
 
-            r.setHoraEntrada(horaProgramada);
-            r.setHoraSalida(horaProgramada.plusHours(8));
-            r.setHorasTrabajadas(new java.math.BigDecimal("8.00"));
-            r.setMinutosTardanza(0);
-            r.setEstado("PUNTUAL");
-            r.setObservacion("Tardanza justificada y aprobada por RRHH");
-            em.merge(r);
+            RegistroAsistenciaModel correccion = new RegistroAsistenciaModel();
+            correccion.setEmpleado(r.getEmpleado());
+            correccion.setFecha(r.getFecha());
+            correccion.setHoraEntrada(entrada);
+            correccion.setHoraSalida(salida);
+            correccion.setHorasTrabajadas(new java.math.BigDecimal("8.00"));
+            correccion.setMinutosTardanza(0);
+            correccion.setEstado("JUSTIFICADA");
+            correccion.setTipoRegistro("CORRECCION");
+            correccion.setObservacion("Tardanza original: " + tardanzaOriginal + " min. Horas recuperadas.");
+            em.persist(correccion);
         }
 
         return em.merge(j);

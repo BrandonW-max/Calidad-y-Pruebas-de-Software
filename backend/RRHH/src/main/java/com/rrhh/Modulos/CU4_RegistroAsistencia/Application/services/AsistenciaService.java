@@ -75,7 +75,8 @@ public class AsistenciaService {
         LocalTime horaActual = LocalTime.now();
 
         Optional<RegistroAsistenciaModel> registroOptional =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(request.getIdEmpleado(), fechaActual);
+                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                        request.getIdEmpleado(), fechaActual, "ORIGINAL");
 
         if (registroOptional.isEmpty()) {
             return registrarEntrada(empleado, fechaActual, horaActual);
@@ -130,9 +131,56 @@ public class AsistenciaService {
         }
 
         boolean esEntrada = "ENTRADA".equalsIgnoreCase(request.getTipo());
+        boolean esCorreccion = "CORRECCION".equalsIgnoreCase(request.getTipoRegistro());
+
+        if (esCorreccion) {
+            Optional<RegistroAsistenciaModel> existente = registroAsistenciaRepository
+                    .findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                            request.getIdEmpleado(), fecha, "CORRECCION");
+            RegistroAsistenciaModel registro = existente.orElseGet(() -> {
+                RegistroAsistenciaModel r = new RegistroAsistenciaModel();
+                r.setEmpleado(empleado);
+                r.setFecha(fecha);
+                r.setTipoRegistro("CORRECCION");
+                return r;
+            });
+            if (esEntrada) {
+                registro.setHoraEntrada(request.getFechaHora().toLocalTime());
+                registro.setTipoUltimoRegistro("ENTRADA");
+                registro.setMinutosTardanza(0);
+                registro.setEstado("JUSTIFICADA");
+            } else {
+                registro.setHoraSalida(request.getFechaHora().toLocalTime());
+                registro.setTipoUltimoRegistro("SALIDA");
+                if (registro.getHoraEntrada() != null) {
+                    long mins = Duration.between(registro.getHoraEntrada(), registro.getHoraSalida()).toMinutes();
+                    registro.setHorasTrabajadas(BigDecimal.valueOf(mins)
+                            .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
+                }
+                registro.setEstado("JUSTIFICADA");
+            }
+            registro.setObservacion(request.getMotivo() != null ? request.getMotivo() : "Correccion de tardanza justificada");
+            RegistroAsistenciaModel guardado = registroAsistenciaRepository.save(registro);
+
+            Historial log = new Historial(idUsuarioRrhh, "REGISTRO_MANUAL_CORRECCION", ip);
+            log.setTablaAfectada("REGISTRO_ASISTENCIA");
+            log.setValorNuevo("CORRECCION | Empleado: " + empleado.getIdEmpleado()
+                    + " | Tipo: " + (esEntrada ? "ENTRADA" : "SALIDA")
+                    + " | Fecha: " + fecha);
+            historialRepository.save(log);
+
+            return new MarcarAsistenciaResponseDTO(
+                    true, "Corrección registrada correctamente.",
+                    esEntrada ? "ENTRADA" : "SALIDA",
+                    guardado.getFecha(), guardado.getHoraEntrada(), guardado.getHoraSalida(),
+                    guardado.getHorasTrabajadas(), guardado.getMinutosTardanza(),
+                    guardado.getMinutosExtra(), guardado.getEstado()
+            );
+        }
 
         Optional<RegistroAsistenciaModel> registroOptional =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(request.getIdEmpleado(), fecha);
+                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                        request.getIdEmpleado(), fecha, "ORIGINAL");
 
         RegistroAsistenciaModel registro;
         if (registroOptional.isEmpty()) {
@@ -207,11 +255,16 @@ public class AsistenciaService {
     }
 
     public List<RegistroAsistenciaModel> listarPorEmpleado(Integer idEmpleado) {
-        return registroAsistenciaRepository.findByEmpleado_IdEmpleadoOrderByFechaDesc(idEmpleado);
+        List<RegistroAsistenciaModel> todos = registroAsistenciaRepository.findByEmpleado_IdEmpleadoOrderByFechaDesc(idEmpleado);
+        return todos.stream().filter(r -> "ORIGINAL".equals(r.getTipoRegistro()) || r.getTipoRegistro() == null).toList();
     }
 
     public Optional<RegistroAsistenciaModel> buscarHoy(Integer idEmpleado) {
-        return registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFecha(idEmpleado, LocalDate.now());
+        Optional<RegistroAsistenciaModel> corr = registroAsistenciaRepository
+                .findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(idEmpleado, LocalDate.now(), "CORRECCION");
+        if (corr.isPresent()) return corr;
+        return registroAsistenciaRepository
+                .findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(idEmpleado, LocalDate.now(), "ORIGINAL");
     }
 
     private void registrarLogFallo(Long idEmpleado, String motivo, String ip) {

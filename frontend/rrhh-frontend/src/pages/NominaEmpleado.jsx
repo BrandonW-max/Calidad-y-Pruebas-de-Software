@@ -5,6 +5,17 @@ import "../styles/Dashboard.css";
 import { getNominasPorEmpleado, getIdEmpleado } from "../services/api";
 import { abrirComprobante } from "../services/comprobanteHtml";
 
+const getBonif = (n) =>
+  (Number(n.bonifFamiliar)      || 0) +
+  (Number(n.bonifTurnoNocturno) || 0) +
+  (Number(n.bonifGuardia)       || 0) +
+  (Number(n.bonifRiesgo)        || 0) +
+  (Number(n.bonifCargo)         || 0);
+
+const getDesc = (n) =>
+  (Number(n.descuentoTardanzas) || 0) +
+  (Number(n.descuentoLey)       || 0);
+
 export default function NominaEmpleado() {
   const idEmpleado = getIdEmpleado();
   const [nominas,  setNominas]  = useState([]);
@@ -109,13 +120,13 @@ export default function NominaEmpleado() {
                       </td>
                       <td>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
                       <td style={{ color: "var(--success)" }}>
-                        {fmtS(n.bonificaciones ?? n.totalBonificaciones)}
+                        {fmtS(getBonif(n))}
                       </td>
                       <td style={{ color: "#ef4444" }}>
-                        {fmtS(n.descuentos ?? n.totalDescuentos)}
+                        {fmtS(getDesc(n))}
                       </td>
                       <td style={{ fontWeight: 700, color: "#0f172a" }}>
-                        {fmtS(n.sueldoNeto ?? n.totalNeto)}
+                        {fmtS(n.sueldoNeto)}
                       </td>
                       <td>
                         <button

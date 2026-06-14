@@ -53,7 +53,8 @@ public class AsistenciaController {
         Long idRegistro = Long.valueOf(Objects.requireNonNull(body.get("idRegistroAsistencia"), "idRegistroAsistencia es requerido").toString());
         String motivo = Objects.requireNonNull(body.get("motivo"), "motivo es requerido").toString();
         String evidencia = Objects.toString(body.get("evidenciaUrl"), "");
-        JustificacionTardanzaModel j = justificacionService.registrar(idRegistro.intValue(), user.getIdUsuario(), motivo, evidencia);
+        Long idEmpleado = Long.valueOf(Objects.requireNonNull(body.get("idEmpleado"), "idEmpleado es requerido").toString());
+        JustificacionTardanzaModel j = justificacionService.registrar(idRegistro.intValue(), idEmpleado, motivo, evidencia);
         return ResponseEntity.ok(j);
     }
 

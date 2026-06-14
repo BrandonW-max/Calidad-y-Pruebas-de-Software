@@ -281,6 +281,7 @@ function App() {
       {/* Gerencia */}
       <Route path="/gerencia" element={<ProtectedRoute requiredRole="GERENCIA"><DashboardGerencia /></ProtectedRoute>} />
       <Route path="/gerencia/solicitudes" element={<ProtectedRoute requiredRole="GERENCIA"><SolicitudPermisos /></ProtectedRoute>} />
+      <Route path="/gerencia/asistencia" element={<ProtectedRoute requiredRole="GERENCIA"><ControlAsistencia /></ProtectedRoute>} />
       <Route path="/gerencia/justificaciones" element={<ProtectedRoute requiredRole="GERENCIA"><GerenciaJustificaciones /></ProtectedRoute>} />
 
       {/* DEV — ELIMINAR ANTES DE PRODUCCIÓN */}
