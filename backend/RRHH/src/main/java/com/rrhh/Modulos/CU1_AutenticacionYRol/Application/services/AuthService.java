@@ -93,13 +93,14 @@ public class AuthService implements IAuthService {
                         permisos,
                         user.getTokenInvalidoDesde()
                 );
+                boolean recordar2FA = !user.getNombreUsuario().equals("admin.rrhh");
                 return new AuthResponseDTO(
                         true,
-                        "Acceso concedido. Active 2FA para asegurar su cuenta.",
+                        "Acceso concedido.",
                         user.getNombreRol(),
                         false,
                         token,
-                        true
+                        recordar2FA
                 );
             }
 

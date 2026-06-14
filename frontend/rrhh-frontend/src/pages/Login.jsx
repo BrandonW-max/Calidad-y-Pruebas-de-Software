@@ -11,10 +11,10 @@ export default function Login() {
   const [mensaje,  setMensaje]      = useState("");
   const [intentos, setIntentos]     = useState(null);
   const [show2FA,  setShow2FA]      = useState(false);
-  const [resetKey, setResetKey]     = useState(0);
-  const [showForgot,   setShowForgot]   = useState(false);
-  const [forgotInput,  setForgotInput]  = useState("");
-  const [forgotOk,     setForgotOk]     = useState(false);
+  const [resetKey, setResetKey]       = useState(0);
+  const [showForgot,   setShowForgot] = useState(false);
+  const [forgotInput,  setForgotInput]= useState("");
+  const [forgotOk,     setForgotOk]   = useState(false);
 
   useEffect(() => {
     const user = getUser();
@@ -46,6 +46,7 @@ export default function Login() {
         return;
       }
       saveSession(data.token, data.rol, username, data.idEmpleado ?? null);
+      if (data.requires2FASetup) sessionStorage.setItem('show2FAReminder', 'true');
       redirectByRole(data.rol);
     } catch {
       setMensaje("Error de conexión con el servidor. Verifique que el servicio esté disponible.");

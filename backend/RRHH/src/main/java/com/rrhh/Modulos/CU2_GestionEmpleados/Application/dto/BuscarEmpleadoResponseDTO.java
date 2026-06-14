@@ -1,5 +1,8 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 public class BuscarEmpleadoResponseDTO {
 
     private Long idEmpleado;
@@ -15,6 +18,8 @@ public class BuscarEmpleadoResponseDTO {
     private String rol;
     private String nombreUsuario;
     private String correoInstitucional;
+    private BigDecimal sueldo;
+    private LocalDate fechaInicio;
 
     public BuscarEmpleadoResponseDTO() {
     }
@@ -31,7 +36,9 @@ public class BuscarEmpleadoResponseDTO {
             String departamento,
             String rol,
             String nombreUsuario,
-            String correoInstitucional
+            String correoInstitucional,
+            BigDecimal sueldo,
+            LocalDate fechaInicio
     ) {
         this.idEmpleado = idEmpleado;
         this.nombres = nombres;
@@ -45,6 +52,8 @@ public class BuscarEmpleadoResponseDTO {
         this.rol = rol;
         this.nombreUsuario = nombreUsuario;
         this.correoInstitucional = correoInstitucional;
+        this.sueldo = sueldo;
+        this.fechaInicio = fechaInicio;
     }
 
     public Long getIdEmpleado() {
@@ -141,5 +150,21 @@ public class BuscarEmpleadoResponseDTO {
 
     public void setCorreoInstitucional(String correoInstitucional) {
         this.correoInstitucional = correoInstitucional;
+    }
+
+    public java.math.BigDecimal getSueldo() {
+        return sueldo;
+    }
+
+    public void setSueldo(java.math.BigDecimal sueldo) {
+        this.sueldo = sueldo;
+    }
+
+    public java.time.LocalDate getFechaInicio() {
+        return fechaInicio;
+    }
+
+    public void setFechaInicio(java.time.LocalDate fechaInicio) {
+        this.fechaInicio = fechaInicio;
     }
 }

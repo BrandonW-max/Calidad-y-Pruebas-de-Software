@@ -130,6 +130,28 @@ body { background: var(--bg); color: var(--text); }
 .nav-logout a { color: rgba(255,255,255,0.55) !important; font-size: 13px; }
 .nav-logout a:hover { color: rgba(255,255,255,0.85) !important; }
 
+.nav-logout button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.7);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s;
+}
+
+.nav-logout button:hover {
+  background: rgba(255, 80, 80, 0.2);
+  color: #ff8080;
+}
+
 /* ══ MAIN CONTENT ══ */
 .main-content {
   margin-left: var(--sidebar-w);

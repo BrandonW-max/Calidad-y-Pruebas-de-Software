@@ -32,6 +32,14 @@ export const verify2FA = (username, code) =>
     body: JSON.stringify({ username, code }),
   }).then(json);
 
+export const enable2FA = (username) =>
+  fetch(`${BASE}/api/v1/auth/enable-2fa/${username}`, { headers: h() })
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.blob(); });
+
+// ── DEPARTAMENTOS ─────────────────────────────────────────────────────────────
+export const getDepartamentos = () =>
+  fetch(`${BASE}/api/v1/departamentos/listar`, { headers: h() }).then(json);
+
 // ── EMPLEADOS ─────────────────────────────────────────────────────────────────
 export const listarEmpleados = (page = 0, size = 20) =>
   fetch(`${BASE}/api/v1/empleados/listar?page=${page}&size=${size}`, { headers: h() }).then(json);

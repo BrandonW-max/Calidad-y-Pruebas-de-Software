@@ -158,7 +158,9 @@ public class BuscarEmpleadoUseCase {
                 contrato != null ? contrato.getNombreDepartamento() : null,
                 usuario != null ? usuario.getNombreRol() : null,
                 usuario != null ? usuario.getNombreUsuario() : null,
-                usuario != null ? usuario.getCorreoInst() : null
+                usuario != null ? usuario.getCorreoInst() : null,
+                contrato != null ? contrato.getSueldo() : null,
+                contrato != null ? contrato.getFechaInicio() : null
         );
     }
 }

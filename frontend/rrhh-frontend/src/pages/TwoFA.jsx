@@ -99,11 +99,11 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
 
         <h2 className="twofa-title">Verificación en dos pasos</h2>
         <p className="twofa-subtitle">
-          Ingrese el código de verificación enviado a su dispositivo o aplicación autenticadora.
+          Ingrese el código de 6 dígitos generado por su aplicación autenticadora.
         </p>
 
         <div className="twofa-info-box">
-          ℹ️ Hemos enviado un código de verificación a su dispositivo registrado.
+          ℹ️ Abra Google Authenticator o Authy y use el código de 6 dígitos que se muestra para su cuenta.
         </div>
 
         <p className="twofa-code-label">Código de verificación</p>
@@ -140,11 +140,11 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
         </button>
 
         <button className="twofa-resend" onClick={handleResend}>
-          🔄 Reenviar código
+          🔄 Limpiar campos
         </button>
 
         <p className="twofa-hint">
-          ¿No recibió el código? Verifique su dispositivo o reenvíelo.
+          El código se renueva cada 30 segundos en su aplicación autenticadora.
         </p>
       </div>
     </div>

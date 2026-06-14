@@ -13,6 +13,7 @@ import {
   registrarSancion,
   registrarAscenso,
   cambioSalarial,
+  getDepartamentos,
 } from "../services/api";
 
 const FORM_VACIO = {
@@ -24,6 +25,19 @@ const FORM_VACIO = {
 
 const PAGE_SIZES = [10, 25, 50];
 
+
+const DEPT_CARGOS = {
+  "Recursos Humanos":  ["Especialista RRHH", "Analista RRHH", "Coordinador RRHH", "Asistente RRHH", "Auxiliar RRHH", "Administrador RRHH"],
+  "Dirección General": ["Director General", "Subgerente", "Gerente Administrativo", "Asistente de Gerencia"],
+  "Emergencia":        ["Médico de Emergencia", "Paramédico", "Triagista", "Técnico de Emergencias"],
+  "Enfermería":        ["Enfermera Jefe", "Enfermera", "Enfermero", "Auxiliar de Enfermería"],
+  "Medicina":          ["Médico General", "Médico Especialista", "Médico Residente", "Médico de Guardia"],
+  "Administración":    ["Administrador", "Administradora", "Recepcionista", "Asistente Administrativo", "Secretaria"],
+  "Laboratorio":       ["Técnico de Laboratorio", "Analista de Laboratorio", "Biólogo", "Químico Farmacéutico"],
+  "Finanzas":          ["Contador", "Contadora", "Analista Financiero", "Tesorero", "Asistente Contable"],
+  "Radiología":        ["Radiólogo", "Técnico en Radiología", "Operador de Equipos de Imagen"],
+};
+
 export default function GestionEmpleados() {
   const [empleados,     setEmpleados]     = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -32,6 +46,9 @@ export default function GestionEmpleados() {
   const [totalElements, setTotalElements] = useState(0);
   const [page,          setPage]          = useState(0);
   const [pageSize,      setPageSize]      = useState(10);
+
+  // Departamentos (cargados del backend)
+  const [departamentos, setDepartamentos] = useState([]);
 
   // Filters
   const [searchName,  setSearchName]  = useState("");
@@ -60,6 +77,10 @@ export default function GestionEmpleados() {
   const dropRef = useRef(null);
 
   useEffect(() => { cargarEmpleados(); }, [page, pageSize]);
+
+  useEffect(() => {
+    getDepartamentos().then(setDepartamentos).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -97,7 +118,10 @@ export default function GestionEmpleados() {
       if (searchName) {
         data = await buscarEmpleados(searchName, 0);
       } else {
-        data = await buscarEmpleadosAvanzado({ estado: filterEstado, cargo: filterCargo });
+        const idDpto = filterArea
+          ? departamentos.find(d => d.nombre === filterArea)?.idDpto
+          : undefined;
+        data = await buscarEmpleadosAvanzado({ estado: filterEstado, cargo: filterCargo, idDpto });
       }
       const list = data.content ?? (Array.isArray(data) ? data : []);
       setEmpleados(list);
@@ -244,7 +268,7 @@ export default function GestionEmpleados() {
       "Nombre Completo": `${e.nombres ?? ""} ${e.apellidos ?? ""}`.trim(),
       "DNI":            e.numeroDi ?? "—",
       "Cargo":          e.cargo ?? "—",
-      "Área":           e.departamento ?? "—",
+      "Departamento":           e.departamento ?? "—",
       "Sueldo Base":    e.sueldo != null ? Number(e.sueldo).toFixed(2) : "—",
       "Estado":         e.estado ?? "—",
       "Tipo Contrato":  e.tipoContrato ?? "—",
@@ -271,7 +295,7 @@ export default function GestionEmpleados() {
               Administre la información de los empleados de la clínica.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", position: "relative", top: "10px" }}>
             <button className="btn btn-success" onClick={() => setModalNuevo(true)}>
               ＋ Nuevo Empleado
             </button>
@@ -293,21 +317,24 @@ export default function GestionEmpleados() {
             </select>
           </div>
           <div className="filter-group">
-            <label className="filter-label">Área</label>
-            <select className="filter-select" value={filterArea} onChange={e => setFilterArea(e.target.value)}>
-              <option value="">Todas</option>
-              <option value="Enfermería">Enfermería</option>
-              <option value="Medicina">Medicina</option>
-              <option value="Administración">Administración</option>
+            <label className="filter-label">Departamento</label>
+            <select className="filter-select" value={filterArea} onChange={e => { setFilterArea(e.target.value); setFilterCargo(""); }}>
+              <option value="">Todos</option>
+              {departamentos.map(d => (
+                <option key={d.idDpto} value={d.nombre}>{d.nombre}</option>
+              ))}
             </select>
           </div>
           <div className="filter-group">
             <label className="filter-label">Cargo</label>
             <select className="filter-select" value={filterCargo} onChange={e => setFilterCargo(e.target.value)}>
               <option value="">Todos</option>
-              <option value="Médico General">Médico General</option>
-              <option value="Enfermero">Enfermero</option>
-              <option value="Administrador">Administrador</option>
+              {(filterArea && DEPT_CARGOS[filterArea]
+                ? DEPT_CARGOS[filterArea]
+                : [...new Set(empleados.map(e => e.cargo).filter(Boolean))].sort()
+              ).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </div>
           <div className="filter-group">
@@ -327,7 +354,7 @@ export default function GestionEmpleados() {
               <span className="filter-search-icon">🔍</span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", position: "relative", top: "-5px" }}>
             <button className="btn btn-primary btn-sm" onClick={handleBuscar}>Buscar</button>
             <button className="btn btn-secondary btn-sm" onClick={handleLimpiar}>☰ Limpiar filtros</button>
           </div>
@@ -342,21 +369,17 @@ export default function GestionEmpleados() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: "36px" }}><input type="checkbox" /></th>
-                    <th>ID ↕</th>
                     <th>Nombre Completo</th>
-                    <th>DNI</th>
+                    <th>Tipo Doc / DNI</th>
+                    <th>Departamento</th>
                     <th>Cargo</th>
-                    <th>Área</th>
-                    <th>Salario</th>
                     <th>Estado</th>
-                    <th>Fecha Ingreso</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {empleados.length === 0 ? (
-                    <tr><td colSpan={10}>
+                    <tr><td colSpan={6}>
                       <div className="empty-state">
                         <div className="empty-state-icon">🔍</div>
                         <p>No se encontraron empleados</p>
@@ -364,24 +387,16 @@ export default function GestionEmpleados() {
                     </td></tr>
                   ) : empleados.map(emp => (
                     <tr key={emp.idEmpleado}>
-                      <td><input type="checkbox" /></td>
-                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{emp.idEmpleado}</td>
-                      <td>
-                        <span className="emp-name-link" onClick={() => setModalEditar({ ...emp })}>
-                          {emp.nombres} {emp.apellidos}
-                        </span>
+                      <td>{emp.nombres} {emp.apellidos}</td>
+                      <td style={{ fontSize: "13px", color: "var(--text-2)" }}>
+                        {emp.docIdentidad ?? "DNI"} · {emp.numeroDi}
                       </td>
-                      <td style={{ fontSize: "13px", color: "var(--text-2)" }}>{emp.numeroDi}</td>
-                      <td>{emp.cargo}</td>
                       <td>{emp.departamento ?? "—"}</td>
-                      <td style={{ fontWeight: 600 }}>{formatSueldo(emp.sueldo)}</td>
+                      <td>{emp.cargo ?? "—"}</td>
                       <td>
                         <span className={`emp-status-dot ${emp.estado === "ACTIVO" ? "emp-status-active" : "emp-status-inactive"}`}>
                           {emp.estado === "ACTIVO" ? "Activo" : "Inactivo"}
                         </span>
-                      </td>
-                      <td style={{ fontSize: "12px", color: "var(--text-3)" }}>
-                        {formatFecha(emp.fechaInicio)}
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
@@ -525,7 +540,13 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Cargo *</label>
-                    <input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} placeholder="Ej: Enfermero, Médico..." required />
+                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required>
+                      <option value="">Seleccione cargo</option>
+                      {(form.idDpto
+                        ? DEPT_CARGOS[departamentos.find(d => d.idDpto === parseInt(form.idDpto))?.nombre] ?? []
+                        : []
+                      ).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Tipo de Contrato</label>
@@ -545,8 +566,13 @@ export default function GestionEmpleados() {
                     <input type="number" step="0.01" min="0" value={form.sueldo} onChange={e => setForm({ ...form, sueldo: e.target.value })} placeholder="0.00" required />
                   </div>
                   <div className="form-group">
-                    <label>ID Departamento *</label>
-                    <input type="number" value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value })} placeholder="Ej: 1" required />
+                    <label>Departamento *</label>
+                    <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required>
+                      <option value="">Seleccione departamento</option>
+                      {departamentos.map(d => (
+                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Contraseña Inicial</label>
