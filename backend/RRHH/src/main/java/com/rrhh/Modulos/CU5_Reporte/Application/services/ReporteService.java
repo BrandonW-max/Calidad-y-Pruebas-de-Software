@@ -78,7 +78,7 @@ public class ReporteService implements IReporteService {
         );
 
         if (empleados.isEmpty()) {
-            throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
+            return guardarYRetornar("EMPLEADOS", filtro, java.util.List.of(), idUsuario);
         }
 
         validarConsistenciaDatos("EMPLEADOS", empleados);
@@ -111,7 +111,7 @@ public class ReporteService implements IReporteService {
         );
 
         if (registros.isEmpty()) {
-            throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
+            return guardarYRetornar("ASISTENCIA", filtro, java.util.List.of(), idUsuario);
         }
 
         validarConsistenciaDatos("ASISTENCIA", registros);
@@ -149,7 +149,7 @@ public class ReporteService implements IReporteService {
         );
 
         if (nominas.isEmpty()) {
-            throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
+            return guardarYRetornar("NOMINA", filtro, java.util.List.of(), idUsuario);
         }
 
         validarConsistenciaDatos("NOMINA", nominas);
@@ -189,7 +189,7 @@ public class ReporteService implements IReporteService {
         );
 
         if (solicitudes.isEmpty()) {
-            throw new IllegalStateException("No se encontraron datos para los filtros seleccionados.");
+            return guardarYRetornar("SOLICITUDES", filtro, java.util.List.of(), idUsuario);
         }
 
         validarConsistenciaDatos("SOLICITUDES", solicitudes);
@@ -232,8 +232,7 @@ public class ReporteService implements IReporteService {
 
     private void validarConsistenciaDatos(String tipoReporte, List<?> datos) {
         if (datos == null || datos.isEmpty()) {
-            throw new IllegalStateException("Error de consistencia: el reporte " + tipoReporte +
-                    " no contiene datos.");
+            return;
         }
 
         int size = datos.size();

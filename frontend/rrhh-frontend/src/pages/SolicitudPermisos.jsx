@@ -16,10 +16,13 @@ const STEP_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
 const ESTADO_FLOW_STEP = {
   PENDIENTE:   0,
+  OBSERVADO:   0,
   EN_REVISION: 1,
+  PROCESADO:   2,
   APROBADO:    3,
+  APROBADA:    3,
   RECHAZADO:   3,
-  PROCESADO:   3,
+  RECHAZADA:   3,
 };
 
 function FlowBar({ estadoSolicitud }) {
@@ -70,10 +73,10 @@ function FlowBar({ estadoSolicitud }) {
 }
 
 const ESTADO_TAB_CONFIG = {
-  PENDIENTE:   { label: "Pendiente",   icon: "⏳", color: "#d97706", bg: "#fef3c7", activeBg: "#f59e0b" },
-  EN_REVISION: { label: "En Revisión", icon: "🔍", color: "#2563eb", bg: "#dbeafe", activeBg: "#3b82f6" },
-  APROBADO:    { label: "Aprobado",    icon: "✅", color: "#16a34a", bg: "#dcfce7", activeBg: "#22c55e" },
-  RECHAZADO:   { label: "Rechazado",   icon: "❌", color: "#dc2626", bg: "#fee2e2", activeBg: "#ef4444" },
+  PENDIENTE: { label: "Pendiente",   icon: "⏳", color: "#d97706", bg: "#fef3c7", activeBg: "#f59e0b" },
+  PROCESADO: { label: "En Revisión", icon: "🔍", color: "#2563eb", bg: "#dbeafe", activeBg: "#3b82f6" },
+  APROBADA:  { label: "Aprobado",    icon: "✅", color: "#16a34a", bg: "#dcfce7", activeBg: "#22c55e" },
+  RECHAZADA: { label: "Rechazado",   icon: "❌", color: "#dc2626", bg: "#fee2e2", activeBg: "#ef4444" },
 };
 
 const TIPO_LABELS = {
@@ -86,10 +89,13 @@ const TIPO_LABELS = {
 const estadoBadge = (estado) => {
   const m = {
     PENDIENTE:   "badge-sol-pendiente",
+    OBSERVADO:   "badge-sol-pendiente",
     EN_REVISION: "badge-sol-gerencia",
-    APROBADO:    "badge-sol-aprobada",
-    RECHAZADO:   "badge-sol-rechazada",
     PROCESADO:   "badge-sol-gerencia",
+    APROBADO:    "badge-sol-aprobada",
+    APROBADA:    "badge-sol-aprobada",
+    RECHAZADO:   "badge-sol-rechazada",
+    RECHAZADA:   "badge-sol-rechazada",
   };
   return m[estado] ?? "badge-gray";
 };
@@ -319,9 +325,9 @@ function VistaRRHH() {
 
   const stats = [
     { label: "Pendientes",  value: contarPorEstado("PENDIENTE"),  color: "#f59e0b" },
-    { label: "En revisión", value: solicitudes.length,            color: "#3b82f6" },
-    { label: "Aprobadas",   value: contarPorEstado("APROBADO"),   color: "#10b981" },
-    { label: "Rechazadas",  value: contarPorEstado("RECHAZADO"),  color: "#ef4444" },
+    { label: "En revisión", value: contarPorEstado("PROCESADO"),  color: "#3b82f6" },
+    { label: "Aprobadas",   value: contarPorEstado("APROBADA"),   color: "#10b981" },
+    { label: "Rechazadas",  value: contarPorEstado("RECHAZADA"),  color: "#ef4444" },
   ];
 
   return (
@@ -353,7 +359,7 @@ function VistaRRHH() {
         <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["PENDIENTE", "EN_REVISION", "APROBADO", "RECHAZADO"].map(e => {
+              {["PENDIENTE", "PROCESADO", "APROBADA", "RECHAZADA"].map(e => {
                 const cfg = ESTADO_TAB_CONFIG[e];
                 const isActive = filtroEstado === e;
                 return (
@@ -404,7 +410,7 @@ function VistaRRHH() {
                         <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
                         <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
                         <td>
-                          {s.estado === "PENDIENTE" && (
+                          {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
                             <button className="btn btn-primary btn-sm"
                               onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
                               Revisar
@@ -466,26 +472,29 @@ function VistaRRHH() {
    VISTA GERENCIA
 ══════════════════════════════════════════════════════════ */
 function VistaGerencia() {
-  const [solicitudes,   setSolicitudes]   = useState([]);
-  const [solAprobadas,  setSolAprobadas]  = useState([]);
-  const [loading,       setLoading]       = useState(false);
-  const [mensaje,       setMensaje]       = useState("");
-  const [error,         setError]         = useState("");
-  const [solicitudActiva, setSolicitudActiva] = useState(null);
-  const [modalDecision, setModalDecision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
-  const [procesando,    setProcesando]    = useState(false);
+  const [solicitudes,    setSolicitudes]    = useState([]);
+  const [solAprobadas,   setSolAprobadas]   = useState([]);
+  const [solRechazadas,  setSolRechazadas]  = useState([]);
+  const [loading,        setLoading]        = useState(false);
+  const [mensaje,        setMensaje]        = useState("");
+  const [error,          setError]          = useState("");
+  const [solicitudActiva,  setSolicitudActiva]  = useState(null);
+  const [modalDecision,    setModalDecision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
+  const [procesando,       setProcesando]       = useState(false);
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
   const cargarSolicitudes = async () => {
     setLoading(true); setError("");
     try {
-      const [enRev, aprob] = await Promise.all([
-        getSolicitudesPorEstado("EN_REVISION"),
-        getSolicitudesPorEstado("APROBADO"),
+      const [enRev, aprob, recha] = await Promise.all([
+        getSolicitudesPorEstado("PROCESADO"),
+        getSolicitudesPorEstado("APROBADA"),
+        getSolicitudesPorEstado("RECHAZADA"),
       ]);
       setSolicitudes(Array.isArray(enRev) ? enRev : []);
       setSolAprobadas(Array.isArray(aprob) ? aprob : []);
+      setSolRechazadas(Array.isArray(recha) ? recha : []);
     } catch { setError("No se pudieron cargar las solicitudes"); }
     finally  { setLoading(false); }
   };
@@ -616,6 +625,51 @@ function VistaGerencia() {
                           <td>{s.fechaFin ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
                           <td style={{ fontSize: 12, color: "#16a34a" }}>{s.respuesta ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabla: Rechazadas ── */}
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ margin: "0 0 10px", fontSize: 15, color: "#ef4444", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+            Solicitudes Rechazadas ({solRechazadas.length})
+          </h3>
+          <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="table-wrapper" style={{ marginBottom: 0 }}>
+              {loading ? (
+                <div className="loading-text">Actualizando solicitudes rechazadas...</div>
+              ) : solRechazadas.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📋</div>
+                  <p>No hay solicitudes rechazadas</p>
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Motivo del Rechazo</th></tr>
+                  </thead>
+                  <tbody>
+                    {solRechazadas.map(s => {
+                      const id = s.idSolicitud ?? s.id;
+                      const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                      return (
+                        <tr key={id}
+                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          style={{ cursor: "pointer", background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
+                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{id}</td>
+                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td>{s.fechaInicio ?? "—"}</td>
+                          <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
+                          <td style={{ fontSize: 12, color: "#dc2626" }}>{s.respuesta ?? "—"}</td>
                         </tr>
                       );
                     })}
