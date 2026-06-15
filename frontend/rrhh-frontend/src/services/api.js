@@ -10,7 +10,13 @@ export const clearSession  = () => sessionStorage.removeItem('user');
 const CRED = 'include';
 
 const json = (r) => {
-  if (!r.ok && r.status !== 400 && r.status !== 401) throw new Error(`HTTP ${r.status}`);
+  if (r.status === 403) {
+    clearSession();
+    window.location.href = '/';
+    throw new Error('Sesión expirada');
+  }
+  // Para 400, 500 y similares intentamos parsear el JSON del backend antes de fallar
+  if (!r.ok) return r.json().catch(() => { throw new Error(`HTTP ${r.status}`); });
   return r.json();
 };
 
@@ -21,9 +27,30 @@ const h = () => {
   return headers;
 };
 
-const f = (url, opts = {}) => fetch(url, { ...opts, credentials: CRED });
+const f = (url, opts = {}) =>
+  fetch(url, { ...opts, credentials: CRED }).then(r => {
+    const newToken = r.headers.get('X-New-Token');
+    if (newToken) {
+      const user = getUser();
+      saveSession(newToken, user.rol, user.username, user.idEmpleado);
+    }
+    return r;
+  });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+export const solicitarRecuperacion = (identifier) =>
+  fetch(`${BASE}/api/v1/auth/recovery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier }),
+  }).then(r => r.json().catch(() => { throw new Error(`HTTP ${r.status}`); }));
+
+export const resetPassword = (token, nuevaContrasenia, confirmarContrasenia) =>
+  fetch(`${BASE}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, nuevaContrasenia, confirmarContrasenia }),
+  }).then(r => r.json().catch(() => { throw new Error(`HTTP ${r.status}`); }));
 export const getMe = () =>
   f(`${BASE}/api/v1/auth/me`, { headers: { 'Content-Type': 'application/json' } }).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -50,6 +77,35 @@ export const logout = () =>
 export const enable2FA = (username) =>
   f(`${BASE}/api/v1/auth/enable-2fa/${username}`, { headers: h() })
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.blob(); });
+
+// ── HORARIOS ──────────────────────────────────────────────────────────────────
+export const getHorarios = () =>
+  f(`${BASE}/api/v1/horarios`, { headers: h() }).then(json);
+
+export const crearHorario = (dto) =>
+  f(`${BASE}/api/v1/horarios`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
+  }).then(json);
+
+export const actualizarHorario = (id, dto) =>
+  f(`${BASE}/api/v1/horarios/${id}`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
+  }).then(json);
+
+export const eliminarHorario = (id) =>
+  f(`${BASE}/api/v1/horarios/${id}`, { method: 'DELETE', headers: h() })
+    .then(r => r.status === 200 ? {} : r.json().catch(() => ({})));
+
+export const asignarHorario = (dto) =>
+  f(`${BASE}/api/v1/horarios/asignar`, {
+    method: 'POST', headers: h(), body: JSON.stringify(dto),
+  }).then(json);
+
+export const getAsignacionesEmpleado = (idEmpleado) =>
+  f(`${BASE}/api/v1/horarios/asignaciones/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+export const getAsignacionesActivas = () =>
+  f(`${BASE}/api/v1/horarios/asignaciones/activas`, { headers: h() }).then(json);
 
 // ── DEPARTAMENTOS ─────────────────────────────────────────────────────────────
 export const getDepartamentos = () =>

@@ -1,5 +1,5 @@
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { getUser, clearSession, enable2FA, verify2FA, saveSession, getMe } from "./services/api";
 import Login from "./pages/Login";
 import Acceso403 from "./pages/Acceso403";
@@ -13,6 +13,8 @@ import SolicitudPermisos from "./pages/SolicitudPermisos";
 import GenerarReportes from "./pages/GenerarReportes";
 import NominaEmpleado from "./pages/NominaEmpleado";
 import GerenciaJustificaciones from "./pages/GerenciaJustificaciones";
+import ResetPassword from "./pages/ResetPassword";
+import GestionHorarios from "./pages/GestionHorarios";
 import DevLogin from "./pages/DevLogin"; // ELIMINAR ANTES DE PRODUCCIÓN
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -63,6 +65,15 @@ function Setup2FAModal() {
   const [code,      setCode]      = useState('');
   const [codeError, setCodeError] = useState('');
   const user = getUser();
+  const location = useLocation();
+
+  // Re-check sessionStorage whenever the route changes (e.g., after login redirect)
+  useEffect(() => {
+    if (sessionStorage.getItem('show2FAReminder') === 'true') {
+      setVisible(true);
+      setStep(1);
+    }
+  }, [location.pathname]);
 
   const cerrar = () => {
     sessionStorage.removeItem('show2FAReminder');
@@ -228,8 +239,101 @@ function ProtectedRoute({ children, requiredRole }) {
   return children;
 }
 
+const WARNING_MS  = 10 * 60 * 1000; // 10 min → mostrar modal
+const LOGOUT_MS   = 15 * 60 * 1000; // 15 min → cerrar sesión
+const COUNTDOWN_S = 5 * 60;         // 5 min de cuenta regresiva
+
+function AfkModal({ countdown, onContinuar, onSalir }) {
+  const mins = String(Math.floor(countdown / 60)).padStart(2, '0');
+  const secs = String(countdown % 60).padStart(2, '0');
+  const pct   = (countdown / COUNTDOWN_S) * 100;
+  const color = countdown <= 60 ? '#ef4444' : countdown <= 120 ? '#f97316' : '#2563eb';
+
+  const overlay = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 99999, fontFamily: "'Poppins', system-ui, sans-serif",
+  };
+  const box = {
+    background: '#fff', borderRadius: 18, padding: '40px 36px',
+    maxWidth: 420, width: '90%', textAlign: 'center',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+  };
+
+  return (
+    <div style={overlay}>
+      <div style={box}>
+        <div style={{ fontSize: 56, marginBottom: 8 }}>⏳</div>
+        <h2 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 20 }}>
+          ¿Sigues ahí?
+        </h2>
+        <p style={{ color: '#64748b', fontSize: 14, margin: '0 0 24px', lineHeight: 1.6 }}>
+          No se detectó actividad en los últimos 10 minutos.<br />
+          La sesión se cerrará automáticamente en:
+        </p>
+
+        {/* Círculo de cuenta regresiva */}
+        <div style={{ position: 'relative', width: 110, height: 110, margin: '0 auto 24px' }}>
+          <svg width="110" height="110" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="55" cy="55" r="48" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+            <circle
+              cx="55" cy="55" r="48" fill="none"
+              stroke={color} strokeWidth="8"
+              strokeDasharray={`${2 * Math.PI * 48}`}
+              strokeDashoffset={`${2 * Math.PI * 48 * (1 - pct / 100)}`}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexDirection: 'column',
+          }}>
+            <span style={{ fontSize: 24, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
+              {mins}:{secs}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <button
+            onClick={onSalir}
+            style={{
+              flex: 1, padding: '12px 0', borderRadius: 10, border: 'none',
+              background: '#ef4444', color: '#fff', fontWeight: 600,
+              fontSize: 14, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
+            }}
+          >
+            🚪 Cerrar sesión
+          </button>
+          <button
+            onClick={onContinuar}
+            style={{
+              flex: 1, padding: '12px 0', borderRadius: 10, border: 'none',
+              background: '#16a34a', color: '#fff', fontWeight: 600,
+              fontSize: 14, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(22,163,74,0.3)',
+            }}
+          >
+            ✅ Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const navigate = useNavigate();
+  const [showAfkModal, setShowAfkModal]   = useState(false);
+  const [afkCountdown, setAfkCountdown]   = useState(COUNTDOWN_S);
+  const warningTimerRef      = useRef(null);
+  const logoutTimerRef       = useRef(null);
+  const countdownIntervalRef = useRef(null);
+  const resetAfkRef          = useRef(null);
+  const showAfkModalRef      = useRef(false); // ref para leer en el event handler sin closure stale
 
   useEffect(() => {
     const user = getUser();
@@ -243,30 +347,82 @@ function App() {
     }
   }, [navigate]);
 
-  useEffect(() => {
-    let timer;
-    const reset = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => { clearSession(); navigate('/', { replace: true }); }, 15 * 60 * 1000);
-    };
-    ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.addEventListener(e, reset));
-    reset();
-    return () => {
-      clearTimeout(timer);
-      ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.removeEventListener(e, reset));
-    };
+  const handleLogout = useCallback(() => {
+    clearTimeout(warningTimerRef.current);
+    clearTimeout(logoutTimerRef.current);
+    clearInterval(countdownIntervalRef.current);
+    showAfkModalRef.current = false;
+    setShowAfkModal(false);
+    clearSession();
+    navigate('/', { replace: true });
   }, [navigate]);
+
+  const resetAfk = useCallback(() => {
+    clearTimeout(warningTimerRef.current);
+    clearTimeout(logoutTimerRef.current);
+    clearInterval(countdownIntervalRef.current);
+    showAfkModalRef.current = false;
+    setShowAfkModal(false);
+    setAfkCountdown(COUNTDOWN_S);
+
+    // A los 10 min → mostrar modal y arrancar countdown
+    warningTimerRef.current = setTimeout(() => {
+      showAfkModalRef.current = true;
+      setShowAfkModal(true);
+      setAfkCountdown(COUNTDOWN_S);
+      let remaining = COUNTDOWN_S;
+      countdownIntervalRef.current = setInterval(() => {
+        remaining -= 1;
+        setAfkCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(countdownIntervalRef.current);
+          handleLogout();
+        }
+      }, 1000);
+    }, WARNING_MS);
+
+    // A los 15 min → logout directo (seguro si el usuario ignora el modal)
+    logoutTimerRef.current = setTimeout(handleLogout, LOGOUT_MS);
+  }, [handleLogout]);
+
+  // Guardar referencia actualizada para el event handler
+  useEffect(() => { resetAfkRef.current = resetAfk; }, [resetAfk]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    // Usa el ref para evitar el closure stale de showAfkModal
+    const handler = () => {
+      if (!showAfkModalRef.current) resetAfkRef.current?.();
+    };
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    resetAfkRef.current?.();
+    return () => {
+      clearTimeout(warningTimerRef.current);
+      clearTimeout(logoutTimerRef.current);
+      clearInterval(countdownIntervalRef.current);
+      events.forEach(e => window.removeEventListener(e, handler));
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ErrorBoundary>
     <Setup2FAModal />
+    {showAfkModal && (
+      <AfkModal
+        countdown={afkCountdown}
+        onContinuar={resetAfk}
+        onSalir={handleLogout}
+      />
+    )}
     <Routes>
-      {/* Auth */}
+      {/* Auth (rutas públicas) */}
       <Route path="/" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* RRHH */}
       <Route path="/rrhh" element={<ProtectedRoute requiredRole="RRHH"><DashboardRRHH /></ProtectedRoute>} />
       <Route path="/rrhh/empleados" element={<ProtectedRoute requiredRole="RRHH"><GestionEmpleados /></ProtectedRoute>} />
+      <Route path="/rrhh/horarios" element={<ProtectedRoute requiredRole="RRHH"><GestionHorarios /></ProtectedRoute>} />
       <Route path="/rrhh/asistencia" element={<ProtectedRoute requiredRole="RRHH"><ControlAsistencia /></ProtectedRoute>} />
       <Route path="/rrhh/nomina" element={<ProtectedRoute requiredRole="RRHH"><CalculoNomina /></ProtectedRoute>} />
       <Route path="/rrhh/solicitudes" element={<ProtectedRoute requiredRole="RRHH"><SolicitudPermisos /></ProtectedRoute>} />

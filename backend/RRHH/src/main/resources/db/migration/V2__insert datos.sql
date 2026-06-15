@@ -217,16 +217,16 @@ ON CONFLICT (cod_dpto) DO NOTHING;
 -- =========================
 
 INSERT INTO empleado(nombres, apellidos, doc_identidad, numero_di, fecha_nac, sexo, estado_civil, direccion, correo, telefono, estado, creado_el, actualizado_el) VALUES
-    ('Ana',    'García López',    'DNI', '12345678', '1990-05-15', 'M', 'CASADO',    'Av. Lima 123, Miraflores',        'ana.garcia@hospital.pe',    '987654321', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Carlos', 'Méndez Torres',   'DNI', '23456789', '1985-08-22', 'H', 'CASADO',    'Jr. Arequipa 456, San Isidro',   'c.mendez@hospital.pe',      '976543210', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('María',  'Quispe Riva',     'DNI', '34567890', '1992-11-30', 'M', 'SOLTERO',   'Av. Tacna 789, Lima',            'm.quispe@hospital.pe',      '965432109', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Luis',   'Fernández Paz',   'DNI', '45678901', '1988-03-10', 'H', 'SOLTERO',   'Calle Miraflores 101, Lince',    'l.fernandez@hospital.pe',   '954321098', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Rosa',   'Vargas Chávez',   'DNI', '56789012', '1995-07-18', 'M', 'SOLTERO',   'Av. Brasil 202, Breña',          'r.vargas@hospital.pe',      '943210987', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Pedro',  'Ramos Soto',      'DNI', '67890123', '1982-12-05', 'H', 'CASADO',    'Jr. Cusco 303, La Victoria',     'p.ramos@hospital.pe',       '932109876', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Elena',  'Castro Neira',    'DNI', '78901234', '1987-04-25', 'M', 'CASADO',    'Av. Salaverry 404, Jesús María', 'e.castro@hospital.pe',      '921098765', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Jorge',  'Huamán Pinto',    'DNI', '89012345', '1990-09-12', 'H', 'SOLTERO',   'Jr. Puno 505, Lima',             'j.huaman@hospital.pe',      '910987654', 'DESVINCULADO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Sofía',  'Delgado Ríos',    'DNI', '90123456', '1998-02-28', 'M', 'SOLTERO',   'Av. Colonial 606, Pueblo Libre', 's.delgado@hospital.pe',     '909876543', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Miguel', 'Paredes Luna',    'DNI', '01234567', '1983-06-14', 'H', 'CASADO',    'Calle Piura 707, Magdalena',     'm.paredes@hospital.pe',     '998765432', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ('Ana',    'García López',    'DNI', '12345678', '1990-05-15', 'F', 'CASADO',    'Av. Lima 123, Miraflores',        'ana.garcia@hospital.pe',    '987654321', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Carlos', 'Méndez Torres',   'DNI', '23456789', '1985-08-22', 'M', 'CASADO',    'Jr. Arequipa 456, San Isidro',   'c.mendez@hospital.pe',      '976543210', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('María',  'Quispe Riva',     'DNI', '34567890', '1992-11-30', 'F', 'SOLTERO',   'Av. Tacna 789, Lima',            'm.quispe@hospital.pe',      '965432109', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Luis',   'Fernández Paz',   'DNI', '45678901', '1988-03-10', 'M', 'SOLTERO',   'Calle Miraflores 101, Lince',    'l.fernandez@hospital.pe',   '954321098', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Rosa',   'Vargas Chávez',   'DNI', '56789012', '1995-07-18', 'F', 'SOLTERO',   'Av. Brasil 202, Breña',          'r.vargas@hospital.pe',      '943210987', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Pedro',  'Ramos Soto',      'DNI', '67890123', '1982-12-05', 'M', 'CASADO',    'Jr. Cusco 303, La Victoria',     'p.ramos@hospital.pe',       '932109876', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Elena',  'Castro Neira',    'DNI', '78901234', '1987-04-25', 'F', 'CASADO',    'Av. Salaverry 404, Jesús María', 'e.castro@hospital.pe',      '921098765', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Jorge',  'Huamán Pinto',    'DNI', '89012345', '1990-09-12', 'M', 'SOLTERO',   'Jr. Puno 505, Lima',             'j.huaman@hospital.pe',      '910987654', 'DESVINCULADO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Sofía',  'Delgado Ríos',    'DNI', '90123456', '1998-02-28', 'F', 'SOLTERO',   'Av. Colonial 606, Pueblo Libre', 's.delgado@hospital.pe',     '909876543', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Miguel', 'Paredes Luna',    'DNI', '01234567', '1983-06-14', 'M', 'CASADO',    'Calle Piura 707, Magdalena',     'm.paredes@hospital.pe',     '998765432', 'ACTIVO',       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (numero_di) DO NOTHING;
 
 
@@ -376,11 +376,11 @@ FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '01234567' AND r.nombre_rol
 -- =========================
 
 INSERT INTO empleado(nombres, apellidos, doc_identidad, numero_di, fecha_nac, sexo, estado_civil, direccion, correo, telefono, estado, creado_el, actualizado_el) VALUES
-    ('Laura',   'Huanca Quispe',    'DNI', '11223300', '1989-03-22', 'M', 'CASADO',  'Av. Universitaria 150, Los Olivos',  'l.huanca@hospital.pe',   '981100001', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Marco',   'Díaz Villanueva',  'DNI', '22334400', '1991-07-14', 'H', 'SOLTERO', 'Jr. Huancavelica 280, Cercado',      'm.diaz@hospital.pe',      '981100002', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Isabel',  'Torres Mamani',    'DNI', '33445500', '1994-11-08', 'M', 'SOLTERO', 'Av. Próceres 440, San Juan de Lurigancho', 'i.torres@hospital.pe', '981100003', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Rodrigo', 'Benítez Lima',     'DNI', '44556600', '1986-05-30', 'H', 'CASADO',  'Calle Las Flores 62, Surco',         'r.benitez@hospital.pe',   '981100004', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Claudia', 'Morales Vásquez',  'DNI', '55667700', '1993-09-17', 'M', 'SOLTERO', 'Av. Angamos 311, Surquillo',         'c.morales@hospital.pe',   '981100005', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ('Laura',   'Huanca Quispe',    'DNI', '11223300', '1989-03-22', 'F', 'CASADO',  'Av. Universitaria 150, Los Olivos',  'l.huanca@hospital.pe',   '981100001', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Marco',   'Díaz Villanueva',  'DNI', '22334400', '1991-07-14', 'M', 'SOLTERO', 'Jr. Huancavelica 280, Cercado',      'm.diaz@hospital.pe',      '981100002', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Isabel',  'Torres Mamani',    'DNI', '33445500', '1994-11-08', 'F', 'SOLTERO', 'Av. Próceres 440, San Juan de Lurigancho', 'i.torres@hospital.pe', '981100003', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Rodrigo', 'Benítez Lima',     'DNI', '44556600', '1986-05-30', 'M', 'CASADO',  'Calle Las Flores 62, Surco',         'r.benitez@hospital.pe',   '981100004', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Claudia', 'Morales Vásquez',  'DNI', '55667700', '1993-09-17', 'F', 'SOLTERO', 'Av. Angamos 311, Surquillo',         'c.morales@hospital.pe',   '981100005', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (numero_di) DO NOTHING;
 
 
@@ -456,9 +456,9 @@ FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '55667700' AND r.nombre_rol
 -- =========================
 
 INSERT INTO empleado(nombres, apellidos, doc_identidad, numero_di, fecha_nac, sexo, estado_civil, direccion, correo, telefono, estado, creado_el, actualizado_el) VALUES
-    ('Fernando',   'Castillo Ruiz',   'DNI', '66778800', '1975-04-10', 'H', 'CASADO',  'Av. La Molina 520, La Molina',   'f.castillo@hospital.pe',  '991200001', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Patricia',   'Medina Solís',    'DNI', '77889900', '1980-08-25', 'M', 'CASADO',  'Jr. Monte Bello 89, Surco',      'p.medina@hospital.pe',    '991200002', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('Alejandro',  'Vargas Flores',   'DNI', '88990011', '1978-12-03', 'H', 'CASADO',  'Av. El Polo 740, Surco',         'a.vargas@hospital.pe',    '991200003', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ('Fernando',   'Castillo Ruiz',   'DNI', '66778800', '1975-04-10', 'M', 'CASADO',  'Av. La Molina 520, La Molina',   'f.castillo@hospital.pe',  '991200001', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Patricia',   'Medina Solís',    'DNI', '77889900', '1980-08-25', 'F', 'CASADO',  'Jr. Monte Bello 89, Surco',      'p.medina@hospital.pe',    '991200002', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Alejandro',  'Vargas Flores',   'DNI', '88990011', '1978-12-03', 'M', 'CASADO',  'Av. El Polo 740, Surco',         'a.vargas@hospital.pe',    '991200003', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (numero_di) DO NOTHING;
 
 
@@ -1219,3 +1219,59 @@ JOIN empleado e ON e.numero_di = d.numero_di
 WHERE NOT EXISTS (
     SELECT 1 FROM nomina n WHERE n.id_empleado = e.id_empleado AND n.periodo = '2026-06'
 );
+
+
+-- =========================
+-- HORARIOS BASE
+-- =========================
+
+INSERT INTO horario(nombre_turno, hora_entrada, hora_salida, tolerancia, umbral_extra, activo, creado_el, actualizado_el)
+SELECT 'Turno Mañana', '07:00', '15:00', 10, 60, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM horario WHERE nombre_turno = 'Turno Mañana');
+
+INSERT INTO horario(nombre_turno, hora_entrada, hora_salida, tolerancia, umbral_extra, activo, creado_el, actualizado_el)
+SELECT 'Turno Tarde', '15:00', '23:00', 10, 60, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM horario WHERE nombre_turno = 'Turno Tarde');
+
+INSERT INTO horario(nombre_turno, hora_entrada, hora_salida, tolerancia, umbral_extra, activo, creado_el, actualizado_el)
+SELECT 'Turno Noche', '23:00', '07:00', 10, 60, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM horario WHERE nombre_turno = 'Turno Noche');
+
+
+-- =========================
+-- ASIGNACIONES DE HORARIO
+-- Nota: fecha_desde = CURRENT_DATE para no interferir con los registros históricos
+--       de asistencia del mes de mayo 2026 que ya tienen minutos_tardanza calculados.
+-- =========================
+
+-- Turno Mañana: Admin RRHH, Ana García (ENF), Carlos Méndez (MED), María Quispe (ADM),
+--               Luis Fernández (LAB), Elena Castro (FIN), Sofía Delgado (ADM),
+--               Laura Huanca (RRHH), Marco Díaz (RRHH), Isabel Torres (RRHH),
+--               Rodrigo Benítez (RRHH), Claudia Morales (RRHH),
+--               Fernando Castillo (DIR), Patricia Medina (DIR), Alejandro Vargas (DIR)
+
+INSERT INTO asignacion_horario(id_empleado, id_horario, fecha_desde, fecha_hasta, es_temporal, activo, creado_el, actualizado_el)
+SELECT e.id_empleado, h.id_horario, CURRENT_DATE, NULL, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e
+CROSS JOIN horario h
+WHERE h.nombre_turno = 'Turno Mañana'
+  AND e.numero_di IN ('00000001','12345678','23456789','34567890','45678901',
+                      '78901234','90123456','11223300','22334400','33445500',
+                      '44556600','55667700','66778800','77889900','88990011')
+  AND NOT EXISTS (
+      SELECT 1 FROM asignacion_horario a
+      WHERE a.id_empleado = e.id_empleado AND a.activo = true
+  );
+
+-- Turno Tarde: Rosa Vargas (ENF), Pedro Ramos (MED), Miguel Paredes (RAD)
+
+INSERT INTO asignacion_horario(id_empleado, id_horario, fecha_desde, fecha_hasta, es_temporal, activo, creado_el, actualizado_el)
+SELECT e.id_empleado, h.id_horario, CURRENT_DATE, NULL, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e
+CROSS JOIN horario h
+WHERE h.nombre_turno = 'Turno Tarde'
+  AND e.numero_di IN ('56789012','67890123','01234567')
+  AND NOT EXISTS (
+      SELECT 1 FROM asignacion_horario a
+      WHERE a.id_empleado = e.id_empleado AND a.activo = true
+  );

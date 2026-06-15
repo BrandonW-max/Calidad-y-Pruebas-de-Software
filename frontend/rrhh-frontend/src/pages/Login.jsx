@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
-import { login, saveSession, getUser } from "../services/api";
+import { login, saveSession, getUser, solicitarRecuperacion } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,9 +14,11 @@ export default function Login() {
   const [intentos, setIntentos]     = useState(null);
   const [show2FA,  setShow2FA]      = useState(false);
   const [resetKey, setResetKey]       = useState(0);
-  const [showForgot,   setShowForgot] = useState(false);
-  const [forgotInput,  setForgotInput]= useState("");
-  const [forgotOk,     setForgotOk]   = useState(false);
+  const [showForgot,    setShowForgot]   = useState(false);
+  const [forgotInput,   setForgotInput]  = useState("");
+  const [forgotOk,      setForgotOk]    = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError,   setForgotError]  = useState("");
 
   useEffect(() => {
     const user = getUser();
@@ -55,7 +57,31 @@ export default function Login() {
     }
   };
 
-  const cerrarForgot = () => { setShowForgot(false); setForgotInput(""); setForgotOk(false); };
+  const cerrarForgot = () => {
+    setShowForgot(false);
+    setForgotInput("");
+    setForgotOk(false);
+    setForgotError("");
+    setForgotLoading(false);
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+    try {
+      const data = await solicitarRecuperacion(forgotInput.trim());
+      if (data.success) {
+        setForgotOk(true);
+      } else {
+        setForgotError(data.message || "No se pudo procesar la solicitud.");
+      }
+    } catch {
+      setForgotError("Error de conexión con el servidor.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   return (
     <div className="login-page">
@@ -157,27 +183,33 @@ export default function Login() {
             {!forgotOk ? (
               <>
                 <p>Ingrese su usuario o correo electrónico registrado. Le enviaremos las instrucciones de recuperación.</p>
-                <form onSubmit={e => { e.preventDefault(); setForgotOk(true); }}>
+                <form onSubmit={handleForgotSubmit}>
                   <div className="login-field">
                     <label>Usuario o correo</label>
                     <input
                       type="text"
                       placeholder="Ingrese su usuario o correo"
                       value={forgotInput}
-                      onChange={e => setForgotInput(e.target.value)}
+                      onChange={e => { setForgotInput(e.target.value); setForgotError(""); }}
                       required autoFocus
+                      disabled={forgotLoading}
                     />
                   </div>
+                  {forgotError && (
+                    <div className="login-error" style={{ margin: "8px 0 0" }}>⚠️ {forgotError}</div>
+                  )}
                   <div className="login-modal-actions">
-                    <button type="button" className="login-modal-btn-secondary" onClick={cerrarForgot}>Cancelar</button>
-                    <button type="submit" className="login-btn" style={{ margin: 0 }}>Enviar instrucciones</button>
+                    <button type="button" className="login-modal-btn-secondary" onClick={cerrarForgot} disabled={forgotLoading}>Cancelar</button>
+                    <button type="submit" className="login-btn" style={{ margin: 0 }} disabled={forgotLoading || !forgotInput.trim()}>
+                      {forgotLoading ? "Enviando..." : "Enviar instrucciones"}
+                    </button>
                   </div>
                 </form>
               </>
             ) : (
               <>
                 <div className="login-modal-success">
-                  ✅ Si su usuario está registrado en el sistema, recibirá las instrucciones en el correo asociado.
+                  ✅ Si su usuario o correo está registrado en el sistema, recibirá las instrucciones en su correo institucional.
                 </div>
                 <div className="login-modal-actions">
                   <button className="login-btn" style={{ margin: 0 }} onClick={cerrarForgot}>Cerrar</button>

@@ -1,5 +1,6 @@
 package com.rrhh.Shared.persistence;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,13 +48,11 @@ public class HorarioModel {
     @Column(name = "actualizado_el")
     private LocalDateTime actualizadoEl = LocalDateTime.now();
 
-    // =========================
-    // RELACIONES
-    // =========================
-
+    @JsonIgnore
     @OneToMany(mappedBy = "horario", fetch = FetchType.LAZY)
     private List<AsignacionHorarioModel> asignacionesHorario;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "horario", fetch = FetchType.LAZY)
     private List<RegistroAsistenciaModel> registrosAsistencia;
 }

@@ -27,7 +27,19 @@ public interface JpaUsuarioRepository extends JpaRepository<UsuarioModel, Long> 
         WHERE LOWER(e.correo) = LOWER(:correo)
            OR LOWER(u.correoInst) = LOWER(:correo)
         """)
-Optional<UsuarioModel> findByCorreoPersonalOInstitucional(
-        @Param("correo") String correo
-);
+    Optional<UsuarioModel> findByCorreoPersonalOInstitucional(
+            @Param("correo") String correo
+    );
+
+    @Query("""
+        SELECT u
+        FROM UsuarioModel u
+        LEFT JOIN FETCH u.empleado e
+        WHERE LOWER(u.nombreUsuario) = LOWER(:identifier)
+           OR LOWER(u.correoInst) = LOWER(:identifier)
+           OR (e IS NOT NULL AND LOWER(e.correo) = LOWER(:identifier))
+        """)
+    Optional<UsuarioModel> findByIdentifier(
+            @Param("identifier") String identifier
+    );
 }

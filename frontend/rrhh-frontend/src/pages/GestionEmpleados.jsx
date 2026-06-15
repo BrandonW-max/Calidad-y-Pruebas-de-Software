@@ -15,13 +15,17 @@ import {
   cambioSalarial,
   getDepartamentos,
   getHistorialEmpleado,
+  getHorarios,
+  asignarHorario,
+  getAsignacionesEmpleado,
+  getAsignacionesActivas,
 } from "../services/api";
 
 const FORM_VACIO = {
   nombres: "", apellidos: "", docIdentidad: "DNI", numeroDi: "",
   fechaNac: "", sexo: "", estadoCivil: "", direccion: "",
   correo: "", telefono: "", cargo: "", tipoContrato: "",
-  fechaInicio: "", fechaFin: "", sueldo: "", idDpto: "", contrasenia: "",
+  fechaInicio: "", fechaFin: "", sueldo: "", idDpto: "",
 };
 
 const PAGE_SIZES = [10, 25, 50];
@@ -44,6 +48,7 @@ export default function GestionEmpleados() {
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
   const [mensaje,       setMensaje]       = useState("");
+  const [mensajeOk,     setMensajeOk]     = useState(true); // true=éxito, false=error
   const [totalElements, setTotalElements] = useState(0);
   const [page,          setPage]          = useState(0);
   const [pageSize,      setPageSize]      = useState(10);
@@ -74,6 +79,7 @@ export default function GestionEmpleados() {
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
   const [modalSueldo,     setModalSueldo]     = useState(false);
+  const [showFechas,      setShowFechas]      = useState(false);
   const [sueldoForm,      setSueldoForm]      = useState({
     sueldoBase: "", bonifAsistencia: 0, bonifFamiliar: 0, bonifExtraordinaria: 0,
     sistemaPensionario: "AFP", descuentoTardanza: 0, otrosDescuentos: 0,
@@ -89,8 +95,21 @@ export default function GestionEmpleados() {
   const [historialData,  setHistorialData]  = useState([]);
   const [historialLoad,  setHistorialLoad]  = useState(false);
 
+  // Horario
+  const [horarios,      setHorarios]      = useState([]);
+  const [turnosMap,     setTurnosMap]     = useState({});  // { idEmpleado: {nombreTurno, horaEntrada, horaSalida} }
+  const [modalHorario,  setModalHorario]  = useState({ open: false, empleado: null, asignaciones: [], loading: false });
+  const HORARIO_VACIO = { idHorario: "", fechaDesde: "", fechaHasta: "", esTemporal: false };
+  const [horarioForm,   setHorarioForm]   = useState(HORARIO_VACIO);
+
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
+    getHorarios().then(setHorarios).catch(() => {});
+    getAsignacionesActivas().then(lista => {
+      const map = {};
+      (lista || []).forEach(a => { map[a.idEmpleado] = a; });
+      setTurnosMap(map);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -158,19 +177,30 @@ export default function GestionEmpleados() {
     e.preventDefault();
     setMensaje("");
     try {
-      await registrarEmpleado({
+      const data = await registrarEmpleado({
         ...form,
         sueldo: parseFloat(form.sueldo),
         idDpto: parseInt(form.idDpto),
         fechaNac: form.fechaNac || null,
         fechaInicio: form.fechaInicio || null,
         fechaFin: form.fechaFin || null,
+        correo: form.correo || "",
+        estadoCivil: form.estadoCivil || null,
+        sexo: form.sexo || null,
+        contrasenia: form.numeroDi,
       });
+      if (!data?.success) {
+        setMensajeOk(false);
+        setMensaje(data?.message || "No se pudo registrar el empleado.");
+        return;
+      }
+      setMensajeOk(true);
       setMensaje("Empleado registrado correctamente");
       setForm(FORM_VACIO);
       setModalNuevo(false);
       cargarEmpleados();
     } catch {
+      setMensajeOk(false);
       setMensaje("Error al registrar empleado. Verifique los datos.");
     }
   };
@@ -265,6 +295,45 @@ export default function GestionEmpleados() {
 
   const openDropMenu = (id) => { setOpenDrop(openDrop === id ? null : id); };
 
+  const abrirModalHorario = async (emp) => {
+    setOpenDrop(null);
+    setHorarioForm(HORARIO_VACIO);
+    setModalHorario({ open: true, empleado: emp, asignaciones: [], loading: true });
+    try {
+      const data = await getAsignacionesEmpleado(emp.idEmpleado);
+      setModalHorario(m => ({ ...m, asignaciones: data || [], loading: false }));
+    } catch {
+      setModalHorario(m => ({ ...m, loading: false }));
+    }
+  };
+
+  const handleAsignarHorario = async (e) => {
+    e.preventDefault();
+    try {
+      await asignarHorario({
+        idEmpleado: modalHorario.empleado.idEmpleado,
+        idHorario:  Number(horarioForm.idHorario),
+        fechaDesde: horarioForm.fechaDesde,
+        fechaHasta: horarioForm.fechaHasta || null,
+        esTemporal: horarioForm.esTemporal,
+      });
+      // Refrescar historial en el modal
+      const data = await getAsignacionesEmpleado(modalHorario.empleado.idEmpleado);
+      setModalHorario(m => ({ ...m, asignaciones: data || [] }));
+      // Refrescar columna Turno en la tabla
+      const activas = await getAsignacionesActivas();
+      const map = {};
+      (activas || []).forEach(a => { map[a.idEmpleado] = a; });
+      setTurnosMap(map);
+      setHorarioForm(HORARIO_VACIO);
+      setMensaje("Horario asignado correctamente");
+      setMensajeOk(true);
+    } catch {
+      setMensaje("Error al asignar horario");
+      setMensajeOk(false);
+    }
+  };
+
   const abrirSueldoDetalle = () => {
     setSueldoForm(f => ({ ...f, sueldoBase: modalEditar?.sueldo ?? "" }));
     setModalSueldo(true);
@@ -321,14 +390,18 @@ export default function GestionEmpleados() {
             </p>
           </div>
           <div style={{ display: "flex", gap: "10px", position: "relative", top: "10px" }}>
-            <button className="btn btn-success" onClick={() => setModalNuevo(true)}>
+            <button className="btn btn-success" onClick={() => { setForm(FORM_VACIO); setShowFechas(false); setMensaje(""); setModalNuevo(true); }}>
               ＋ Nuevo Empleado
             </button>
             <button className="btn btn-primary" onClick={exportarEmpleados}>⬇ Exportar</button>
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {mensaje && (
+          <div className={`alert ${mensajeOk ? "alert-success" : "alert-warning"}`}>
+            {mensajeOk ? "✅" : "⚠️"} {mensaje}
+          </div>
+        )}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         {/* ── FILTER ROW ── */}
@@ -398,6 +471,7 @@ export default function GestionEmpleados() {
                     <th style={{ textAlign: "center" }}>Tipo Doc / DNI</th>
                     <th>Departamento</th>
                     <th>Cargo</th>
+                    <th style={{ textAlign: "center" }}>Turno</th>
                     <th style={{ textAlign: "center" }}>Estado</th>
                     <th style={{ textAlign: "center" }}>Acciones</th>
                   </tr>
@@ -408,7 +482,7 @@ export default function GestionEmpleados() {
                       ? empleados.filter(e => (e.docIdentidad ?? "DNI") === filterDocType)
                       : empleados;
                     if (visibles.length === 0) return (
-                      <tr><td colSpan={6}>
+                      <tr><td colSpan={7}>
                         <div className="empty-state">
                           <div className="empty-state-icon">🔍</div>
                           <p>No se encontraron empleados</p>
@@ -423,6 +497,23 @@ export default function GestionEmpleados() {
                       </td>
                       <td>{emp.departamento ?? "—"}</td>
                       <td>{emp.cargo ?? "—"}</td>
+                      <td style={{ textAlign: "center" }}>
+                        {turnosMap[emp.idEmpleado] ? (
+                          <span style={{
+                            display: "inline-flex", flexDirection: "column", alignItems: "center",
+                            gap: 1, fontSize: 11,
+                          }}>
+                            <span style={{ fontWeight: 600, color: "var(--primary)", fontSize: 12 }}>
+                              {turnosMap[emp.idEmpleado].nombreTurno}
+                            </span>
+                            <span style={{ color: "var(--text-3)" }}>
+                              {turnosMap[emp.idEmpleado].horaEntrada?.slice(0,5)} – {turnosMap[emp.idEmpleado].horaSalida?.slice(0,5)}
+                            </span>
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-3)", fontSize: 12 }}>—</span>
+                        )}
+                      </td>
                       <td>
                         <span className={`emp-status-dot ${emp.estado === "ACTIVO" ? "emp-status-active" : "emp-status-inactive"}`}>
                           {emp.estado === "ACTIVO" ? "Activo" : "Inactivo"}
@@ -463,6 +554,10 @@ export default function GestionEmpleados() {
                                 <div className="action-drop-item drop-blue"
                                   onClick={() => { setModalCambio({ open: true, id: emp.idEmpleado }); setCambioForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   💲 Cambio salarial
+                                </div>
+                                <div className="action-drop-item drop-blue"
+                                  onClick={() => abrirModalHorario(emp)}>
+                                  📅 Asignar horario
                                 </div>
                                 <div className="action-drop-item drop-gray"
                                   onClick={async () => {
@@ -531,11 +626,11 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: NUEVO EMPLEADO ══ */}
       {modalNuevo && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNuevo(false)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && (setModalNuevo(false), setForm(FORM_VACIO), setShowFechas(false))}>
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>➕ Registrar Nuevo Empleado</h3></div>
-              <button className="modal-close" onClick={() => setModalNuevo(false)}>×</button>
+              <button className="modal-close" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-info">
@@ -563,51 +658,38 @@ export default function GestionEmpleados() {
                     <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })} placeholder="Apellidos completos" required />
                   </div>
                   <div className="form-group">
-                    <label>Fecha de Nacimiento</label>
-                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} />
+                    <label>Fecha de Nacimiento *</label>
+                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} required />
                   </div>
                   <div className="form-group">
-                    <label>Sexo</label>
-                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })}>
+                    <label>Sexo *</label>
+                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })} required>
                       <option value="">Seleccione</option>
                       <option value="M">Masculino</option>
                       <option value="F">Femenino</option>
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Correo Electrónico</label>
+                    <label>Estado Civil</label>
+                    <select value={form.estadoCivil} onChange={e => setForm({ ...form, estadoCivil: e.target.value })}>
+                      <option value="">Seleccione</option>
+                      <option value="SOLTERO">Soltero/a</option>
+                      <option value="CASADO">Casado/a</option>
+                      <option value="CONVIVIENTE">Conviviente</option>
+                      <option value="DIVORCIADO">Divorciado/a</option>
+                      <option value="VIUDO">Viudo/a</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Correo Personal</label>
                     <input type="email" value={form.correo} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="correo@ejemplo.com" />
+                    <small style={{ color: "var(--text-3)", fontSize: "11px" }}>
+                      El correo institucional se genera automáticamente al registrar.
+                    </small>
                   </div>
                   <div className="form-group">
                     <label>Teléfono</label>
                     <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999" />
-                  </div>
-                  <div className="form-group">
-                    <label>Cargo *</label>
-                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required>
-                      <option value="">Seleccione cargo</option>
-                      {(form.idDpto
-                        ? DEPT_CARGOS[departamentos.find(d => d.idDpto === parseInt(form.idDpto))?.nombre] ?? []
-                        : []
-                      ).map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Tipo de Contrato</label>
-                    <select value={form.tipoContrato} onChange={e => setForm({ ...form, tipoContrato: e.target.value })}>
-                      <option value="">Seleccione</option>
-                      <option value="PLAZO_FIJO">Plazo fijo</option>
-                      <option value="INDEFINIDO">Indefinido</option>
-                      <option value="SERVICIOS">Por servicio</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Fecha Inicio Contrato</label>
-                    <input type="date" value={form.fechaInicio} onChange={e => setForm({ ...form, fechaInicio: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Sueldo Base (S/) *</label>
-                    <input type="number" step="0.01" min="0" value={form.sueldo} onChange={e => setForm({ ...form, sueldo: e.target.value })} placeholder="0.00" required />
                   </div>
                   <div className="form-group">
                     <label>Departamento *</label>
@@ -619,14 +701,71 @@ export default function GestionEmpleados() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Contraseña Inicial</label>
-                    <input type="password" value={form.contrasenia} onChange={e => setForm({ ...form, contrasenia: e.target.value })} placeholder="Contraseña de acceso" />
+                    <label>Cargo *</label>
+                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required>
+                      <option value="">Seleccione cargo</option>
+                      {(form.idDpto
+                        ? DEPT_CARGOS[departamentos.find(d => d.idDpto === parseInt(form.idDpto))?.nombre] ?? []
+                        : Object.values(DEPT_CARGOS).flat().sort()
+                      ).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Tipo de Contrato</label>
+                    <select
+                      value={form.tipoContrato}
+                      onChange={e => {
+                        setForm({ ...form, tipoContrato: e.target.value, fechaInicio: "", fechaFin: "" });
+                        setShowFechas(!!e.target.value);
+                      }}
+                    >
+                      <option value="">Seleccione</option>
+                      <option value="PLAZO FIJO">Plazo fijo</option>
+                      <option value="INDEFINIDO">Indefinido</option>
+                      <option value="POR OBRA">Por obra/servicio</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Sueldo Base (S/) *</label>
+                    <input type="number" step="0.01" min="0" value={form.sueldo} onChange={e => setForm({ ...form, sueldo: e.target.value })} placeholder="0.00" required />
+                  </div>
+
+                  {form.tipoContrato && (
+                    <div className="form-group form-full">
+                      <div style={{ display: "grid", gridTemplateColumns: form.tipoContrato === "INDEFINIDO" ? "1fr" : "1fr 1fr", gap: "12px" }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label>Fecha Inicio Contrato {form.tipoContrato !== "INDEFINIDO" && "*"}</label>
+                          <input
+                            type="date"
+                            value={form.fechaInicio}
+                            onChange={e => setForm({ ...form, fechaInicio: e.target.value })}
+                            required={form.tipoContrato !== "INDEFINIDO"}
+                          />
+                        </div>
+                        {form.tipoContrato !== "INDEFINIDO" && (
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label>Fecha Fin Contrato *</label>
+                            <input
+                              type="date"
+                              value={form.fechaFin}
+                              onChange={e => setForm({ ...form, fechaFin: e.target.value })}
+                              required
+                              min={form.fechaInicio || undefined}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="form-group form-full">
+                    <label>Dirección *</label>
+                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required />
                   </div>
                 </div>
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalNuevo(false)}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>Cancelar</button>
               <button className="btn btn-success" type="submit" form="form-nuevo">✅ Registrar Empleado</button>
             </div>
           </div>
@@ -653,9 +792,9 @@ export default function GestionEmpleados() {
                     <label>Tipo de Contrato</label>
                     <select value={modalEditar.tipoContrato ?? ""} onChange={e => setModalEditar({ ...modalEditar, tipoContrato: e.target.value })}>
                       <option value="">Seleccione</option>
-                      <option value="PLAZO_FIJO">Plazo fijo</option>
+                      <option value="PLAZO FIJO">Plazo fijo</option>
                       <option value="INDEFINIDO">Indefinido</option>
-                      <option value="SERVICIOS">Por servicio</option>
+                      <option value="POR OBRA">Por obra/servicio</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -961,6 +1100,134 @@ export default function GestionEmpleados() {
           </div>
         );
       })()}
+
+      {/* ══ MODAL: ASIGNAR HORARIO ══ */}
+      {modalHorario.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHorario(m => ({ ...m, open: false }))}>
+          <div className="modal-box modal-box-wide">
+            <div className="modal-header">
+              <div>
+                <h3>📅 Horario — {modalHorario.empleado?.nombres} {modalHorario.empleado?.apellidos}</h3>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)" }}>
+                  DNI: {modalHorario.empleado?.numeroDi} · {modalHorario.empleado?.cargo ?? "—"}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setModalHorario(m => ({ ...m, open: false }))}>×</button>
+            </div>
+
+            <div className="modal-body">
+              {/* ── Formulario de nueva asignación ── */}
+              <p style={{ fontWeight: 600, fontSize: 13, margin: "0 0 10px", color: "var(--text-1)" }}>
+                Nueva asignación
+              </p>
+              <form id="form-horario" onSubmit={handleAsignarHorario}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Turno *</label>
+                    <select
+                      value={horarioForm.idHorario}
+                      onChange={e => setHorarioForm(f => ({ ...f, idHorario: e.target.value }))}
+                      required
+                    >
+                      <option value="">Seleccione turno</option>
+                      {horarios.map(h => (
+                        <option key={h.idHorario} value={h.idHorario}>
+                          {h.nombreTurno} ({h.horaEntrada?.slice(0,5)} – {h.horaSalida?.slice(0,5)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Desde *</label>
+                    <input
+                      type="date"
+                      value={horarioForm.fechaDesde}
+                      onChange={e => setHorarioForm(f => ({ ...f, fechaDesde: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Hasta <span style={{ color: "var(--text-3)", fontWeight: 400 }}>(opcional)</span></label>
+                    <input
+                      type="date"
+                      value={horarioForm.fechaHasta}
+                      onChange={e => setHorarioForm(f => ({ ...f, fechaHasta: e.target.value }))}
+                      min={horarioForm.fechaDesde || undefined}
+                    />
+                  </div>
+                  <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 24 }}>
+                    <input
+                      type="checkbox"
+                      id="esTemporal"
+                      checked={horarioForm.esTemporal}
+                      onChange={e => setHorarioForm(f => ({ ...f, esTemporal: e.target.checked }))}
+                      style={{ width: 16, height: 16, cursor: "pointer" }}
+                    />
+                    <label htmlFor="esTemporal" style={{ margin: 0, cursor: "pointer", fontWeight: 500 }}>
+                      Asignación temporal
+                    </label>
+                  </div>
+                </div>
+              </form>
+
+              {/* ── Historial de asignaciones ── */}
+              <p style={{ fontWeight: 600, fontSize: 13, margin: "18px 0 10px", color: "var(--text-1)" }}>
+                Historial de asignaciones
+              </p>
+              {modalHorario.loading ? (
+                <div className="loading-text">Cargando...</div>
+              ) : modalHorario.asignaciones.length === 0 ? (
+                <div className="empty-state" style={{ padding: "16px 0" }}>
+                  <div className="empty-state-icon">📅</div>
+                  <p>Sin asignaciones de horario registradas.</p>
+                </div>
+              ) : (
+                <div className="table-wrapper" style={{ maxHeight: 260, overflowY: "auto" }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Turno</th>
+                        <th>Horario</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th style={{ textAlign: "center" }}>Temporal</th>
+                        <th style={{ textAlign: "center" }}>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalHorario.asignaciones.map(a => (
+                        <tr key={a.idAsignacion}>
+                          <td style={{ fontWeight: 600 }}>{a.nombreTurno}</td>
+                          <td style={{ fontSize: 12, color: "var(--text-2)" }}>
+                            {a.horaEntrada?.slice(0,5)} – {a.horaSalida?.slice(0,5)}
+                          </td>
+                          <td style={{ fontSize: 12 }}>{a.fechaDesde ?? "—"}</td>
+                          <td style={{ fontSize: 12 }}>{a.fechaHasta ?? "Indefinido"}</td>
+                          <td style={{ textAlign: "center", fontSize: 12 }}>{a.esTemporal ? "Sí" : "No"}</td>
+                          <td style={{ textAlign: "center" }}>
+                            <span className={`emp-status-dot ${a.activo ? "emp-status-active" : "emp-status-inactive"}`}>
+                              {a.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalHorario(m => ({ ...m, open: false }))}>
+                Cerrar
+              </button>
+              <button className="btn btn-success" type="submit" form="form-horario">
+                📅 Asignar turno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ MODAL: HISTORIAL DEL EMPLEADO ══ */}
       {modalHistorial.open && (

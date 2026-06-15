@@ -18,11 +18,16 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.factory.IContratoFactory;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.HorarioService;
+import com.rrhh.Shared.persistence.HorarioModel;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rrhh.Shared.security.HashService;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class RegistrarEmpleadoUseCase {
@@ -47,7 +52,9 @@ public class RegistrarEmpleadoUseCase {
 
     private final IContratoFactory contratoFactory;
 
-    public RegistrarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IRolRepository rolRepository, IUsuarioGestionRepository usuarioRepository, NombreUsuarioService nombreUsuarioService, RolAsignacionService rolAsignacionService, HashService hashService, AuditoriaEmpleadoService auditoriaEmpleadoService, IContratoFactory contratoFactory) {
+    private final HorarioService horarioService;
+
+    public RegistrarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IRolRepository rolRepository, IUsuarioGestionRepository usuarioRepository, NombreUsuarioService nombreUsuarioService, RolAsignacionService rolAsignacionService, HashService hashService, AuditoriaEmpleadoService auditoriaEmpleadoService, IContratoFactory contratoFactory, HorarioService horarioService) {
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.departamentoRepository = departamentoRepository;
@@ -58,6 +65,7 @@ public class RegistrarEmpleadoUseCase {
         this.hashService = hashService;
         this.auditoriaEmpleadoService = auditoriaEmpleadoService;
         this.contratoFactory = contratoFactory;
+        this.horarioService = horarioService;
     }
 
     @Transactional
@@ -102,15 +110,24 @@ public class RegistrarEmpleadoUseCase {
         Empleado empleadoGuardado =
                 empleadoRepository.save(empleado);
 
+        String tipoContratoFinal = (dto.getTipoContrato() != null && !dto.getTipoContrato().isBlank())
+                ? dto.getTipoContrato()
+                : "INDEFINIDO";
+
+        LocalDate fechaInicioContrato = dto.getFechaInicio() != null
+                ? dto.getFechaInicio()
+                : LocalDate.now();
+
         Contrato contrato = contratoFactory.crearIndefinido(
                 empleadoGuardado.getIdEmpleado(),
                 departamento.getIdDpto(),
                 departamento.getNombre(),
                 dto.getCargo(),
-                dto.getFechaInicio(),
+                fechaInicioContrato,
                 dto.getFechaFin(),
                 dto.getSueldo()
         );
+        contrato.setTipoContrato(tipoContratoFinal);
 
         contratoRepository.save(contrato);
 
@@ -150,6 +167,22 @@ public class RegistrarEmpleadoUseCase {
         usuario.setNombreRol(rol.getNombreRol());
 
         usuarioRepository.save(usuario);
+
+        // Asignar horario predeterminado (Turno Mañana o el primer turno activo)
+        List<HorarioModel> horarios = horarioService.listar();
+        if (!horarios.isEmpty()) {
+            HorarioModel predeterminado = horarios.stream()
+                    .filter(h -> h.getNombreTurno() != null && h.getNombreTurno().toLowerCase().contains("mañana"))
+                    .findFirst()
+                    .orElse(horarios.get(0));
+            horarioService.asignarHorario(
+                    empleadoGuardado.getIdEmpleado(),
+                    predeterminado.getIdHorario(),
+                    LocalDate.now(),
+                    null,
+                    false
+            );
+        }
 
         auditoriaEmpleadoService.registrar(
                 empleadoGuardado.getIdEmpleado(),

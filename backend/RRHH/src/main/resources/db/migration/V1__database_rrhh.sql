@@ -26,7 +26,7 @@ CREATE TABLE empleado(
     doc_identidad VARCHAR (15) NOT NULL DEFAULT 'DNI' CHECK (doc_identidad IN('DNI','CE')),
     numero_di VARCHAR (15) UNIQUE NOT NULL,
     fecha_nac DATE NOT NULL,
-    sexo VARCHAR(1) NOT NULL CHECK (sexo IN ('H', 'M')),
+    sexo VARCHAR(1) NOT NULL CHECK (sexo IN ('F', 'M')),
     estado_civil VARCHAR(20) DEFAULT 'SOLTERO' CHECK (estado_civil IN ('SOLTERO', 'CASADO', 'DIVORCIADO', 'VIUDO', 'CONVIVIENTE')),
     direccion VARCHAR (80) NOT NULL ,
     correo VARCHAR (50) NOT NULL,

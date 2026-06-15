@@ -1,26 +1,24 @@
 package com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class RecoveryRequestDTO {
 
-    @NotBlank(message = "El correo es obligatorio")
-    @Email(message = "El correo no tiene un formato valido")
-    private String email;
+    @NotBlank(message = "El usuario o correo es obligatorio")
+    private String identifier;
 
     public RecoveryRequestDTO() {
     }
 
-    public RecoveryRequestDTO(String email) {
-        this.email = email;
+    public RecoveryRequestDTO(String identifier) {
+        this.identifier = identifier;
     }
 
-    public String getEmail() {
-        return email;
+    public String getIdentifier() {
+        return identifier;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
     }
 }

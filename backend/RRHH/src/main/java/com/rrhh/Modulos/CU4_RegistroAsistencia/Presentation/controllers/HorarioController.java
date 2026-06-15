@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -50,9 +51,32 @@ public class HorarioController {
         return ResponseEntity.ok().build();
     }
 
+    /** Asigna (o reasigna) un horario a un empleado. Desactiva la asignación anterior. */
     @PostMapping("/asignar")
-    public ResponseEntity<?> asignarHorario(@RequestBody Map<String, Integer> body) {
-        return ResponseEntity.ok(horarioService.asignarHorario(
-                body.get("idEmpleado"), body.get("idHorario")));
+    public ResponseEntity<?> asignarHorario(@RequestBody Map<String, Object> body) {
+        Long      idEmpleado = ((Number) body.get("idEmpleado")).longValue();
+        Integer   idHorario  = ((Number) body.get("idHorario")).intValue();
+        LocalDate fechaDesde = body.get("fechaDesde") != null
+                ? LocalDate.parse((String) body.get("fechaDesde")) : LocalDate.now();
+        LocalDate fechaHasta = body.get("fechaHasta") != null
+                ? LocalDate.parse((String) body.get("fechaHasta")) : null;
+        Boolean esTemporal   = body.get("esTemporal") instanceof Boolean
+                ? (Boolean) body.get("esTemporal") : false;
+
+        return ResponseEntity.ok(
+                horarioService.asignarHorario(idEmpleado, idHorario, fechaDesde, fechaHasta, esTemporal));
+    }
+
+    /** Historial de asignaciones de horario de un empleado. */
+    @GetMapping("/asignaciones/empleado/{idEmpleado}")
+    public ResponseEntity<List<Map<String, Object>>> asignacionesPorEmpleado(
+            @PathVariable Long idEmpleado) {
+        return ResponseEntity.ok(horarioService.listarAsignacionesPorEmpleado(idEmpleado));
+    }
+
+    /** Resumen de asignaciones activas (una por empleado) para poblar la tabla. */
+    @GetMapping("/asignaciones/activas")
+    public ResponseEntity<List<Map<String, Object>>> asignacionesActivas() {
+        return ResponseEntity.ok(horarioService.getAsignacionesActivasResumen());
     }
 }
