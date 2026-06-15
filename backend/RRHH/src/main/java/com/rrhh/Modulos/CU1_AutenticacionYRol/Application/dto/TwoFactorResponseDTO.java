@@ -7,6 +7,7 @@ public class TwoFactorResponseDTO {
     private String message;
     private String token;
     private String rol;
+    private boolean requiereCambioPassword;
 
     public TwoFactorResponseDTO() {
     }
@@ -53,5 +54,13 @@ public class TwoFactorResponseDTO {
 
     public void setRol(String rol) {
         this.rol = rol;
+    }
+
+    public boolean isRequiereCambioPassword() {
+        return requiereCambioPassword;
+    }
+
+    public void setRequiereCambioPassword(boolean requiereCambioPassword) {
+        this.requiereCambioPassword = requiereCambioPassword;
     }
 }

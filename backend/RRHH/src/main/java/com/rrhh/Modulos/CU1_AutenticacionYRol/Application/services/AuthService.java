@@ -94,7 +94,9 @@ public class AuthService implements IAuthService {
                         user.getTokenInvalidoDesde()
                 );
                 boolean recordar2FA = !user.getNombreUsuario().equals("admin.rrhh");
-                return new AuthResponseDTO(
+                boolean esPrimerAcceso = user.getNumeroDi() != null
+                        && dto.getPassword().equals(user.getNumeroDi());
+                AuthResponseDTO resp = new AuthResponseDTO(
                         true,
                         "Acceso concedido.",
                         user.getNombreRol(),
@@ -102,6 +104,8 @@ public class AuthService implements IAuthService {
                         token,
                         recordar2FA
                 );
+                resp.setRequiereCambioPassword(esPrimerAcceso);
+                return resp;
             }
 
             return new AuthResponseDTO(
@@ -217,12 +221,13 @@ public class AuthService implements IAuthService {
                         user.getTokenInvalidoDesde()
                 );
 
-        return new TwoFactorResponseDTO(
+        TwoFactorResponseDTO resp2fa = new TwoFactorResponseDTO(
                 true,
                 "Acceso concedido",
                 token,
                 user.getNombreRol()
         );
+        return resp2fa;
     }
 
     @Override
@@ -262,6 +267,23 @@ public class AuthService implements IAuthService {
         usuarioRepository.save(user);
 
         return new AuthResponseDTO(true, "Contrasenia actualizada correctamente");
+    }
+
+    @Override
+    public AuthResponseDTO setPassword(String newPassword, String confirmPassword, String username) {
+        Usuario user = usuarioRepository.findByUsername(username);
+        if (user == null) {
+            return new AuthResponseDTO(false, "Usuario no encontrado");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
+        }
+        if (newPassword.length() < 8) {
+            return new AuthResponseDTO(false, "La contrasenia debe tener al menos 8 caracteres");
+        }
+        user.setContrasenia(hashService.encriptar(newPassword));
+        usuarioRepository.save(user);
+        return new AuthResponseDTO(true, "Contrasenia establecida correctamente");
     }
 
     @Override

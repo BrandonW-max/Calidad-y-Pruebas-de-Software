@@ -10,9 +10,14 @@ public interface JpaUsuarioRepository extends JpaRepository<UsuarioModel, Long> 
 
     Optional<UsuarioModel> findByNombreUsuario(String nombreUsuario);
 
+    @Query("""
+        SELECT u FROM UsuarioModel u
+        LEFT JOIN FETCH u.empleado
+        WHERE u.nombreUsuario = :nombreUsuario OR u.correoInst = :correoInst
+        """)
     Optional<UsuarioModel> findByNombreUsuarioOrCorreoInst(
-        String nombreUsuario,
-        String correoInst
+        @Param("nombreUsuario") String nombreUsuario,
+        @Param("correoInst") String correoInst
     );
     boolean existsByNombreUsuario(String nombreUsuario);
 

@@ -24,5 +24,7 @@ public interface IAuthService {
 
     AuthResponseDTO changePassword(ChangePasswordRequestDTO dto, String username);
 
+    AuthResponseDTO setPassword(String newPassword, String confirmPassword, String username);
+
     long getJwtExpirationSeconds();
 }

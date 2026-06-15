@@ -33,6 +33,12 @@ public class NominaResponseDTO {
     private BigDecimal sueldoNeto;
     private String estadoPago;
 
+    private Integer cantidadHijos;
+    private Boolean tieneHijos;
+    private Integer cantidadGuardias;
+    private BigDecimal totalHorasNocturnas;
+    private String tipoPensionAplicada;
+
     private List<DetalleNominaResponseDTO> detalles;
 
     public NominaResponseDTO() {}
@@ -102,6 +108,21 @@ public class NominaResponseDTO {
 
     public String getEstadoPago() { return estadoPago; }
     public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
+
+    public Integer getCantidadHijos() { return cantidadHijos; }
+    public void setCantidadHijos(Integer cantidadHijos) { this.cantidadHijos = cantidadHijos; }
+
+    public Boolean getTieneHijos() { return tieneHijos; }
+    public void setTieneHijos(Boolean tieneHijos) { this.tieneHijos = tieneHijos; }
+
+    public Integer getCantidadGuardias() { return cantidadGuardias; }
+    public void setCantidadGuardias(Integer cantidadGuardias) { this.cantidadGuardias = cantidadGuardias; }
+
+    public BigDecimal getTotalHorasNocturnas() { return totalHorasNocturnas; }
+    public void setTotalHorasNocturnas(BigDecimal totalHorasNocturnas) { this.totalHorasNocturnas = totalHorasNocturnas; }
+
+    public String getTipoPensionAplicada() { return tipoPensionAplicada; }
+    public void setTipoPensionAplicada(String tipoPensionAplicada) { this.tipoPensionAplicada = tipoPensionAplicada; }
 
     public List<DetalleNominaResponseDTO> getDetalles() { return detalles; }
     public void setDetalles(List<DetalleNominaResponseDTO> detalles) { this.detalles = detalles; }

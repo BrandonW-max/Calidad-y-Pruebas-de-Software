@@ -3,8 +3,8 @@ const BASE = import.meta.env.VITE_API_URL || '';
 export const getToken      = () => getUser().token;
 export const getUser       = () => JSON.parse(sessionStorage.getItem('user') || '{}');
 export const getIdEmpleado = () => getUser()?.idEmpleado ?? null;
-export const saveSession   = (token, rol, username, idEmpleado = null) =>
-  sessionStorage.setItem('user', JSON.stringify({ token, rol, username, idEmpleado }));
+export const saveSession   = (token, rol, username, idEmpleado = null, requiereCambioPassword = false) =>
+  sessionStorage.setItem('user', JSON.stringify({ token, rol, username, idEmpleado, requiereCambioPassword }));
 export const clearSession  = () => sessionStorage.removeItem('user');
 
 const CRED = 'include';
@@ -51,6 +51,12 @@ export const resetPassword = (token, nuevaContrasenia, confirmarContrasenia) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, nuevaContrasenia, confirmarContrasenia }),
   }).then(r => r.json().catch(() => { throw new Error(`HTTP ${r.status}`); }));
+
+export const setPassword = (nuevaContrasenia, confirmarContrasenia) =>
+  f(`${BASE}/api/v1/auth/set-password`, {
+    method: 'POST', headers: h(),
+    body: JSON.stringify({ nuevaContrasenia, confirmarContrasenia }),
+  }).then(json);
 export const getMe = () =>
   f(`${BASE}/api/v1/auth/me`, { headers: { 'Content-Type': 'application/json' } }).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -106,6 +112,9 @@ export const getAsignacionesEmpleado = (idEmpleado) =>
 
 export const getAsignacionesActivas = () =>
   f(`${BASE}/api/v1/horarios/asignaciones/activas`, { headers: h() }).then(json);
+
+export const getEmpleadosPorHorario = (idHorario) =>
+  f(`${BASE}/api/v1/horarios/${idHorario}/empleados`, { headers: h() }).then(json);
 
 // ── DEPARTAMENTOS ─────────────────────────────────────────────────────────────
 export const getDepartamentos = () =>
@@ -185,6 +194,16 @@ export const listarJustificacionesPendientes = () =>
 export const listarJustificacionesEmpleado = (idEmpleado) =>
   f(`${BASE}/api/v1/asistencia/justificaciones/empleado/${idEmpleado}`, { headers: h() }).then(json);
 
+export const uploadEvidencia = (file) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return f(`${BASE}/api/v1/asistencia/upload-evidencia`, {
+    method: "POST",
+    headers: { Authorization: h().Authorization },
+    body: fd,
+  }).then(json);
+};
+
 export const registrarJustificacion = (dto) =>
   f(`${BASE}/api/v1/asistencia/justificar`, {
     method: 'POST', headers: h(), body: JSON.stringify(dto),
@@ -219,6 +238,11 @@ export const getNominasPorEmpleado = (idEmpleado) =>
 export const enviarComprobante = (id) =>
   f(`${BASE}/api/nomina/${id}/enviar`, {
     method: 'POST', headers: h(),
+  }).then(json);
+
+export const ajustarNomina = (id, dto) =>
+  f(`${BASE}/api/nomina/${id}/ajustar`, {
+    method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 // Returns a Blob for PDF download

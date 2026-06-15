@@ -27,6 +27,8 @@ public class RRHHProperties {
 
     private BigDecimal tasaDescuentoLey;
 
+    private BigDecimal tasaDescuentoAfp;
+
     public BigDecimal getSalarioMinimo() {
         return salarioMinimo;
     }
@@ -105,5 +107,13 @@ public class RRHHProperties {
 
     public void setTasaDescuentoLey(BigDecimal tasaDescuentoLey) {
         this.tasaDescuentoLey = tasaDescuentoLey;
+    }
+
+    public BigDecimal getTasaDescuentoAfp() {
+        return tasaDescuentoAfp;
+    }
+
+    public void setTasaDescuentoAfp(BigDecimal tasaDescuentoAfp) {
+        this.tasaDescuentoAfp = tasaDescuentoAfp;
     }
 }

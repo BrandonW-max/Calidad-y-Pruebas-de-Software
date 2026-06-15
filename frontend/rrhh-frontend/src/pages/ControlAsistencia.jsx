@@ -9,6 +9,7 @@ import {
   getAsistenciaHoy,
   registrarManual,
   registrarJustificacion,
+  uploadEvidencia,
   revisarJustificacion,
   listarEmpleados,
   buscarEmpleados,
@@ -45,7 +46,14 @@ function VistaEmpleado() {
   // ECU-03 A4: justificación de tardanza
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo, setJustifMotivo] = useState("");
+  const [justifFile,   setJustifFile]   = useState(null);
   const [justifSaving, setJustifSaving] = useState(false);
+
+  const cerrarModalJustif = () => {
+    setModalJustificar({ open: false, justificacion: null });
+    setJustifMotivo("");
+    setJustifFile(null);
+  };
 
   // Reloj
   useEffect(() => {
@@ -99,19 +107,23 @@ function VistaEmpleado() {
     setMensaje("");
     try {
       const j = modalJustificar.justificacion;
+      let evidenciaUrl = "";
+      if (justifFile) {
+        const res = await uploadEvidencia(justifFile);
+        evidenciaUrl = res.url ?? "";
+      }
       await registrarJustificacion({
         idEmpleado,
         idRegistroAsistencia: j.idRegistroAsistencia,
         motivo: justifMotivo,
-        evidenciaUrl: "",
+        evidenciaUrl,
       });
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
-      setModalJustificar({ open: false, justificacion: null });
-      setJustifMotivo("");
+      cerrarModalJustif();
       cargarJustificaciones();
     } catch {
       setError("Error al enviar la justificación. Intente de nuevo.");
-      setModalJustificar({ open: false, justificacion: null });
+      cerrarModalJustif();
     } finally {
       setJustifSaving(false);
     }
@@ -504,14 +516,14 @@ function VistaEmpleado() {
 
       {/* ── MODAL: JUSTIFICACIÓN DE TARDANZA (ECU-03 A4) ── */}
       {modalJustificar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalJustificar({ open: false, justificacion: null })}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarModalJustif()}>
           <div className="modal-box">
             <div className="modal-header">
               <div>
                 <h3>✍️ Registrar Justificación de Tardanza</h3>
                 <p>Fecha: {modalJustificar.justificacion?.fechaJustificacion?.substring(0, 10) ?? "—"}</p>
               </div>
-              <button className="modal-close" onClick={() => setModalJustificar({ open: false, justificacion: null })}>×</button>
+              <button className="modal-close" onClick={cerrarModalJustif}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning" style={{ marginBottom: 14 }}>
@@ -529,13 +541,21 @@ function VistaEmpleado() {
               </div>
               <div className="form-group">
                 <label>Evidencia (opcional)</label>
-                <div className="alert alert-info" style={{ marginBottom: 0, fontSize: "12px" }}>
-                  Si tienes un documento de respaldo (certificado médico, etc.), adjúntalo en físico a RRHH.
-                </div>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
+                  style={{ display: "block", width: "100%", fontSize: 13 }}
+                />
+                {justifFile && (
+                  <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
+                    📎 {justifFile.name}
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalJustificar({ open: false, justificacion: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={cerrarModalJustif}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleEnviarJustificacion}
                 disabled={!justifMotivo.trim() || justifSaving}>
                 {justifSaving ? "Enviando..." : "📤 Enviar Justificación"}
@@ -616,11 +636,13 @@ function VistaRRHH() {
   const [correccionInfo,  setCorreccionInfo]  = useState({
     fechaCorreccion: "", horaCorregida: "", horaEntradaDisplay: "", minutosTardanza: 0,
     entradaProgramada: "08:00", salidaProgramada: "17:00", salidaPropuesta: "",
+    horaEntradaReal: "", salidaReal: "",
     evidenciaUrl: "",
   });
   const resetCorreccion = () => setCorreccionInfo({
     fechaCorreccion: "", horaCorregida: "", horaEntradaDisplay: "", minutosTardanza: 0,
     entradaProgramada: "08:00", salidaProgramada: "17:00", salidaPropuesta: "",
+    horaEntradaReal: "", salidaReal: "",
     evidenciaUrl: "",
   });
 
@@ -750,15 +772,21 @@ function VistaRRHH() {
 
     let horaCorregida = "08:00";
     let horaEntradaDisplay = "";
+    let horaEntradaReal = "";
     let minsTard = 0;
+    let salidaReal = "17:00";
 
     if (j.horaEntrada) {
       const parts = String(j.horaEntrada).split(":");
       const hh = parseInt(parts[0] ?? "8");
       const mm = parseInt(parts[1] ?? "0");
-      horaEntradaDisplay = String(hh).padStart(2, "0");
-      horaCorregida = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
-      minsTard = Math.max(0, hh * 60 + mm - 8 * 60);
+      horaEntradaDisplay = String(hh).padStart(2, "0") + ":00";
+      horaCorregida = String(hh).padStart(2, "0") + ":00";
+      horaEntradaReal = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+      minsTard = Math.max(0, hh * 60 - 8 * 60);
+      const minsRealTard = Math.max(0, hh * 60 + mm - 8 * 60);
+      const salidaRealMins = 17 * 60 + minsRealTard;
+      salidaReal = String(Math.floor(salidaRealMins / 60)).padStart(2, "0") + ":" + String(salidaRealMins % 60).padStart(2, "0");
     }
 
     const salidaMins = 17 * 60 + minsTard;
@@ -775,9 +803,11 @@ function VistaRRHH() {
       entradaProgramada: "08:00",
       horaCorregida,
       horaEntradaDisplay,
+      horaEntradaReal,
       minutosTardanza: minsTard,
       salidaProgramada: "17:00",
       salidaPropuesta: salidaStr,
+      salidaReal,
       evidenciaUrl: j.evidenciaUrl || j.evidencia || "",
     });
   };
@@ -920,21 +950,22 @@ function VistaRRHH() {
                 </div>
                 <div className="form-group">
                   <label>Vieja Entrada</label>
-                  <div style={{
-                    background: "var(--bg-2, #f8fafc)", border: "1px solid var(--border)",
-                    borderRadius: 6, padding: "8px 12px", fontSize: "26px", fontWeight: 700,
-                    color: correccionInfo.horaEntradaDisplay ? "#0f172a" : "var(--text-3)",
-                    minHeight: "42px", display: "flex", alignItems: "center",
-                    letterSpacing: "0.05em",
-                  }}>
-                    {correccionInfo.horaEntradaDisplay ? correccionInfo.horaEntradaDisplay + "h" : "—"}
-                  </div>
+                  <input
+                    type="time"
+                    value={correccionInfo.horaEntradaDisplay || ""}
+                    readOnly
+                    placeholder="--:--"
+                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }}
+                  />
                 </div>
                 <div className="form-group">
                   <label>Nueva Salida</label>
-                  <input type="time" value={correccionInfo.salidaPropuesta}
+                  <input
+                    type="time"
+                    value={correccionInfo.salidaPropuesta || ""}
                     readOnly
-                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }} />
+                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }}
+                  />
                 </div>
                 <div className="form-group form-full" style={{ maxWidth: 320 }}>
                   <label>Motivo / Evidencia</label>
@@ -971,9 +1002,9 @@ function VistaRRHH() {
               {correccionInfo.horaCorregida && (
                 <div className="alert alert-info" style={{ marginTop: 12 }}>
                   <strong>📋 Corrección de tardanza calculada:</strong><br />
-                  ⏰ Entrada programada: {correccionInfo.entradaProgramada} → Vieja entrada: {correccionInfo.horaCorregida}
+                  ⏰ Entrada programada: {correccionInfo.entradaProgramada} → Vieja entrada: {correccionInfo.horaEntradaReal || correccionInfo.horaCorregida}
                   &nbsp;({Math.floor(correccionInfo.minutosTardanza / 60)}h {correccionInfo.minutosTardanza % 60}min de tardanza)<br />
-                  ⏰ Salida programada: {correccionInfo.salidaProgramada} → Propuesta: {correccionInfo.salidaPropuesta}
+                  ⏰ Salida programada: {correccionInfo.salidaProgramada} → Propuesta: {correccionInfo.salidaReal || correccionInfo.salidaPropuesta}
                   &nbsp;(recuperación de {Math.floor(correccionInfo.minutosTardanza / 60)}h {correccionInfo.minutosTardanza % 60}min)
                 </div>
               )}
@@ -1088,7 +1119,14 @@ function VistaGerencia() {
 
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo,    setJustifMotivo]    = useState("");
+  const [justifFile,      setJustifFile]      = useState(null);
   const [justifSaving,    setJustifSaving]    = useState(false);
+
+  const cerrarModalJustif = () => {
+    setModalJustificar({ open: false, justificacion: null });
+    setJustifMotivo("");
+    setJustifFile(null);
+  };
 
   useEffect(() => {
     const t = setInterval(() => setHora(new Date()), 1000);
@@ -1131,14 +1169,18 @@ function VistaGerencia() {
     setMensaje("");
     try {
       const j = modalJustificar.justificacion;
-      await registrarJustificacion({ idEmpleado, idRegistroAsistencia: j.idRegistroAsistencia, motivo: justifMotivo, evidenciaUrl: "" });
+      let evidenciaUrl = "";
+      if (justifFile) {
+        const res = await uploadEvidencia(justifFile);
+        evidenciaUrl = res.url ?? "";
+      }
+      await registrarJustificacion({ idEmpleado, idRegistroAsistencia: j.idRegistroAsistencia, motivo: justifMotivo, evidenciaUrl });
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
-      setModalJustificar({ open: false, justificacion: null });
-      setJustifMotivo("");
+      cerrarModalJustif();
       cargarJustificaciones();
     } catch {
       setError("Error al enviar la justificación. Intente de nuevo.");
-      setModalJustificar({ open: false, justificacion: null });
+      cerrarModalJustif();
     } finally { setJustifSaving(false); }
   };
 
@@ -1406,14 +1448,14 @@ function VistaGerencia() {
       </main>
 
       {modalJustificar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalJustificar({ open: false, justificacion: null })}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarModalJustif()}>
           <div className="modal-box">
             <div className="modal-header">
               <div>
                 <h3>✍️ Registrar Justificación de Tardanza</h3>
                 <p>Fecha: {modalJustificar.justificacion?.fechaJustificacion?.substring(0, 10) ?? "—"}</p>
               </div>
-              <button className="modal-close" onClick={() => setModalJustificar({ open: false, justificacion: null })}>×</button>
+              <button className="modal-close" onClick={cerrarModalJustif}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning" style={{ marginBottom: 14 }}>
@@ -1424,9 +1466,23 @@ function VistaGerencia() {
                 <textarea rows={4} value={justifMotivo} onChange={e => setJustifMotivo(e.target.value)}
                   placeholder="Describa el motivo de su tardanza..." autoFocus />
               </div>
+              <div className="form-group">
+                <label>Evidencia (opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
+                  style={{ display: "block", width: "100%", fontSize: 13 }}
+                />
+                {justifFile && (
+                  <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
+                    📎 {justifFile.name}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalJustificar({ open: false, justificacion: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={cerrarModalJustif}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleEnviarJustificacion} disabled={!justifMotivo.trim() || justifSaving}>
                 {justifSaving ? "Enviando..." : "📤 Enviar Justificación"}
               </button>

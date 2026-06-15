@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { getHorarios, crearHorario, actualizarHorario, eliminarHorario } from "../services/api";
+import {
+  getHorarios, crearHorario, actualizarHorario, eliminarHorario,
+  asignarHorario, getEmpleadosPorHorario, listarEmpleados,
+} from "../services/api";
 
 const FORM_VACIO = {
   nombreTurno: "",
@@ -20,6 +23,15 @@ export default function GestionHorarios() {
   const [form,      setForm]      = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [modalElim, setModalElim] = useState({ open: false, horario: null });
+
+  // ── ASIGNAR EMPLEADOS ──
+  const [modalAsignar,     setModalAsignar]     = useState({ open: false, horario: null });
+  const [empleadosHorario, setEmpleadosHorario] = useState([]);
+  const [todosEmpleados,   setTodosEmpleados]   = useState([]);
+  const [selectedEmps,     setSelectedEmps]     = useState([]);
+  const [buscarEmp,        setBuscarEmp]        = useState("");
+  const [expandirLista,    setExpandirLista]    = useState(true);
+  const [asignando,        setAsignando]        = useState(false);
 
   useEffect(() => { cargar(); }, []);
 
@@ -95,6 +107,58 @@ export default function GestionHorarios() {
     }
   };
 
+  const abrirAsignar = async (h) => {
+    setModalAsignar({ open: true, horario: h });
+    setSelectedEmps([]);
+    setBuscarEmp("");
+    setExpandirLista(true);
+    try {
+      const [asignados, todos] = await Promise.all([
+        getEmpleadosPorHorario(h.idHorario),
+        listarEmpleados(0, 200),
+      ]);
+      setEmpleadosHorario(asignados || []);
+      const lista = todos?.content ?? (Array.isArray(todos) ? todos : []);
+      setTodosEmpleados(lista.filter(e => e.estado === "ACTIVO" || !e.estado));
+    } catch {
+      setEmpleadosHorario([]);
+      setTodosEmpleados([]);
+    }
+  };
+
+  const cerrarAsignar = () => setModalAsignar({ open: false, horario: null });
+
+  const toggleEmp = (id) =>
+    setSelectedEmps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const handleAsignarMultiple = async () => {
+    if (!selectedEmps.length) return;
+    setAsignando(true);
+    try {
+      await Promise.all(
+        selectedEmps.map(idEmpleado =>
+          asignarHorario({
+            idEmpleado,
+            idHorario: modalAsignar.horario.idHorario,
+            fechaDesde: new Date().toISOString().slice(0, 10),
+            esTemporal: false,
+          })
+        )
+      );
+      setMensaje(`${selectedEmps.length} empleado(s) asignado(s) al turno "${modalAsignar.horario.nombreTurno}"`);
+      setMensajeOk(true);
+      // Refrescar lista de asignados
+      const asignados = await getEmpleadosPorHorario(modalAsignar.horario.idHorario);
+      setEmpleadosHorario(asignados || []);
+      setSelectedEmps([]);
+    } catch {
+      setMensaje("Error al asignar empleados");
+      setMensajeOk(false);
+    } finally {
+      setAsignando(false);
+    }
+  };
+
   const duracionHoras = (entrada, salida) => {
     if (!entrada || !salida) return null;
     const [h1, m1] = entrada.split(":").map(Number);
@@ -105,6 +169,13 @@ export default function GestionHorarios() {
     const m = mins % 60;
     return m > 0 ? `${h}h ${m}min` : `${h}h`;
   };
+
+  const empleadosDisponibles = todosEmpleados.filter(e => {
+    const yaAsignado = empleadosHorario.some(a => a.idEmpleado === e.idEmpleado);
+    if (yaAsignado) return false;
+    const nombre = `${e.nombres ?? ""} ${e.apellidos ?? ""}`.toLowerCase();
+    return nombre.includes(buscarEmp.toLowerCase());
+  });
 
   return (
     <div className="dashboard">
@@ -212,15 +283,24 @@ export default function GestionHorarios() {
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <div style={{ display: "inline-flex", gap: 6 }}>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", fontWeight: 700, fontSize: 16, lineHeight: 1, padding: "4px 10px" }}
+                              title="Asignar empleados"
+                              onClick={() => abrirAsignar(h)}
+                            >
+                              +
+                            </button>
                             <button className="btn btn-secondary btn-sm" onClick={() => abrirEditar(h)}>
                               ✏️ Editar
                             </button>
                             <button
                               className="btn btn-sm"
-                              style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}
+                              style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontWeight: 700, fontSize: 14 }}
                               onClick={() => setModalElim({ open: true, horario: h })}
+                              title="Desactivar turno"
                             >
-                              🗑
+                              ✕
                             </button>
                           </div>
                         </td>
@@ -337,7 +417,7 @@ export default function GestionHorarios() {
         <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
-              <div><h3>🗑 Desactivar Turno</h3></div>
+              <div><h3>Desactivar Turno</h3></div>
               <button className="modal-close" onClick={() => setModalElim({ open: false, horario: null })}>×</button>
             </div>
             <div className="modal-body">
@@ -353,6 +433,126 @@ export default function GestionHorarios() {
               </button>
               <button className="btn btn-danger" onClick={handleEliminar}>
                 Confirmar desactivar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ASIGNAR EMPLEADOS ══ */}
+      {modalAsignar.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarAsignar()}>
+          <div className="modal-box" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <div>
+                <h3>Asignar empleados al turno</h3>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)" }}>
+                  {modalAsignar.horario?.nombreTurno}
+                  {" · "}
+                  {modalAsignar.horario?.horaEntrada?.slice(0,5)} – {modalAsignar.horario?.horaSalida?.slice(0,5)}
+                </p>
+              </div>
+              <button className="modal-close" onClick={cerrarAsignar}>×</button>
+            </div>
+
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+              {/* Lista desplegable de empleados actuales */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setExpandirLista(v => !v)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 8,
+                    fontWeight: 600, fontSize: 14, color: "var(--text-1)", padding: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 11 }}>{expandirLista ? "▼" : "▶"}</span>
+                  Empleados en este turno ({empleadosHorario.length})
+                </button>
+                {expandirLista && (
+                  <div style={{
+                    marginTop: 8, border: "1px solid var(--border)", borderRadius: 8,
+                    overflow: "hidden", maxHeight: 200, overflowY: "auto",
+                  }}>
+                    {empleadosHorario.length === 0 ? (
+                      <div style={{ padding: "12px 16px", color: "var(--text-3)", fontSize: 13 }}>
+                        Sin empleados asignados actualmente
+                      </div>
+                    ) : (
+                      empleadosHorario.map(e => (
+                        <div key={e.idEmpleado} style={{
+                          padding: "8px 16px", borderBottom: "1px solid var(--border)",
+                          fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}>
+                          <span style={{ fontWeight: 500 }}>{e.apellidos}, {e.nombres}</span>
+                          {e.fechaDesde && (
+                            <span style={{ fontSize: 11, color: "var(--text-3)" }}>desde {e.fechaDesde}</span>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Asignar nuevos empleados */}
+              <div>
+                <label style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 8 }}>
+                  Asignar empleados
+                </label>
+                <input
+                  placeholder="Buscar por nombre o apellido..."
+                  value={buscarEmp}
+                  onChange={e => setBuscarEmp(e.target.value)}
+                  style={{ width: "100%", marginBottom: 8 }}
+                />
+                <div style={{
+                  border: "1px solid var(--border)", borderRadius: 8,
+                  maxHeight: 240, overflowY: "auto",
+                }}>
+                  {empleadosDisponibles.length === 0 ? (
+                    <div style={{ padding: "12px 16px", color: "var(--text-3)", fontSize: 13 }}>
+                      {buscarEmp ? "Sin resultados" : "Todos los empleados activos ya están asignados a este turno"}
+                    </div>
+                  ) : (
+                    empleadosDisponibles.map(e => (
+                      <label key={e.idEmpleado} style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "9px 14px", cursor: "pointer",
+                        borderBottom: "1px solid var(--border)", fontSize: 13,
+                        background: selectedEmps.includes(e.idEmpleado) ? "#eff6ff" : "transparent",
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedEmps.includes(e.idEmpleado)}
+                          onChange={() => toggleEmp(e.idEmpleado)}
+                          style={{ accentColor: "#2563eb" }}
+                        />
+                        <span style={{ fontWeight: 500 }}>{e.apellidos}, {e.nombres}</span>
+                        {e.cargo && (
+                          <span style={{ fontSize: 11, color: "var(--text-3)", marginLeft: "auto" }}>{e.cargo}</span>
+                        )}
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={cerrarAsignar}>
+                Cerrar
+              </button>
+              <button
+                className="btn btn-success"
+                onClick={handleAsignarMultiple}
+                disabled={selectedEmps.length === 0 || asignando}
+              >
+                {asignando
+                  ? "Asignando..."
+                  : `Asignar${selectedEmps.length ? ` (${selectedEmps.length})` : ""}`}
               </button>
             </div>
           </div>

@@ -28,6 +28,7 @@ public class Usuario implements Prototype<Usuario> {
     private String nombreRol;
     @Builder.Default
     private Boolean activo = true;
+    private String numeroDi;
 
     public Long getId() {
         return id;
@@ -143,6 +144,14 @@ public class Usuario implements Prototype<Usuario> {
 
     public boolean isActivo() {
         return activo != null && activo;
+    }
+
+    public String getNumeroDi() {
+        return numeroDi;
+    }
+
+    public void setNumeroDi(String numeroDi) {
+        this.numeroDi = numeroDi;
     }
 
     public boolean puedeIntentarLogin() {

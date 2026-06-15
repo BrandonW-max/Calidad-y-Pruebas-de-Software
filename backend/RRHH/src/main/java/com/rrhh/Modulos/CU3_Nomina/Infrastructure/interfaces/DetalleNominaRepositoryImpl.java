@@ -48,6 +48,11 @@ public class DetalleNominaRepositoryImpl implements IDetalleNominaRepository {
             .stream().map(this::mapearAEntidad).collect(Collectors.toList());
     }
 
+    @Override
+    public void eliminarPorNomina(Integer idNomina) {
+        jpaDetalleNominaRepository.deleteByNominaIdNomina(idNomina);
+    }
+
     private DetalleNominaModel mapearAModel(DetalleNomina detalle) {
         DetalleNominaModel model = new DetalleNominaModel();
         model.setFecha(detalle.getFecha());

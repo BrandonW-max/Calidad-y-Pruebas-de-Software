@@ -33,6 +33,9 @@ public class ContratoModel {
     @Column(name = "estado", length = 20)
     private String estado = "ACTIVO";
 
+    @Column(name = "tipo_pension", length = 10)
+    private String tipoPension = "ONP";
+
     @Column(name = "creado_el", updatable = false)
     private LocalDateTime creadoEl = LocalDateTime.now();
 
@@ -104,6 +107,14 @@ public class ContratoModel {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getTipoPension() {
+        return tipoPension;
+    }
+
+    public void setTipoPension(String tipoPension) {
+        this.tipoPension = tipoPension;
     }
 
     public LocalDateTime getCreadoEl() {

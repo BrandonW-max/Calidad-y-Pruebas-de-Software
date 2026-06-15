@@ -62,6 +62,7 @@ public Usuario save(Usuario usuario) {
         model.setBloqueo2faHasta(usuario.getBloqueo2faHasta());
 
         model.setTokenInvalidoDesde(usuario.getTokenInvalidoDesde());
+        model.setContrasenia(usuario.getContrasenia());
 
         UsuarioModel saved = jpaRepository.save(model);
 

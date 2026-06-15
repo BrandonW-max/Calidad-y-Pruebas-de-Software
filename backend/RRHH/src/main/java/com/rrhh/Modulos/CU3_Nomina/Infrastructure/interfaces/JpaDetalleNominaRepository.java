@@ -9,6 +9,8 @@ import java.util.List;
 public interface JpaDetalleNominaRepository extends JpaRepository<DetalleNominaModel, Integer> {
  
     List<DetalleNominaModel> findByNominaIdNomina(Integer idNomina);
- 
+
     List<DetalleNominaModel> findByEmpleadoIdEmpleado(Long idEmpleado);
+
+    void deleteByNominaIdNomina(Integer idNomina);
 }

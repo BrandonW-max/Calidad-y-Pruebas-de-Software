@@ -19,4 +19,6 @@ public class ApiRoutes {
     public static final String ME = "/me";
 
     public static final String LOGOUT = "/logout";
+
+    public static final String SET_PASSWORD = "/set-password";
 }

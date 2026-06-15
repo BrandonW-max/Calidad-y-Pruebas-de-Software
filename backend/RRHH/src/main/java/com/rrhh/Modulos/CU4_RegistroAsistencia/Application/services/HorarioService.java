@@ -124,6 +124,26 @@ public class HorarioService {
         }).collect(Collectors.toList());
     }
 
+    /** Empleados actualmente asignados a un horario específico. */
+    public List<Map<String, Object>> getEmpleadosPorHorario(Integer idHorario) {
+        List<Object[]> rows = em.createQuery(
+                "SELECT a.empleado.idEmpleado, a.empleado.nombres, a.empleado.apellidos, a.fechaDesde " +
+                "FROM AsignacionHorarioModel a " +
+                "WHERE a.horario.idHorario = :idHorario AND a.activo = true " +
+                "ORDER BY a.empleado.apellidos", Object[].class)
+                .setParameter("idHorario", idHorario)
+                .getResultList();
+
+        return rows.stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("idEmpleado", r[0]);
+            m.put("nombres",    r[1]);
+            m.put("apellidos",  r[2]);
+            m.put("fechaDesde", r[3] != null ? r[3].toString() : null);
+            return m;
+        }).collect(Collectors.toList());
+    }
+
     /** Resumen de asignaciones activas para todos los empleados (para poblar la tabla). */
     public List<Map<String, Object>> getAsignacionesActivasResumen() {
         List<Object[]> rows = em.createQuery(

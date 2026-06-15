@@ -37,6 +37,12 @@ public class Nomina implements Prototype<Nomina> {
     private BigDecimal sueldoBruto;
     private BigDecimal sueldoNeto;
 
+    private Integer cantidadHijos;
+    private Boolean tieneHijos;
+    private Integer cantidadGuardias;
+    private BigDecimal totalHorasNocturnas;
+    private String tipoPensionAplicada;
+
     private String estadoPago;
 
     private Integer version;
@@ -54,7 +60,10 @@ public class Nomina implements Prototype<Nomina> {
                   BigDecimal bonifGuardia, BigDecimal bonifRiesgo, BigDecimal bonifCargo,
                   BigDecimal descuentoTardanzas, BigDecimal descuentoLey,
                   BigDecimal asignacionFamiliar, BigDecimal sueldoBruto,
-                  BigDecimal sueldoNeto, String estadoPago, Integer version,
+                  BigDecimal sueldoNeto,
+                  Integer cantidadHijos, Boolean tieneHijos, Integer cantidadGuardias,
+                  BigDecimal totalHorasNocturnas, String tipoPensionAplicada,
+                  String estadoPago, Integer version,
                   Integer nominaAnteriorId, Long idEmpleado, Long calculadoPor,
                   List<DetalleNomina> detalles) {
         this.idNomina = idNomina;
@@ -76,6 +85,11 @@ public class Nomina implements Prototype<Nomina> {
         this.asignacionFamiliar = asignacionFamiliar;
         this.sueldoBruto = sueldoBruto;
         this.sueldoNeto = sueldoNeto;
+        this.cantidadHijos = cantidadHijos;
+        this.tieneHijos = tieneHijos;
+        this.cantidadGuardias = cantidadGuardias;
+        this.totalHorasNocturnas = totalHorasNocturnas;
+        this.tipoPensionAplicada = tipoPensionAplicada;
         this.estadoPago = estadoPago;
         this.version = version;
         this.nominaAnteriorId = nominaAnteriorId;
@@ -140,6 +154,21 @@ public class Nomina implements Prototype<Nomina> {
 
     public BigDecimal getSueldoNeto() { return sueldoNeto; }
     public void setSueldoNeto(BigDecimal sueldoNeto) { this.sueldoNeto = sueldoNeto; }
+
+    public Integer getCantidadHijos() { return cantidadHijos; }
+    public void setCantidadHijos(Integer cantidadHijos) { this.cantidadHijos = cantidadHijos; }
+
+    public Boolean getTieneHijos() { return tieneHijos; }
+    public void setTieneHijos(Boolean tieneHijos) { this.tieneHijos = tieneHijos; }
+
+    public Integer getCantidadGuardias() { return cantidadGuardias; }
+    public void setCantidadGuardias(Integer cantidadGuardias) { this.cantidadGuardias = cantidadGuardias; }
+
+    public BigDecimal getTotalHorasNocturnas() { return totalHorasNocturnas; }
+    public void setTotalHorasNocturnas(BigDecimal totalHorasNocturnas) { this.totalHorasNocturnas = totalHorasNocturnas; }
+
+    public String getTipoPensionAplicada() { return tipoPensionAplicada; }
+    public void setTipoPensionAplicada(String tipoPensionAplicada) { this.tipoPensionAplicada = tipoPensionAplicada; }
 
     public String getEstadoPago() { return estadoPago; }
     public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }

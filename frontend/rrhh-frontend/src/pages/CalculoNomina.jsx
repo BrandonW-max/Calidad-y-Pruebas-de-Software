@@ -1,13 +1,13 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
-import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
 import {
   calcularNomina,
   getNominasPorPeriodo,
   enviarComprobante,
+  descargarComprobante,
+  ajustarNomina,
 } from "../services/api";
-import { abrirComprobante } from "../services/comprobanteHtml";
 
 const getBonif = (n) =>
   (Number(n.bonifFamiliar)      || 0) +
@@ -40,7 +40,29 @@ export default function CalculoNomina() {
   const [mensaje,   setMensaje]   = useState("");
   const [error,     setError]     = useState("");
   const [enviando,  setEnviando]  = useState({});
+  const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const [previewNomina, setPreviewNomina] = useState(null);
+  const [modalEstructura, setModalEstructura] = useState(null);
+  const [datosBase, setDatosBase] = useState({
+    sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0,
+    horasNocturnas: 0, minutosLate: 0, tieneHijos: false,
+    cantidadHijos: 0, tipoPension: "ONP", cantidadGuardias: 0,
+  });
+
+  const abrirEstructura = (n) => {
+    setModalEstructura(n);
+    setDatosBase({
+      sueldoBase:       Number(n.sueldoBase ?? 0),
+      horasTrabajadas:  Number(n.totalHorasTrabajadas ?? 0),
+      horasExtra:       Number(n.totalHorasExtra ?? 0),
+      horasNocturnas:   Number(n.totalHorasNocturnas ?? 0),
+      minutosLate:      n.totalMinutosTardanza ?? 0,
+      tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
+      cantidadHijos:    n.cantidadHijos ?? 0,
+      tipoPension:      n.tipoPensionAplicada ?? "ONP",
+      cantidadGuardias: n.cantidadGuardias ?? 0,
+    });
+  };
 
   const periodo = `${anio}-${mes}`;
 
@@ -107,13 +129,65 @@ export default function CalculoNomina() {
     }
   };
 
-  const handleDescargar = (idNomina) => {
-    const n = resultList.find(x => String(x.idNomina ?? x.id) === String(idNomina));
-    if (n) {
-      const logoUrl = window.location.origin + logo;
-      abrirComprobante(n, logoUrl, "#2563eb", "Comprobante de Nómina", "Sistema de Recursos Humanos — Comprobante de Nómina");
-    } else {
-      setError("Calcule la nómina primero para ver el comprobante.");
+  const handleDescargar = async (idNomina) => {
+    try {
+      const blob = await descargarComprobante(idNomina);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `comprobante-nomina-${idNomina}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Error al descargar el comprobante.");
+    }
+  };
+
+  const reemplazarNomina = (actualizada) => {
+    setResultado(prev => {
+      if (!prev) return prev;
+      const lista = Array.isArray(prev) ? prev : [prev];
+      const nuevaLista = lista.map(n => n.idNomina === actualizada.idNomina ? actualizada : n);
+      return Array.isArray(prev) ? nuevaLista : nuevaLista[0];
+    });
+    setModalEstructura(actualizada);
+  };
+
+  const handleGuardarAjuste = async (calculos) => {
+    if (!modalEstructura?.idNomina) return;
+    setGuardandoAjuste(true);
+    setMensaje("");
+    setError("");
+    try {
+      const actualizada = await ajustarNomina(modalEstructura.idNomina, {
+        sueldoBase: datosBase.sueldoBase,
+        totalHorasTrabajadas: datosBase.horasTrabajadas,
+        totalHorasExtra: datosBase.horasExtra,
+        totalHorasNocturnas: datosBase.horasNocturnas,
+        totalMinutosTardanza: datosBase.minutosLate,
+        tieneHijos: datosBase.tieneHijos,
+        cantidadHijos: datosBase.cantidadHijos,
+        cantidadGuardias: datosBase.cantidadGuardias,
+        tipoPensionAplicada: datosBase.tipoPension,
+      });
+      reemplazarNomina(actualizada);
+      setDatosBase(p => ({
+        ...p,
+        sueldoBase: Number(actualizada.sueldoBase ?? p.sueldoBase),
+        horasTrabajadas: Number(actualizada.totalHorasTrabajadas ?? p.horasTrabajadas),
+        horasExtra: Number(actualizada.totalHorasExtra ?? p.horasExtra),
+        horasNocturnas: Number(actualizada.totalHorasNocturnas ?? p.horasNocturnas),
+        minutosLate: actualizada.totalMinutosTardanza ?? p.minutosLate,
+        tieneHijos: actualizada.tieneHijos ?? p.tieneHijos,
+        cantidadHijos: actualizada.cantidadHijos ?? p.cantidadHijos,
+        cantidadGuardias: actualizada.cantidadGuardias ?? p.cantidadGuardias,
+        tipoPension: actualizada.tipoPensionAplicada ?? p.tipoPension,
+      }));
+      setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(calculos.neto)}`);
+    } catch {
+      setError("Error al guardar el ajuste de nómina.");
+    } finally {
+      setGuardandoAjuste(false);
     }
   };
 
@@ -223,7 +297,7 @@ export default function CalculoNomina() {
                         <tr key={n.idNomina ?? i}>
                           <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{n.idNomina ?? i + 1}</td>
                           <td>
-                            <strong>{n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
+                            <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
                           </td>
                           <td>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
                           <td style={{ color: "var(--success)" }}>{fmtS(getBonif(n))}</td>
@@ -231,6 +305,11 @@ export default function CalculoNomina() {
                           <td style={{ fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
                           <td>
                             <div style={{ display: "flex", gap: "4px" }}>
+                              <button className="btn btn-secondary btn-sm"
+                                title="Estructura salarial"
+                                onClick={() => abrirEstructura(n)}>
+                                💰
+                              </button>
                               <button className="btn btn-secondary btn-sm"
                                 title="Vista previa detallada"
                                 onClick={() => setPreviewNomina(n)}>
@@ -332,11 +411,11 @@ export default function CalculoNomina() {
         const n = previewNomina;
         const base  = Number(n.sueldoBase ?? n.sueldo ?? 0);
         const bonifs = [
-          { label: "Bonif. Familiar",     val: n.bonifFamiliar },
+          { label: "Bonif. Familiar",       val: n.bonifFamiliar },
           { label: "Bonif. Turno Nocturno", val: n.bonifTurnoNocturno },
-          { label: "Bonif. Guardia",       val: n.bonifGuardia },
-          { label: "Bonif. Riesgo",        val: n.bonifRiesgo },
-          { label: "Bonif. Cargo",         val: n.bonifCargo },
+          { label: "Bonif. Guardia",        val: n.bonifGuardia },
+          { label: "Bonif. Riesgo",         val: n.bonifRiesgo },
+          { label: "Bonif. Cargo",          val: n.bonifCargo },
         ];
         const descs = [
           { label: "Descuento Tardanzas", val: n.descuentoTardanzas },
@@ -344,8 +423,8 @@ export default function CalculoNomina() {
         ];
         const totalBonif = getBonif(n);
         const totalDesc  = getDesc(n);
-        const neto  = Number(n.sueldoNeto ?? 0);
-        const mesLabel = MESES.find(m => m.v === (n.mes ?? mes))?.l ?? n.mes ?? mes;
+        const neto       = Number(n.sueldoNeto ?? 0);
+        const mesLabel   = MESES.find(m => m.v === (n.mes ?? mes))?.l ?? n.mes ?? mes;
         return (
           <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setPreviewNomina(null)}>
             <div className="modal-box" style={{ maxWidth: 500 }}>
@@ -353,25 +432,18 @@ export default function CalculoNomina() {
                 <div>
                   <h3>📊 Vista Previa — Nómina #{n.idNomina}</h3>
                   <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13 }}>
-                    {n.empleadoNombre ?? `Empleado #${n.idEmpleado}`} — {mesLabel} {n.anio ?? anio}
+                    {n.nombreEmpleado ?? n.empleadoNombre ?? `Empleado #${n.idEmpleado}`} — {mesLabel} {n.anio ?? anio}
                   </p>
                 </div>
                 <button className="modal-close" onClick={() => setPreviewNomina(null)}>×</button>
               </div>
-
               <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-                {/* Sueldo base */}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
                   <span style={{ fontWeight: 600 }}>Sueldo Base</span>
                   <strong>{fmtS(base)}</strong>
                 </div>
-
-                {/* Bonificaciones */}
                 <div>
-                  <div style={{ fontWeight: 700, color: "#16a34a", marginBottom: 8, fontSize: 13 }}>
-                    + Bonificaciones
-                  </div>
+                  <div style={{ fontWeight: 700, color: "#16a34a", marginBottom: 8, fontSize: 13 }}>+ Bonificaciones</div>
                   {bonifs.filter(r => Number(r.val)).map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4, paddingLeft: 12 }}>
                       <span style={{ color: "var(--text-2)" }}>{r.label}</span>
@@ -383,12 +455,8 @@ export default function CalculoNomina() {
                     <span style={{ color: "#16a34a" }}>{fmtS(totalBonif)}</span>
                   </div>
                 </div>
-
-                {/* Descuentos */}
                 <div>
-                  <div style={{ fontWeight: 700, color: "#ef4444", marginBottom: 8, fontSize: 13 }}>
-                    — Descuentos
-                  </div>
+                  <div style={{ fontWeight: 700, color: "#ef4444", marginBottom: 8, fontSize: 13 }}>— Descuentos</div>
                   {descs.filter(r => Number(r.val)).map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4, paddingLeft: 12 }}>
                       <span style={{ color: "var(--text-2)" }}>{r.label}</span>
@@ -400,17 +468,223 @@ export default function CalculoNomina() {
                     <span style={{ color: "#ef4444" }}>{fmtS(totalDesc)}</span>
                   </div>
                 </div>
-
-                {/* Neto */}
                 <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontWeight: 700, fontSize: 15 }}>Sueldo Neto a Pagar</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: "#15803d" }}>{fmtS(neto)}</span>
                 </div>
-
               </div>
-
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setPreviewNomina(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── MODAL ESTRUCTURA SALARIAL ── */}
+      {modalEstructura && (() => {
+        const n   = modalEstructura;
+        const db  = datosBase;
+        const fmt = (v) => `S/ ${Number(v || 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
+        const mesLabel = MESES.find(m => m.v === mes)?.l ?? mes;
+
+        const valorHora = db.sueldoBase > 0 ? db.sueldoBase / 30 / 8 : 0;
+        const valorMin  = valorHora / 60;
+        const horasDobles = Math.max(0, db.horasExtra - 2);
+        const horasExtraBase = Math.max(0, Math.min(db.horasExtra, 2));
+        const montoHorasExtra = (horasExtraBase * valorHora * 1.5) + (horasDobles * valorHora * 2);
+        const bFam    = db.tieneHijos ? db.sueldoBase * 0.10 * db.cantidadHijos : 0;
+        const bNoct   = db.horasNocturnas * valorHora * 0.15;
+        const bGuard  = db.cantidadGuardias * 50;
+        const bRiesgo = db.sueldoBase * 0.10;
+        const bCargo  = db.sueldoBase * 0.20;
+        const descTard = valorMin * db.minutosLate;
+        const bruto   = db.sueldoBase + montoHorasExtra + bFam + bNoct + bGuard + bRiesgo + bCargo;
+        const tasa    = db.tipoPension === "AFP" ? 0.12 : 0.13;
+        const descLey = bruto * tasa;
+        const neto    = Math.max(0, bruto - descTard - descLey);
+
+        const resetearValores = () => setDatosBase({
+          sueldoBase:       Number(n.sueldoBase ?? 0),
+          horasTrabajadas:  Number(n.totalHorasTrabajadas ?? 0),
+          horasExtra:       Number(n.totalHorasExtra ?? 0),
+          horasNocturnas:   Number(n.totalHorasNocturnas ?? 0),
+          minutosLate:      n.totalMinutosTardanza ?? 0,
+          tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
+          cantidadHijos:    n.cantidadHijos ?? 0,
+          tipoPension:      n.tipoPensionAplicada ?? "ONP",
+          cantidadGuardias: n.cantidadGuardias ?? 0,
+        });
+
+        const InputField = ({ label, field, step = "0.01", parse, disabled }) => (
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
+            <input
+              type="number" min="0" step={step}
+              value={db[field]}
+              onChange={e => setDatosBase(p => ({ ...p, [field]: parse ? parse(e.target.value) : Number(e.target.value) }))}
+              disabled={disabled}
+              style={{ width: "100%", padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: disabled ? "#f3f4f6" : "#fff", color: disabled ? "#9ca3af" : "#111827", boxSizing: "border-box", outline: "none" }}
+            />
+          </div>
+        );
+
+        const ToggleGroup = ({ label, field, options }) => (
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
+            <div style={{ display: "flex", gap: 6 }}>
+              {options.map(({ val, label: lbl }) => (
+                <button key={String(val)} onClick={() => setDatosBase(p => ({ ...p, [field]: val }))}
+                  style={{ flex: 1, padding: "7px 0", border: `1.5px solid ${db[field] === val ? "#2563eb" : "#d1d5db"}`, borderRadius: 8, background: db[field] === val ? "#eff6ff" : "#fff", color: db[field] === val ? "#2563eb" : "#6b7280", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+        const CalcRow = ({ label, formula, val, tipo = "bonif" }) => {
+          const isDesc = tipo === "desc";
+          return (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 11px", background: isDesc ? "#fff5f5" : "#f0fdf4", borderLeft: `3px solid ${isDesc ? "#dc2626" : "#16a34a"}`, borderRadius: 8, marginBottom: 5 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: isDesc ? "#7f1d1d" : "#14532d" }}>{label}</div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>{formula}</div>
+              </div>
+              <span style={{ fontWeight: 700, fontSize: 13, color: isDesc ? "#dc2626" : "#16a34a", flexShrink: 0, marginLeft: 8 }}>
+                {isDesc ? "−" : "+"} {fmt(val)}
+              </span>
+            </div>
+          );
+        };
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1100 }}
+            onClick={e => e.target === e.currentTarget && setModalEstructura(null)}>
+            <div className="modal-box" style={{ maxWidth: 780, padding: 0, overflow: "hidden", borderRadius: 16 }}>
+
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", color: "#fff", padding: "18px 26px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.6, marginBottom: 4 }}>Estructura Salarial · Simulador</div>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{n.nombreEmpleado ?? `Empleado #${n.idEmpleado}`}</h3>
+                    <div style={{ marginTop: 3, opacity: 0.72, fontSize: 12 }}>Período: {mesLabel} {anio} · Nómina #{n.idNomina}</div>
+                  </div>
+                  <button onClick={() => setModalEstructura(null)} style={{ background: "rgba(255,255,255,0.18)", border: "none", color: "#fff", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                </div>
+              </div>
+
+              {/* Body: two columns */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", maxHeight: "70vh", overflow: "hidden" }}>
+
+                {/* LEFT: Datos ingresados (editable) */}
+                <div style={{ padding: "18px 20px", borderRight: "1px solid #e5e7eb", overflowY: "auto", background: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 14, background: "#2563eb", borderRadius: 2 }} />
+                    <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#2563eb" }}>Datos Ingresados / Registrados</span>
+                  </div>
+
+                  <InputField label="Sueldo Base (S/)" field="sueldoBase" step="1" />
+                  <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
+                  <InputField label="Horas Extra" field="horasExtra" step="0.5" />
+                  <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" />
+                  <InputField label="Tardanzas (minutos)" field="minutosLate" step="1" parse={v => Math.max(0, parseInt(v) || 0)} />
+                  <InputField label="Cantidad de Guardias" field="cantidadGuardias" step="1" parse={v => Math.max(0, parseInt(v) || 0)} />
+
+                  <ToggleGroup label="¿Tiene Hijos?" field="tieneHijos"
+                    options={[
+                      { val: true,  label: "Sí" },
+                      { val: false, label: "No" },
+                    ]}
+                  />
+
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>Cantidad de Hijos</label>
+                    <input type="number" min="0" step="1"
+                      value={db.cantidadHijos}
+                      disabled={!db.tieneHijos}
+                      onChange={e => setDatosBase(p => ({ ...p, cantidadHijos: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      style={{ width: "100%", padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: !db.tieneHijos ? "#f3f4f6" : "#fff", color: !db.tieneHijos ? "#9ca3af" : "#111827", boxSizing: "border-box" }}
+                    />
+                  </div>
+
+                  <ToggleGroup label="Tipo de Pensión" field="tipoPension"
+                    options={[
+                      { val: "ONP", label: "ONP  (13%)" },
+                      { val: "AFP", label: "AFP  (12%)" },
+                    ]}
+                  />
+
+                  <button onClick={resetearValores}
+                    style={{ width: "100%", marginTop: 6, padding: "7px 0", border: "1px solid #d1d5db", borderRadius: 8, background: "#f9fafb", color: "#6b7280", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>
+                    ↺ Restablecer valores originales
+                  </button>
+                </div>
+
+                {/* RIGHT: Cálculos automáticos (live) */}
+                <div style={{ padding: "18px 20px", overflowY: "auto", background: "#f8fafc" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 14, background: "#16a34a", borderRadius: 2 }} />
+                    <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#16a34a" }}>Cálculos Automáticos</span>
+                  </div>
+
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Bonificaciones</div>
+                  <CalcRow label="Horas Extra"
+                    formula={`${db.horasExtra}h con 1.5x hasta 2h y 2x restante`}
+                    val={montoHorasExtra} />
+                  <CalcRow label="Bonif. Familiar"
+                    formula={db.tieneHijos && db.cantidadHijos > 0
+                      ? `10% × ${fmt(db.sueldoBase)} × ${db.cantidadHijos} hijo(s)`
+                      : "No aplica (sin hijos declarados)"}
+                    val={bFam} />
+                  <CalcRow label="Bonif. Nocturna"
+                    formula={`${db.horasNocturnas}h × ${fmt(valorHora)}/h × 15%`}
+                    val={bNoct} />
+                  <CalcRow label="Bonif. Guardia"
+                    formula={`${db.cantidadGuardias} guardia(s) × S/ 50.00`}
+                    val={bGuard} />
+                  <CalcRow label="Bonif. Riesgo"
+                    formula={`10% × ${fmt(db.sueldoBase)}`}
+                    val={bRiesgo} />
+                  <CalcRow label="Bonif. Cargo"
+                    formula={`20% × ${fmt(db.sueldoBase)}`}
+                    val={bCargo} />
+
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 11px", background: "#dcfce7", borderRadius: 8, margin: "8px 0 12px", fontWeight: 700, fontSize: 12 }}>
+                    <span style={{ color: "#15803d" }}>Total Bruto</span>
+                    <span style={{ color: "#15803d" }}>{fmt(bruto)}</span>
+                  </div>
+
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Descuentos</div>
+                  <CalcRow label={`Desc. de Ley (${db.tipoPension})`}
+                    formula={`${(tasa * 100).toFixed(0)}% × ${fmt(bruto)} (bruto)`}
+                    val={descLey} tipo="desc" />
+                  <CalcRow label="Desc. Tardanzas"
+                    formula={`${db.minutosLate} min × ${fmt(valorMin)}/min`}
+                    val={descTard} tipo="desc" />
+
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 11px", background: "#fee2e2", borderRadius: 8, marginTop: 8, fontWeight: 700, fontSize: 12 }}>
+                    <span style={{ color: "#b91c1c" }}>Total Descuentos</span>
+                    <span style={{ color: "#b91c1c" }}>− {fmt(descTard + descLey)}</span>
+                  </div>
+
+                  <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #2563eb 100%)", borderRadius: 12, padding: "15px 18px", marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 4px 14px rgba(37,99,235,0.25)" }}>
+                    <div>
+                      <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Sueldo Neto</div>
+                      <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 3 }}>{fmt(bruto)} − {fmt(descTard + descLey)}</div>
+                    </div>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 26, lineHeight: 1 }}>{fmt(neto)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", background: "#fff" }}>
+                <button className="btn btn-primary" onClick={() => handleGuardarAjuste({ neto })} disabled={guardandoAjuste} style={{ marginRight: 10 }}>
+                  {guardandoAjuste ? "Guardando..." : "Guardar cambios"}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setModalEstructura(null)}>Cerrar</button>
               </div>
             </div>
           </div>

@@ -98,4 +98,5 @@ public class UsuarioGestion {
     public void setNombreRol(String nombreRol) {
         this.nombreRol = nombreRol;
     }
+
 }

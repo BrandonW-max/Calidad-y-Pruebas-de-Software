@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
+import PrimerAccesoModal from "./PrimerAccesoModal";
 import { login, saveSession, getUser, solicitarRecuperacion } from "../services/api";
 
 export default function Login() {
@@ -12,8 +13,10 @@ export default function Login() {
   const [showPwd,  setShowPwd]      = useState(false);
   const [mensaje,  setMensaje]      = useState("");
   const [intentos, setIntentos]     = useState(null);
-  const [show2FA,  setShow2FA]      = useState(false);
-  const [resetKey, setResetKey]       = useState(0);
+  const [show2FA,        setShow2FA]        = useState(false);
+  const [resetKey,       setResetKey]       = useState(0);
+  const [primerAcceso,   setPrimerAcceso]   = useState(false);
+  const [primerUsername, setPrimerUsername] = useState("");
   const [showForgot,    setShowForgot]   = useState(false);
   const [forgotInput,   setForgotInput]  = useState("");
   const [forgotOk,      setForgotOk]    = useState(false);
@@ -49,8 +52,13 @@ export default function Login() {
         setShow2FA(true);
         return;
       }
-      saveSession(data.token, data.rol, username, data.idEmpleado ?? null);
+      saveSession(data.token, data.rol, username, data.idEmpleado ?? null, data.requiereCambioPassword ?? false);
       if (data.requires2FASetup) sessionStorage.setItem('show2FAReminder', 'true');
+      if (data.requiereCambioPassword) {
+        setPrimerUsername(username);
+        setPrimerAcceso(true);
+        return;
+      }
       redirectByRole(data.rol);
     } catch {
       setMensaje("Error de conexión con el servidor. Verifique que el servicio esté disponible.");
@@ -168,8 +176,23 @@ export default function Login() {
           open={show2FA}
           username={username}
           onClose={() => setShow2FA(false)}
-          onSuccess={(rol, idEmpleado) => {
+          onSuccess={(rol, idEmpleado, requiereCambioPassword) => {
             setShow2FA(false);
+            if (requiereCambioPassword) {
+              setPrimerUsername(username);
+              setPrimerAcceso(true);
+              return;
+            }
+            redirectByRole(rol);
+          }}
+        />
+      )}
+
+      {primerAcceso && (
+        <PrimerAccesoModal
+          username={primerUsername}
+          onDone={(rol) => {
+            setPrimerAcceso(false);
             redirectByRole(rol);
           }}
         />

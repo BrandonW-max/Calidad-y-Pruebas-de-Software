@@ -111,6 +111,11 @@ public class NominaRepositoryImpl implements INominaRepository {
         model.setEstadoPago(nomina.getEstadoPago());
         model.setVersion(nomina.getVersion() != null ? nomina.getVersion() : 1);
         model.setNominaAnteriorId(nomina.getNominaAnteriorId());
+        model.setCantidadHijos(nomina.getCantidadHijos() != null ? nomina.getCantidadHijos() : 0);
+        model.setTieneHijos(nomina.getTieneHijos() != null ? nomina.getTieneHijos() : false);
+        model.setCantidadGuardias(nomina.getCantidadGuardias() != null ? nomina.getCantidadGuardias() : 0);
+        model.setTotalHorasNocturnas(nomina.getTotalHorasNocturnas() != null ? nomina.getTotalHorasNocturnas() : java.math.BigDecimal.ZERO);
+        model.setTipoPensionAplicada(nomina.getTipoPensionAplicada() != null ? nomina.getTipoPensionAplicada() : "ONP");
 
         EmpleadoModel emp = new EmpleadoModel();
         emp.setIdEmpleado(nomina.getIdEmpleado());
@@ -149,6 +154,11 @@ public class NominaRepositoryImpl implements INominaRepository {
         nomina.setEstadoPago(model.getEstadoPago());
         nomina.setVersion(model.getVersion());
         nomina.setNominaAnteriorId(model.getNominaAnteriorId());
+        nomina.setCantidadHijos(model.getCantidadHijos());
+        nomina.setTieneHijos(model.getTieneHijos());
+        nomina.setCantidadGuardias(model.getCantidadGuardias());
+        nomina.setTotalHorasNocturnas(model.getTotalHorasNocturnas());
+        nomina.setTipoPensionAplicada(model.getTipoPensionAplicada());
         if (model.getEmpleado() != null) {
             nomina.setIdEmpleado(model.getEmpleado().getIdEmpleado());
         }

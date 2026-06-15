@@ -79,6 +79,7 @@ export default function GestionEmpleados() {
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
   const [modalSueldo,     setModalSueldo]     = useState(false);
+  const [sueldoModo,      setSueldoModo]      = useState("editar"); // "nuevo" | "editar"
   const [showFechas,      setShowFechas]      = useState(false);
   const [sueldoForm,      setSueldoForm]      = useState({
     sueldoBase: "", bonifAsistencia: 0, bonifFamiliar: 0, bonifExtraordinaria: 0,
@@ -334,15 +335,21 @@ export default function GestionEmpleados() {
     }
   };
 
-  const abrirSueldoDetalle = () => {
-    setSueldoForm(f => ({ ...f, sueldoBase: modalEditar?.sueldo ?? "" }));
+  const abrirSueldoDetalle = (modo = "editar") => {
+    const base = modo === "nuevo" ? (form.sueldo ?? "") : (modalEditar?.sueldo ?? "");
+    setSueldoForm(f => ({ ...f, sueldoBase: base }));
+    setSueldoModo(modo);
     setModalSueldo(true);
   };
 
   const aplicarCambioSueldo = () => {
-    setModalEditar(prev => ({ ...prev, sueldo: sueldoForm.sueldoBase }));
+    if (sueldoModo === "nuevo") {
+      setForm(f => ({ ...f, sueldo: sueldoForm.sueldoBase }));
+    } else {
+      setModalEditar(prev => ({ ...prev, sueldo: sueldoForm.sueldoBase }));
+    }
     setModalSueldo(false);
-  };;
+  };
 
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
@@ -692,6 +699,10 @@ export default function GestionEmpleados() {
                     <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999" />
                   </div>
                   <div className="form-group">
+                    <label>Dirección *</label>
+                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required />
+                  </div>
+                  <div className="form-group">
                     <label>Departamento *</label>
                     <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required>
                       <option value="">Seleccione departamento</option>
@@ -727,7 +738,14 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Sueldo Base (S/) *</label>
-                    <input type="number" step="0.01" min="0" value={form.sueldo} onChange={e => setForm({ ...form, sueldo: e.target.value })} placeholder="0.00" required />
+                    <button type="button" className="sueldo-detalle-btn" onClick={() => abrirSueldoDetalle("nuevo")}>
+                      <span className="sueldo-detalle-valor">
+                        {form.sueldo ? formatSueldo(form.sueldo) : "Sin definir"}
+                      </span>
+                      <span className="sueldo-detalle-hint">Ver estructura salarial →</span>
+                    </button>
+                    {/* campo oculto para validación required */}
+                    <input type="hidden" value={form.sueldo} required />
                   </div>
 
                   {form.tipoContrato && (
@@ -757,10 +775,6 @@ export default function GestionEmpleados() {
                       </div>
                     </div>
                   )}
-                  <div className="form-group form-full">
-                    <label>Dirección *</label>
-                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required />
-                  </div>
                 </div>
               </form>
             </div>
@@ -977,7 +991,11 @@ export default function GestionEmpleados() {
       )}
 
       {/* ══ SUB-MODAL: ESTRUCTURA SALARIAL ══ */}
-      {modalSueldo && modalEditar && (() => {
+      {modalSueldo && (sueldoModo === "nuevo" || modalEditar) && (() => {
+        const empleadoNombre = sueldoModo === "nuevo"
+          ? `${form.nombres || "—"} ${form.apellidos || ""}`.trim()
+          : `${modalEditar?.nombres ?? ""} ${modalEditar?.apellidos ?? ""}`.trim();
+        const empleadoCargo = sueldoModo === "nuevo" ? (form.cargo ?? "—") : (modalEditar?.cargo ?? "—");
         const base      = parseFloat(sueldoForm.sueldoBase       || 0);
         const bAsist    = parseFloat(sueldoForm.bonifAsistencia   || 0);
         const bFam      = parseFloat(sueldoForm.bonifFamiliar     || 0);
@@ -997,7 +1015,7 @@ export default function GestionEmpleados() {
               <div className="modal-header">
                 <div>
                   <h3>💰 Estructura Salarial</h3>
-                  <p>{modalEditar.nombres} {modalEditar.apellidos} — {modalEditar.cargo ?? "—"}</p>
+                  <p>{empleadoNombre || "Nuevo empleado"} — {empleadoCargo}</p>
                 </div>
                 <button className="modal-close" onClick={() => setModalSueldo(false)}>×</button>
               </div>

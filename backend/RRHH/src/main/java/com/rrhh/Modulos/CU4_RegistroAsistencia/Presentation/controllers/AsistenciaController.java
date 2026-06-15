@@ -8,10 +8,19 @@ import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaR
 import com.rrhh.Shared.persistence.JustificacionTardanzaModel;
 import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 import java.util.List;
@@ -27,10 +36,33 @@ public class AsistenciaController {
     private final AsistenciaService asistenciaService;
     private final JustificacionService justificacionService;
 
+    @Value("${app.upload-dir:uploads/evidencias}")
+    private String uploadDir;
+
     public AsistenciaController(AsistenciaService asistenciaService,
                                 JustificacionService justificacionService) {
         this.asistenciaService = asistenciaService;
         this.justificacionService = justificacionService;
+    }
+
+    @PostMapping(value = "/upload-evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
+    public ResponseEntity<Map<String, String>> uploadEvidencia(
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        Path dir = Paths.get(uploadDir).toAbsolutePath();
+        Files.createDirectories(dir);
+
+        String ext = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.contains(".")) {
+            ext = original.substring(original.lastIndexOf("."));
+        }
+        String filename = UUID.randomUUID() + ext;
+        Files.copy(file.getInputStream(), dir.resolve(filename));
+
+        String url = "/uploads/evidencias/" + filename;
+        return ResponseEntity.ok(Map.of("url", url));
     }
 
     @PostMapping("/marcar")

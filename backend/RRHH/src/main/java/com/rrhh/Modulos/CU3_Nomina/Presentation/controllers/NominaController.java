@@ -1,6 +1,7 @@
 package com.rrhh.Modulos.CU3_Nomina.Presentation.controllers;
 
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.INominaService;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.NominaService;
@@ -124,6 +125,20 @@ public class NominaController {
                         "attachment; filename=Comprobante_Nomina_" + nomina.getPeriodo() + ".pdf")
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_PDF))
                 .body(pdf);
+    }
+
+    @PutMapping(NominaApiRoutes.AJUSTAR)
+    @PreAuthorize("hasRole('RRHH')")
+    public ResponseEntity<?> ajustarNomina(
+            @PathVariable Integer id,
+            @RequestBody AjustarNominaRequestDTO request,
+            Authentication authentication) {
+        try {
+            Long idUsuario = obtenerIdUsuario(authentication);
+            return ResponseEntity.ok(nominaService.ajustarNomina(id, request, idUsuario));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping(NominaApiRoutes.BUSCAR_ID + "/enviar")

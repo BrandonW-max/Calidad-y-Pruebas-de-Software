@@ -7,6 +7,7 @@ public class AuthResponseDTO {
     private boolean requires2FA;
     private String token;
     private boolean requires2FASetup;
+    private boolean requiereCambioPassword;
 
     public AuthResponseDTO(boolean success, String message) {
         this.success = success;
@@ -76,5 +77,13 @@ public class AuthResponseDTO {
 
     public void setRequires2FASetup(boolean requires2FASetup) {
         this.requires2FASetup = requires2FASetup;
+    }
+
+    public boolean isRequiereCambioPassword() {
+        return requiereCambioPassword;
+    }
+
+    public void setRequiereCambioPassword(boolean requiereCambioPassword) {
+        this.requiereCambioPassword = requiereCambioPassword;
     }
 }

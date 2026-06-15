@@ -66,6 +66,10 @@ public class UsuarioMapper {
                 model.getTokenInvalidoDesde()
         );
 
+        if (model.getEmpleado() != null) {
+            domain.setNumeroDi(model.getEmpleado().getNumeroDi());
+        }
+
         // =========================
         // ROL
         // =========================

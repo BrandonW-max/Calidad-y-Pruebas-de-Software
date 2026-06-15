@@ -74,6 +74,12 @@ public class HorarioController {
         return ResponseEntity.ok(horarioService.listarAsignacionesPorEmpleado(idEmpleado));
     }
 
+    /** Empleados asignados actualmente a un horario concreto. */
+    @GetMapping("/{id}/empleados")
+    public ResponseEntity<List<Map<String, Object>>> empleadosPorHorario(@PathVariable Integer id) {
+        return ResponseEntity.ok(horarioService.getEmpleadosPorHorario(id));
+    }
+
     /** Resumen de asignaciones activas (una por empleado) para poblar la tabla. */
     @GetMapping("/asignaciones/activas")
     public ResponseEntity<List<Map<String, Object>>> asignacionesActivas() {

@@ -13,4 +13,6 @@ public interface IDetalleNominaRepository {
     List<DetalleNomina> buscarPorNomina(Integer idNomina);
 
     List<DetalleNomina> buscarPorEmpleado(Long idEmpleado);
+
+    void eliminarPorNomina(Integer idNomina);
 }

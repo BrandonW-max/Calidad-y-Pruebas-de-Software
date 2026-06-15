@@ -81,6 +81,21 @@ public class NominaModel {
     @Column(name = "sueldo_neto", nullable = false)
     private BigDecimal sueldoNeto;
 
+    @Column(name = "cantidad_hijos")
+    private Integer cantidadHijos = 0;
+
+    @Column(name = "tiene_hijos")
+    private Boolean tieneHijos = false;
+
+    @Column(name = "cantidad_guardias")
+    private Integer cantidadGuardias = 0;
+
+    @Column(name = "total_horas_nocturnas")
+    private BigDecimal totalHorasNocturnas = BigDecimal.ZERO;
+
+    @Column(name = "tipo_pension_aplicada", length = 10)
+    private String tipoPensionAplicada = "ONP";
+
     @Column(name = "estado_pago", length = 20)
     private String estadoPago = "CALCULADA";
 

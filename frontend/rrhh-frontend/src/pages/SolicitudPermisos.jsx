@@ -285,27 +285,40 @@ function VistaEmpleado() {
    VISTA RRHH
 ══════════════════════════════════════════════════════════ */
 function VistaRRHH() {
-  const [solicitudes,   setSolicitudes]   = useState([]);
-  const [loading,       setLoading]       = useState(false);
-  const [mensaje,       setMensaje]       = useState("");
-  const [error,         setError]         = useState("");
-  const [filtroEstado,  setFiltroEstado]  = useState("PENDIENTE");
-  const [solicitudActiva, setSolicitudActiva] = useState(null);
-  const [modalRevision, setModalRevision] = useState({ open: false, solicitud: null, decision: "", comentario: "" });
-  const [procesando,    setProcesando]    = useState(false);
+  const [todasSolicitudes, setTodasSolicitudes] = useState([]);
+  const [loading,          setLoading]          = useState(false);
+  const [mensaje,          setMensaje]          = useState("");
+  const [error,            setError]            = useState("");
+  const [filtroEstado,     setFiltroEstado]     = useState("PENDIENTE");
+  const [solicitudActiva,  setSolicitudActiva]  = useState(null);
+  const [modalRevision,    setModalRevision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
+  const [procesando,       setProcesando]       = useState(false);
 
-  useEffect(() => { cargarSolicitudes(); }, [filtroEstado]);
+  // Derivado: solo las del filtro activo (para la tabla)
+  const solicitudes = todasSolicitudes.filter(s => s.estado === filtroEstado);
+
+  useEffect(() => { cargarSolicitudes(); }, []);
 
   const cargarSolicitudes = async () => {
     setLoading(true); setError("");
     try {
-      const data = await getSolicitudesPorEstado(filtroEstado);
-      setSolicitudes(Array.isArray(data) ? data : []);
+      const [pend, enRev, apro, rech] = await Promise.all([
+        getSolicitudesPorEstado("PENDIENTE"),
+        getSolicitudesPorEstado("PROCESADO"),
+        getSolicitudesPorEstado("APROBADA"),
+        getSolicitudesPorEstado("RECHAZADA"),
+      ]);
+      setTodasSolicitudes([
+        ...(Array.isArray(pend)  ? pend  : []),
+        ...(Array.isArray(enRev) ? enRev : []),
+        ...(Array.isArray(apro)  ? apro  : []),
+        ...(Array.isArray(rech)  ? rech  : []),
+      ]);
     } catch { setError("No se pudieron cargar las solicitudes"); }
     finally  { setLoading(false); }
   };
 
-  const contarPorEstado = (e) => solicitudes.filter(s => s.estado === e).length;
+  const contarPorEstado = (e) => todasSolicitudes.filter(s => s.estado === e).length;
 
   const handleRevisar = async () => {
     if (!modalRevision.decision || !modalRevision.comentario.trim()) return;

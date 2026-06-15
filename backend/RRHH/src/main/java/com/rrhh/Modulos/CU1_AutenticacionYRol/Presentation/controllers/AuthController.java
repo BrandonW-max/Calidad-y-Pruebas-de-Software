@@ -204,6 +204,21 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(ApiRoutes.SET_PASSWORD)
+    public ResponseEntity<AuthResponseDTO> setPassword(
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        AuthenticatedUser authUser = (AuthenticatedUser) SecurityContextHolder
+                .getContext().getAuthentication().getPrincipal();
+        String nueva    = body.getOrDefault("nuevaContrasenia", "");
+        String confirmar = body.getOrDefault("confirmarContrasenia", "");
+        AuthResponseDTO response = authService.setPassword(nueva, confirmar, authUser.getUsername());
+        if (!response.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping(ApiRoutes.CHANGE_PASSWORD)
     public ResponseEntity<AuthResponseDTO> changePassword(
             @Valid @RequestBody ChangePasswordRequestDTO request
