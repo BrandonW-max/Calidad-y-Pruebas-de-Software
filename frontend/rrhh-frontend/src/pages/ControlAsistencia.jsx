@@ -600,8 +600,9 @@ function VistaRRHH() {
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
-  const [modalRechazar, setModalRechazar] = useState({ open: false, id: null, comentario: "" });
-  const [modalMotivo, setModalMotivo] = useState({ open: false, texto: "" });
+  const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
+  const [modalMotivo,    setModalMotivo]    = useState({ open: false, texto: "" });
+  const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
   const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
   const [manualForm, setManualForm] = useState({
@@ -704,14 +705,23 @@ function VistaRRHH() {
     }
   };
 
-  const handleAprobar = async (id) => {
+  const handleDecidirAprobar = async () => {
+    const j = modalDecision.justificacion;
+    setModalDecision({ open: false, justificacion: null });
     try {
-      await revisarJustificacion(id, "APROBADA", "");
-      setMensaje("Justificación aprobada correctamente");
+      await revisarJustificacion(j.id ?? j.idJustificacion, "APROBADA", "");
+      setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
+      handleCorregirTardanza(j);
       cargarJustificaciones();
     } catch {
       setMensaje("Error al aprobar la justificación");
     }
+  };
+
+  const handleDecidirRechazar = () => {
+    const j = modalDecision.justificacion;
+    setModalDecision({ open: false, justificacion: null });
+    setModalRechazar({ open: true, id: j.id ?? j.idJustificacion, comentario: "" });
   };
 
   const handleConfirmarRechazo = async () => {
@@ -826,12 +836,12 @@ function VistaRRHH() {
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th><th>Empleado</th><th>Fecha Registro</th><th>Motivo</th><th>Estado</th><th>Decisión</th>
+                      <th>#</th><th>Empleado</th><th>Fecha Asistencia</th><th>Motivo</th><th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
-                      <tr><td colSpan={6}>
+                      <tr><td colSpan={5}>
                         <div className="empty-state">
                           <div className="empty-state-icon">✅</div>
                           <p>No hay justificaciones pendientes de revisión</p>
@@ -840,7 +850,7 @@ function VistaRRHH() {
                     ) : justificaciones.map(j => (
                       <tr
                         key={j.id ?? j.idJustificacion}
-                        onClick={() => handleCorregirTardanza(j)}
+                        onClick={() => setModalDecision({ open: true, justificacion: j })}
                         style={{
                           cursor: "pointer",
                           background: justificacionSeleccionada === (j.id ?? j.idJustificacion)
@@ -850,7 +860,7 @@ function VistaRRHH() {
                       >
                         <td>{j.id ?? j.idJustificacion}</td>
                         <td>{getNombreEmpleado(j.idEmpleado)}</td>
-                        <td>{j.fechaRegistro ?? "—"}</td>
+                        <td>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
                         <td>
                           <button
                             style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px" }}
@@ -861,10 +871,6 @@ function VistaRRHH() {
                           </button>
                         </td>
                         <td><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
-                        <td style={{ display: "inline-flex", gap: "6px" }}>
-                          <button className="btn btn-success btn-sm" onClick={e => { e.stopPropagation(); handleAprobar(j.id ?? j.idJustificacion); }}>✅ Aprobar</button>
-                          <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); setModalRechazar({ open: true, id: j.id ?? j.idJustificacion, comentario: "" }); }}>❌ Rechazar</button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -975,6 +981,39 @@ function VistaRRHH() {
           </div>
 
       </main>
+
+      {/* ── MODAL: DECISIÓN ── */}
+      {modalDecision.open && modalDecision.justificacion && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDecision({ open: false, justificacion: null })}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <div>
+                <h3>📋 Decisión de Justificación</h3>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-2)" }}>
+                  {getNombreEmpleado(modalDecision.justificacion.idEmpleado)}
+                  {modalDecision.justificacion.fechaAsistencia
+                    ? ` — ${modalDecision.justificacion.fechaAsistencia}`
+                    : ""}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setModalDecision({ open: false, justificacion: null })}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontWeight: 600, marginBottom: 12 }}>¿Desea aprobar o rechazar esta justificación?</p>
+              {modalDecision.justificacion.motivo && (
+                <div className="alert alert-info" style={{ marginBottom: 12, fontSize: 13, whiteSpace: "pre-wrap" }}>
+                  <strong>Motivo:</strong> {modalDecision.justificacion.motivo}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalDecision({ open: false, justificacion: null })}>Cancelar</button>
+              <button className="btn btn-danger" onClick={handleDecidirRechazar}>❌ Rechazar</button>
+              <button className="btn btn-success" onClick={handleDecidirAprobar}>✅ Aprobar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL: VER MOTIVO ── */}
       {modalMotivo.open && (

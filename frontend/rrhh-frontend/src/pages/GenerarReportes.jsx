@@ -128,7 +128,7 @@ export default function GenerarReportes() {
 
     const params = {
       tipo:    tipoSeleccionado,
-      formato,
+      formato: undefined,
       fechaInicio: inicio,
       fechaFin:    fin,
       estado:     (tipoSeleccionado === "solicitudes" || tipoSeleccionado === "empleados") ? estado || undefined : undefined,
@@ -158,10 +158,14 @@ export default function GenerarReportes() {
         setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: "Descargado" }, ...h].slice(0, 10));
       } else {
         const data = await response.json();
-        const lista = Array.isArray(data) ? data : (data?.data ?? data?.content ?? []);
+        const lista = Array.isArray(data) ? data : (data?.datos ?? data?.data ?? data?.content ?? []);
         setResultado(lista);
-        setMensaje(`Reporte generado correctamente (${lista.length} registros).`);
-        setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: "Generado" }, ...h].slice(0, 10));
+        if (lista.length === 0) {
+          setMensaje("No se encontraron datos para el período o filtros seleccionados. Pruebe con otro mes o amplíe los criterios.");
+        } else {
+          setMensaje(`Reporte generado correctamente — ${lista.length} registro(s) encontrado(s).`);
+        }
+        setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: lista.length > 0 ? "Generado" : "Sin datos" }, ...h].slice(0, 10));
       }
     } catch {
       setError("Error al generar el reporte. Verifique los filtros e intente de nuevo.");
