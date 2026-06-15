@@ -74,8 +74,15 @@ export default function CalculoNomina() {
     try {
       const data = await getNominasPorPeriodo(mes, anio);
       if (Array.isArray(data) && data.length > 0) {
-        setResultado(data);
-        setMensaje(`Se cargaron ${data.length} registros del período ${periodo}`);
+        const byEmployee = {};
+        for (const n of data) {
+          if (!byEmployee[n.idEmpleado] || n.idNomina > byEmployee[n.idEmpleado].idNomina) {
+            byEmployee[n.idEmpleado] = n;
+          }
+        }
+        const deduped = Object.values(byEmployee);
+        setResultado(deduped);
+        setMensaje(`Se cargaron ${deduped.length} registros del período ${periodo}`);
       } else {
         setError(`No hay nóminas registradas para ${periodo}. Calcule primero.`);
       }

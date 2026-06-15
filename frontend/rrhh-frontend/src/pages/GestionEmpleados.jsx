@@ -14,6 +14,7 @@ import {
   registrarAscenso,
   cambioSalarial,
   getDepartamentos,
+  getHistorialEmpleado,
 } from "../services/api";
 
 const FORM_VACIO = {
@@ -82,6 +83,11 @@ export default function GestionEmpleados() {
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
   const dropRef = useRef(null);
+
+  // Historial modal
+  const [modalHistorial, setModalHistorial] = useState({ open: false, empleado: null });
+  const [historialData,  setHistorialData]  = useState([]);
+  const [historialLoad,  setHistorialLoad]  = useState(false);
 
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
@@ -459,7 +465,20 @@ export default function GestionEmpleados() {
                                   💲 Cambio salarial
                                 </div>
                                 <div className="action-drop-item drop-gray"
-                                  onClick={() => setOpenDrop(null)}>
+                                  onClick={async () => {
+                                    setOpenDrop(null);
+                                    setModalHistorial({ open: true, empleado: emp });
+                                    setHistorialData([]);
+                                    setHistorialLoad(true);
+                                    try {
+                                      const data = await getHistorialEmpleado(emp.idEmpleado);
+                                      setHistorialData(Array.isArray(data) ? data : []);
+                                    } catch {
+                                      setHistorialData([]);
+                                    } finally {
+                                      setHistorialLoad(false);
+                                    }
+                                  }}>
                                   🕐 Ver historial
                                 </div>
                               </div>
@@ -942,6 +961,83 @@ export default function GestionEmpleados() {
           </div>
         );
       })()}
+
+      {/* ══ MODAL: HISTORIAL DEL EMPLEADO ══ */}
+      {modalHistorial.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHistorial({ open: false, empleado: null })}>
+          <div className="modal-box modal-box-wide">
+            <div className="modal-header">
+              <div>
+                <h3>🕐 Historial — {modalHistorial.empleado?.nombres} {modalHistorial.empleado?.apellidos}</h3>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)" }}>
+                  DNI: {modalHistorial.empleado?.numeroDi} · ID #{modalHistorial.empleado?.idEmpleado}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setModalHistorial({ open: false, empleado: null })}>×</button>
+            </div>
+            <div className="modal-body">
+              {historialLoad ? (
+                <div className="loading-text">Cargando historial...</div>
+              ) : historialData.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📋</div>
+                  <p>No hay registros de historial para este empleado.</p>
+                </div>
+              ) : (
+                <div className="table-wrapper" style={{ maxHeight: 420, overflowY: "auto" }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Acción</th>
+                        <th>Valor Anterior</th>
+                        <th>Valor Nuevo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historialData.map((h, i) => (
+                        <tr key={h.idAuditoria ?? i}>
+                          <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--text-3)" }}>
+                            {h.fechaDeCambio
+                              ? new Date(h.fechaDeCambio).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })
+                              : "—"}
+                          </td>
+                          <td>
+                            <span className={`badge ${
+                              h.accion?.includes("CREAR") ? "badge-success" :
+                              h.accion?.includes("DESACTIVAR") ? "badge-danger" :
+                              h.accion?.includes("SANCION") ? "badge-warning" :
+                              "badge-gray"
+                            }`} style={{ fontSize: 11 }}>
+                              {h.accion ?? "—"}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12, color: "var(--text-2)", maxWidth: 220 }}>
+                            <span title={h.valorAnterior ?? ""} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {h.valorAnterior ?? "—"}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12, color: "var(--text-1)", maxWidth: 280 }}>
+                            <span title={h.valorNuevo ?? ""} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {h.valorNuevo ?? "—"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                {historialData.length > 0 && `${historialData.length} registro(s)`}
+              </span>
+              <button className="btn btn-secondary" onClick={() => setModalHistorial({ open: false, empleado: null })}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

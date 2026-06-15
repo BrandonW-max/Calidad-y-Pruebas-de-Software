@@ -12,23 +12,33 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarSancionReq
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.services.IEmpleadoService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.routes.EmpleadoApiRoutes;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaHistorialRepository;
+import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(EmpleadoApiRoutes.EMPLEADO_BASE)
 public class EmpleadoController {
 
     private final IEmpleadoService empleadoService;
+    private final JpaHistorialRepository historialRepository;
 
-    public EmpleadoController(IEmpleadoService empleadoService) {
+    public EmpleadoController(IEmpleadoService empleadoService, JpaHistorialRepository historialRepository) {
         this.empleadoService = empleadoService;
+        this.historialRepository = historialRepository;
     }
 
     @PostMapping(EmpleadoApiRoutes.REGISTRAR)
@@ -124,5 +134,28 @@ public class EmpleadoController {
             @RequestBody CambioSalarialRequestDTO dto
     ) {
         return empleadoService.registrarCambioSalarial(idEmpleado, dto);
+    }
+
+    @GetMapping(EmpleadoApiRoutes.HISTORIAL)
+    @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA')")
+    public ResponseEntity<List<Map<String, Object>>> getHistorialEmpleado(
+            @PathVariable Long idEmpleado) {
+        List<HistorialAuditoriaModel> historial = historialRepository
+                .findByIdRegistroAfectadoAndTablaAfectada(
+                        idEmpleado, "EMPLEADO",
+                        Sort.by(Sort.Direction.DESC, "fechaDeCambio"));
+        List<Map<String, Object>> result = historial.stream().map(h -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("idAuditoria", h.getIdAuditoria());
+            m.put("accion", h.getAccion());
+            m.put("tablaAfectada", h.getTablaAfectada());
+            m.put("valorAnterior", h.getValorAnterior());
+            m.put("valorNuevo", h.getValorNuevo());
+            m.put("ipMaquina", h.getIpMaquina());
+            m.put("fechaDeCambio", h.getFechaDeCambio());
+            m.put("creadoEl", h.getCreadoEl());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
     }
 }

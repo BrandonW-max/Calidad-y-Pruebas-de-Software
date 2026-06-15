@@ -103,9 +103,23 @@ public class JustificacionService {
     }
 
     public List<JustificacionTardanzaModel> listarPendientes() {
-        return em.createQuery(
+        List<JustificacionTardanzaModel> pendientes = em.createQuery(
                 "SELECT j FROM JustificacionTardanzaModel j WHERE j.estado = 'PENDIENTE'",
                 JustificacionTardanzaModel.class).getResultList();
+        for (JustificacionTardanzaModel j : pendientes) {
+            if (j.getIdRegistroAsistencia() != null) {
+                RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
+                if (r != null) {
+                    if (r.getHoraEntrada() != null) {
+                        j.setHoraEntrada(r.getHoraEntrada().toString());
+                    }
+                    if (r.getFecha() != null) {
+                        j.setFechaAsistencia(r.getFecha().toString());
+                    }
+                }
+            }
+        }
+        return pendientes;
     }
 
     public List<JustificacionTardanzaModel> listarPorEmpleado(Long idEmpleado) {

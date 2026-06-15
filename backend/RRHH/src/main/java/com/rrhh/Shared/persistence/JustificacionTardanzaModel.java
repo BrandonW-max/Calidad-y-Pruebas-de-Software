@@ -39,6 +39,12 @@ public class JustificacionTardanzaModel {
     @Column(name = "comentario_revision", length = 500)
     private String comentarioRevision;
 
+    @Transient
+    private String horaEntrada;
+
+    @Transient
+    private String fechaAsistencia;
+
     public JustificacionTardanzaModel() {}
 
     public Integer getIdJustificacion() { return idJustificacion; }
@@ -70,4 +76,10 @@ public class JustificacionTardanzaModel {
 
     public String getComentarioRevision() { return comentarioRevision; }
     public void setComentarioRevision(String comentarioRevision) { this.comentarioRevision = comentarioRevision; }
+
+    public String getHoraEntrada() { return horaEntrada; }
+    public void setHoraEntrada(String horaEntrada) { this.horaEntrada = horaEntrada; }
+
+    public String getFechaAsistencia() { return fechaAsistencia; }
+    public void setFechaAsistencia(String fechaAsistencia) { this.fechaAsistencia = fechaAsistencia; }
 }

@@ -601,6 +601,8 @@ function VistaRRHH() {
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
   const [modalRechazar, setModalRechazar] = useState({ open: false, id: null, comentario: "" });
+  const [modalMotivo, setModalMotivo] = useState({ open: false, texto: "" });
+  const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
   const [manualForm, setManualForm] = useState({
     idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "",
@@ -611,12 +613,12 @@ function VistaRRHH() {
   const [sugerencias,     setSugerencias]     = useState([]);
   const [mostrarSugere,   setMostrarSugere]   = useState(false);
   const [correccionInfo,  setCorreccionInfo]  = useState({
-    fechaCorreccion: "", horaCorregida: "", minutosTardanza: 0,
+    fechaCorreccion: "", horaCorregida: "", horaEntradaDisplay: "", minutosTardanza: 0,
     entradaProgramada: "08:00", salidaProgramada: "17:00", salidaPropuesta: "",
     evidenciaUrl: "",
   });
   const resetCorreccion = () => setCorreccionInfo({
-    fechaCorreccion: "", horaCorregida: "", minutosTardanza: 0,
+    fechaCorreccion: "", horaCorregida: "", horaEntradaDisplay: "", minutosTardanza: 0,
     entradaProgramada: "08:00", salidaProgramada: "17:00", salidaPropuesta: "",
     evidenciaUrl: "",
   });
@@ -668,7 +670,7 @@ function VistaRRHH() {
       return;
     }
     if (!correccionInfo.horaCorregida && !correccionInfo.salidaPropuesta) {
-      setMensaje("Complete al menos la Nueva Entrada o la Nueva Salida.");
+      setMensaje("Seleccione una justificación de la tabla para completar el formulario.");
       return;
     }
     if (!correccionInfo.fechaCorreccion) {
@@ -726,19 +728,29 @@ function VistaRRHH() {
   };
 
   const handleCorregirTardanza = (j) => {
+    setJustificacionSeleccionada(j.id ?? j.idJustificacion);
     const emp = empleados.find(e => e.idEmpleado == j.idEmpleado);
     if (emp) seleccionarEmpleado(emp);
 
-    const parseLocal = (str) => {
-      const m = String(str ?? "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
-      if (m) return { fecha: m[1] + "-" + m[2] + "-" + m[3], hora: m[4] ? parseInt(m[4]) : new Date().getHours() };
-      return { fecha: new Date().toISOString().slice(0, 10), hora: new Date().getHours() };
+    const parseFecha = (str) => {
+      const m = String(str ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? m[1] + "-" + m[2] + "-" + m[3] : new Date().toISOString().slice(0, 10);
     };
-    const p = parseLocal(j.fechaJustificacion || j.fechaRegistro);
-    const fechaStr = p.fecha;
-    const horaStr = String(p.hora).padStart(2, "0") + ":00";
+    const fechaStr = parseFecha(j.fechaAsistencia || j.fechaJustificacion || j.fechaRegistro);
 
-    const minsTard = Math.max(0, p.hora * 60 - 8 * 60);
+    let horaCorregida = "08:00";
+    let horaEntradaDisplay = "";
+    let minsTard = 0;
+
+    if (j.horaEntrada) {
+      const parts = String(j.horaEntrada).split(":");
+      const hh = parseInt(parts[0] ?? "8");
+      const mm = parseInt(parts[1] ?? "0");
+      horaEntradaDisplay = String(hh).padStart(2, "0");
+      horaCorregida = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+      minsTard = Math.max(0, hh * 60 + mm - 8 * 60);
+    }
+
     const salidaMins = 17 * 60 + minsTard;
     const salidaStr = String(Math.floor(salidaMins / 60)).padStart(2, "0") + ":" + String(salidaMins % 60).padStart(2, "0");
 
@@ -751,7 +763,8 @@ function VistaRRHH() {
     setCorreccionInfo({
       fechaCorreccion: fechaStr,
       entradaProgramada: "08:00",
-      horaCorregida: horaStr,
+      horaCorregida,
+      horaEntradaDisplay,
       minutosTardanza: minsTard,
       salidaProgramada: "17:00",
       salidaPropuesta: salidaStr,
@@ -825,16 +838,32 @@ function VistaRRHH() {
                         </div>
                       </td></tr>
                     ) : justificaciones.map(j => (
-                      <tr key={j.id ?? j.idJustificacion}>
+                      <tr
+                        key={j.id ?? j.idJustificacion}
+                        onClick={() => handleCorregirTardanza(j)}
+                        style={{
+                          cursor: "pointer",
+                          background: justificacionSeleccionada === (j.id ?? j.idJustificacion)
+                            ? "var(--accent-light, #eff6ff)"
+                            : undefined,
+                        }}
+                      >
                         <td>{j.id ?? j.idJustificacion}</td>
                         <td>{getNombreEmpleado(j.idEmpleado)}</td>
                         <td>{j.fechaRegistro ?? "—"}</td>
-                        <td>{j.motivo}</td>
+                        <td>
+                          <button
+                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px" }}
+                            title="Ver motivo"
+                            onClick={e => { e.stopPropagation(); setModalMotivo({ open: true, texto: j.motivo ?? "" }); }}
+                          >
+                            📄
+                          </button>
+                        </td>
                         <td><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
                         <td style={{ display: "inline-flex", gap: "6px" }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => handleCorregirTardanza(j)}>📝 Corregir</button>
-                          <button className="btn btn-success btn-sm" onClick={() => handleAprobar(j.id ?? j.idJustificacion)}>✅ Aprobar</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => setModalRechazar({ open: true, id: j.id ?? j.idJustificacion, comentario: "" })}>❌ Rechazar</button>
+                          <button className="btn btn-success btn-sm" onClick={e => { e.stopPropagation(); handleAprobar(j.id ?? j.idJustificacion); }}>✅ Aprobar</button>
+                          <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); setModalRechazar({ open: true, id: j.id ?? j.idJustificacion, comentario: "" }); }}>❌ Rechazar</button>
                         </td>
                       </tr>
                     ))}
@@ -854,31 +883,22 @@ function VistaRRHH() {
               ⚠️ Esta acción quedará registrada en el log de auditoría.
             </div>
             <form onSubmit={handleRegistrarManual}>
+              {!empleadoSelec && (
+                <div className="alert alert-info" style={{ marginBottom: 12 }}>
+                  👆 Haga clic en una justificación de la tabla para llenar el formulario automáticamente.
+                </div>
+              )}
               <div className="form-grid">
                 <div className="form-group" style={{ position: "relative" }}>
-                  <label>Empleado *</label>
+                  <label>Empleado</label>
                   <input
                     type="text"
                     value={busquedaNombre}
-                    onChange={e => handleBuscarEmpleado(e.target.value)}
-                    onFocus={() => sugerencias.length > 0 && setMostrarSugere(true)}
-                    onBlur={() => setTimeout(() => setMostrarSugere(false), 150)}
-                    placeholder="Buscar por nombre..."
-                    autoComplete="off"
-                    required={!manualForm.idEmpleado}
+                    readOnly
+                    placeholder="Seleccione una justificación..."
+                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }}
                   />
-                  <input type="hidden" value={manualForm.idEmpleado} required />
-                  {mostrarSugere && sugerencias.length > 0 && (
-                    <div className="emp-autocomplete-drop">
-                      {sugerencias.map(emp => (
-                        <div key={emp.idEmpleado} className="emp-autocomplete-item"
-                          onMouseDown={() => seleccionarEmpleado(emp)}>
-                          <span className="emp-ac-nombre">{emp.nombres} {emp.apellidos}</span>
-                          <span className="emp-ac-sub">{emp.cargo ?? "—"} · {emp.departamento ?? "—"}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <input type="hidden" value={manualForm.idEmpleado} />
                   {empleadoSelec && (
                     <div className="emp-selec-tag">
                       ✅ {empleadoSelec.nombres} {empleadoSelec.apellidos}
@@ -887,27 +907,28 @@ function VistaRRHH() {
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Fecha de Corrección *</label>
+                  <label>Fecha de Corrección</label>
                   <input type="date" value={correccionInfo.fechaCorreccion}
-                    onChange={e => setCorreccionInfo({ ...correccionInfo, fechaCorreccion: e.target.value })} required />
+                    readOnly
+                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }} />
                 </div>
                 <div className="form-group">
-                  <label>Nueva Entrada</label>
-                  <input type="time" value={correccionInfo.horaCorregida}
-                    onChange={e => {
-                      const h = e.target.value;
-                      const parts = h.split(":").map(Number);
-                      const mins = Math.max(0, (parts[0] * 60 + parts[1]) - 8 * 60);
-                      const salidaMins = 17 * 60 + mins;
-                      const sh = String(Math.floor(salidaMins / 60)).padStart(2, "0");
-                      const sm = String(salidaMins % 60).padStart(2, "0");
-                      setCorreccionInfo({ ...correccionInfo, horaCorregida: h, minutosTardanza: mins, salidaPropuesta: sh + ":" + sm });
-                    }} />
+                  <label>Vieja Entrada</label>
+                  <div style={{
+                    background: "var(--bg-2, #f8fafc)", border: "1px solid var(--border)",
+                    borderRadius: 6, padding: "8px 12px", fontSize: "26px", fontWeight: 700,
+                    color: correccionInfo.horaEntradaDisplay ? "#0f172a" : "var(--text-3)",
+                    minHeight: "42px", display: "flex", alignItems: "center",
+                    letterSpacing: "0.05em",
+                  }}>
+                    {correccionInfo.horaEntradaDisplay ? correccionInfo.horaEntradaDisplay + "h" : "—"}
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Nueva Salida</label>
                   <input type="time" value={correccionInfo.salidaPropuesta}
-                    onChange={e => setCorreccionInfo({ ...correccionInfo, salidaPropuesta: e.target.value })} />
+                    readOnly
+                    style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }} />
                 </div>
                 <div className="form-group form-full" style={{ maxWidth: 320 }}>
                   <label>Motivo / Evidencia</label>
@@ -931,14 +952,20 @@ function VistaRRHH() {
               <div className="form-actions">
                 <button type="submit" className="btn btn-success">💾 Guardar Registro Manual</button>
                 <button type="button" className="btn btn-secondary"
-                  onClick={() => { setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" }); resetCorreccion(); }}>
+                  onClick={() => {
+                    setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" });
+                    resetCorreccion();
+                    setBusquedaNombre("");
+                    setEmpleadoSelec(null);
+                    setJustificacionSeleccionada(null);
+                  }}>
                   Limpiar
                 </button>
               </div>
               {correccionInfo.horaCorregida && (
                 <div className="alert alert-info" style={{ marginTop: 12 }}>
                   <strong>📋 Corrección de tardanza calculada:</strong><br />
-                  ⏰ Entrada programada: {correccionInfo.entradaProgramada} → Corregida: {correccionInfo.horaCorregida}
+                  ⏰ Entrada programada: {correccionInfo.entradaProgramada} → Vieja entrada: {correccionInfo.horaCorregida}
                   &nbsp;({Math.floor(correccionInfo.minutosTardanza / 60)}h {correccionInfo.minutosTardanza % 60}min de tardanza)<br />
                   ⏰ Salida programada: {correccionInfo.salidaProgramada} → Propuesta: {correccionInfo.salidaPropuesta}
                   &nbsp;(recuperación de {Math.floor(correccionInfo.minutosTardanza / 60)}h {correccionInfo.minutosTardanza % 60}min)
@@ -948,6 +975,24 @@ function VistaRRHH() {
           </div>
 
       </main>
+
+      {/* ── MODAL: VER MOTIVO ── */}
+      {modalMotivo.open && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMotivo({ open: false, texto: "" })}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <div><h3>📄 Motivo de la Justificación</h3></div>
+              <button className="modal-close" onClick={() => setModalMotivo({ open: false, texto: "" })}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{modalMotivo.texto || "Sin motivo registrado."}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalMotivo({ open: false, texto: "" })}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL: RECHAZAR JUSTIFICACIÓN ── */}
       {modalRechazar.open && (

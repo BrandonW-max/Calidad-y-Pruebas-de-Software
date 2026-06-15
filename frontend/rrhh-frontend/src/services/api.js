@@ -105,6 +105,9 @@ export const cambioSalarial = (id, dto) =>
     method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
+export const getHistorialEmpleado = (idEmpleado) =>
+  f(`${BASE}/api/v1/empleados/${idEmpleado}/historial`, { headers: h() }).then(json);
+
 // ── ASISTENCIA ────────────────────────────────────────────────────────────────
 export const registrarManual = (dto) =>
   f(`${BASE}/api/v1/asistencia/manual`, {
