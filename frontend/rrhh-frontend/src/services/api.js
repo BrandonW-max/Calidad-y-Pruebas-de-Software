@@ -1,10 +1,9 @@
 const BASE = import.meta.env.VITE_API_URL || '';
 
-export const getToken      = () => getUser().token;
 export const getUser       = () => JSON.parse(sessionStorage.getItem('user') || '{}');
 export const getIdEmpleado = () => getUser()?.idEmpleado ?? null;
 export const saveSession   = (token, rol, username, idEmpleado = null, requiereCambioPassword = false) =>
-  sessionStorage.setItem('user', JSON.stringify({ token, rol, username, idEmpleado, requiereCambioPassword }));
+  sessionStorage.setItem('user', JSON.stringify({ rol, username, idEmpleado, requiereCambioPassword }));
 export const clearSession  = () => sessionStorage.removeItem('user');
 
 const CRED = 'include';
@@ -21,42 +20,33 @@ const json = (r) => {
 };
 
 const h = () => {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
+  return { 'Content-Type': 'application/json' };
 };
 
 const f = (url, opts = {}) =>
-  fetch(url, { ...opts, credentials: CRED }).then(r => {
-    const newToken = r.headers.get('X-New-Token');
-    if (newToken) {
-      const user = getUser();
-      saveSession(newToken, user.rol, user.username, user.idEmpleado);
-    }
-    return r;
-  });
+  fetch(url, { ...opts, credentials: CRED });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 export const solicitarRecuperacion = (identifier) =>
-  fetch(`${BASE}/api/v1/auth/recovery`, {
+  f(`${BASE}/api/v1/auth/recovery`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: h(),
     body: JSON.stringify({ identifier }),
-  }).then(r => r.json().catch(() => { throw new Error(`HTTP ${r.status}`); }));
+  }).then(json);
 
 export const resetPassword = (token, nuevaContrasenia, confirmarContrasenia) =>
-  fetch(`${BASE}/api/v1/auth/reset-password`, {
+  f(`${BASE}/api/v1/auth/reset-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: h(),
     body: JSON.stringify({ token, nuevaContrasenia, confirmarContrasenia }),
-  }).then(r => r.json().catch(() => { throw new Error(`HTTP ${r.status}`); }));
+  }).then(json);
 
 export const setPassword = (nuevaContrasenia, confirmarContrasenia) =>
   f(`${BASE}/api/v1/auth/set-password`, {
     method: 'POST', headers: h(),
     body: JSON.stringify({ nuevaContrasenia, confirmarContrasenia }),
   }).then(json);
+
 export const getMe = () =>
   f(`${BASE}/api/v1/auth/me`, { headers: { 'Content-Type': 'application/json' } }).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -199,7 +189,6 @@ export const uploadEvidencia = (file) => {
   fd.append("file", file);
   return f(`${BASE}/api/v1/asistencia/upload-evidencia`, {
     method: "POST",
-    headers: { Authorization: h().Authorization },
     body: fd,
   }).then(json);
 };

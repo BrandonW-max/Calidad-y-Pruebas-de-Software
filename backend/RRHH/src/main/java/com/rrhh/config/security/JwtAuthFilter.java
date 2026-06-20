@@ -121,15 +121,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         long tiempoRestante = jwtConfig.tiempoRestanteMs(token);
         if (tiempoRestante > 0 && tiempoRestante < 1000 * 60 * 5) {
             String nuevoToken = jwtConfig.refrescarToken(token);
-            response.setHeader("X-New-Token", nuevoToken);
-            ResponseCookie jwtCookie =
-                    ResponseCookie.from("jwt", nuevoToken)
-                            .httpOnly(true)
-                            .secure(false)
-                            .sameSite("Lax")
-                            .path("/")
-                            .maxAge(jwtConfig.getExpirationTime() / 1000)
-                            .build();
+            ResponseCookie jwtCookie = jwtConfig.crearCookieJwt(nuevoToken);
             response.addHeader("Set-Cookie", jwtCookie.toString());
         }
 

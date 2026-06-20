@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -119,5 +120,25 @@ public class JwtConfig {
         Long idUsuario = id != null ? id.longValue() : null;
 
         return generarToken(username, rol, idUsuario, permisos, tokenInvalidoDesde);
+    }
+
+    public ResponseCookie crearCookieJwt(String token) {
+        return ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(expirationTime / 1000)
+                .build();
+    }
+
+    public ResponseCookie crearCookieJwtVacia() {
+        return ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
     }
 }
