@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -353,35 +352,9 @@ export default function GestionEmpleados() {
 
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
-  const formatFecha = (str) => {
-    if (!str) return "—";
-    const d = new Date(str);
-    return isNaN(d) ? str : `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-  };
-
   const formatSueldo = (v) =>
     v != null ? `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}` : "—";
 
-  const exportarEmpleados = () => {
-    if (!empleados.length) return;
-    const data = empleados.map(e => ({
-      "ID":             e.idEmpleado ?? "—",
-      "Nombre Completo": `${e.nombres ?? ""} ${e.apellidos ?? ""}`.trim(),
-      "DNI":            e.numeroDi ?? "—",
-      "Cargo":          e.cargo ?? "—",
-      "Departamento":           e.departamento ?? "—",
-      "Sueldo Base":    e.sueldo != null ? Number(e.sueldo).toFixed(2) : "—",
-      "Estado":         e.estado ?? "—",
-      "Tipo Contrato":  e.tipoContrato ?? "—",
-      "Fecha Ingreso":  formatFecha(e.fechaInicio),
-      "Correo":         e.correo ?? "—",
-      "Teléfono":       e.telefono ?? "—",
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Empleados");
-    XLSX.writeFile(wb, `empleados_${new Date().toISOString().split("T")[0]}.xlsx`);
-  };
 
   return (
     <div className="dashboard">
@@ -400,7 +373,6 @@ export default function GestionEmpleados() {
             <button className="btn btn-success" onClick={() => { setForm(FORM_VACIO); setShowFechas(false); setMensaje(""); setModalNuevo(true); }}>
               ＋ Nuevo Empleado
             </button>
-            <button className="btn btn-primary" onClick={exportarEmpleados}>⬇ Exportar</button>
           </div>
         </header>
 

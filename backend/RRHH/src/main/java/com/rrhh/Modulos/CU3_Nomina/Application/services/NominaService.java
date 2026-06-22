@@ -150,9 +150,11 @@ public class NominaService implements INominaService {
                     .setScale(2, RoundingMode.HALF_UP);
 
                 int cantidadHijos = contarHijos(empleado.getIdEmpleado());
-                BigDecimal bonifFamiliar = sueldoBase.multiply(rrhhProperties.getBonifFamiliar())
-                    .multiply(BigDecimal.valueOf(cantidadHijos))
-                    .setScale(2, RoundingMode.HALF_UP);
+                // La asignación familiar se otorga una sola vez si existe un hijo elegible.
+                BigDecimal bonifFamiliar = cantidadHijos > 0
+                    ? rrhhProperties.getRmv().multiply(rrhhProperties.getBonifFamiliar())
+                        .setScale(2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
                 int diasTrabajados = (int) registros.stream()
                     .filter(r -> r.getHoraEntrada() != null && r.getHoraSalida() != null)
@@ -525,7 +527,9 @@ public class NominaService implements INominaService {
         List<FamiliaInfoModel> familia = jpaFamiliaInfoRepository
             .findByEmpleadoIdEmpleadoAndActivoTrue(idEmpleado);
         return (int) familia.stream()
-            .filter(f -> "HIJO".equals(f.getParentesco()))
+            .filter(f -> "HIJO".equals(f.getParentesco())
+                    && Boolean.TRUE.equals(f.getElegibleAsignacionFamiliar())
+                    && Boolean.TRUE.equals(f.getValidado()))
             .count();
     }
 

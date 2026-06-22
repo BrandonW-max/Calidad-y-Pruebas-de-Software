@@ -327,6 +327,8 @@ function AfkModal({ countdown, onContinuar, onSalir }) {
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionActive = Boolean(getUser()?.rol) && !['/', '/reset-password', '/dev'].includes(location.pathname);
   const [showAfkModal, setShowAfkModal]   = useState(false);
   const [afkCountdown, setAfkCountdown]   = useState(COUNTDOWN_S);
   const warningTimerRef      = useRef(null);
@@ -390,6 +392,14 @@ function App() {
 
   useEffect(() => {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    if (!sessionActive) {
+      clearTimeout(warningTimerRef.current);
+      clearTimeout(logoutTimerRef.current);
+      clearInterval(countdownIntervalRef.current);
+      showAfkModalRef.current = false;
+      return;
+    }
+
     // Usa el ref para evitar el closure stale de showAfkModal
     const handler = () => {
       if (!showAfkModalRef.current) resetAfkRef.current?.();
@@ -402,12 +412,12 @@ function App() {
       clearInterval(countdownIntervalRef.current);
       events.forEach(e => window.removeEventListener(e, handler));
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionActive]);
 
   return (
     <ErrorBoundary>
     <Setup2FAModal />
-    {showAfkModal && (
+    {sessionActive && showAfkModal && (
       <AfkModal
         countdown={afkCountdown}
         onContinuar={resetAfk}

@@ -185,6 +185,13 @@ SELECT 'Carlos RRHH', 'HIJO', '22222222', '2020-07-22', e.id_empleado, true
 FROM empleado e WHERE e.numero_di = '00000001'
 ON CONFLICT (numero_di) DO NOTHING;
 
+-- Hijos de prueba: candidatos a asignación familiar y derechohabientes.
+-- RRHH deberá validarlos mediante la gestión de beneficios antes del cálculo.
+UPDATE familia_info
+SET elegible_asignacion_familiar = true,
+    es_derechohabiente = true
+WHERE parentesco = 'HIJO' AND activo = true;
+
 -- =========================
 -- FERIADOS
 -- =========================

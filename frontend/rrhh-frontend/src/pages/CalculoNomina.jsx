@@ -73,7 +73,7 @@ export default function CalculoNomina() {
     try {
       const data = await calcularNomina(mes, anio);
       if (Array.isArray(data)) {
-        setResultado(data);
+        setResultado([...data].sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity)));
         setHistorial(h => {
           const entry = { ...data, periodo, timestamp: new Date().toISOString() };
           return [entry, ...h.filter(x => x.periodo !== periodo)].slice(0, 10);
@@ -102,7 +102,8 @@ export default function CalculoNomina() {
             byEmployee[n.idEmpleado] = n;
           }
         }
-        const deduped = Object.values(byEmployee);
+        const deduped = Object.values(byEmployee)
+          .sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity));
         setResultado(deduped);
         setMensaje(`Se cargaron ${deduped.length} registros del período ${periodo}`);
       } else {
@@ -194,7 +195,8 @@ export default function CalculoNomina() {
   const fmtS = (v) => v != null ? `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}` : "—";
 
   const resultList = resultado
-    ? (Array.isArray(resultado) ? resultado : [resultado])
+    ? (Array.isArray(resultado) ? [...resultado] : [resultado])
+        .sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity))
     : [];
 
   const totalNeto  = resultList.reduce((sum, n) => sum + Number(n.sueldoNeto ?? 0), 0);
@@ -283,7 +285,7 @@ export default function CalculoNomina() {
                   <table>
                     <thead>
                       <tr>
-                        <th>ID</th>
+                        <th>ID Nómina</th>
                         <th>Empleado</th>
                         <th>Sueldo Base</th>
                         <th>Bonificaciones</th>
