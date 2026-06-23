@@ -94,6 +94,7 @@ export default function PrimerAccesoModal({ username, onDone }) {
         return;
       }
       // Limpiar flag en sesión y finalizar
+      sessionStorage.removeItem('show2FAReminder');
       saveSession(user.token, user.rol, username, user.idEmpleado, false);
       onDone(user.rol);
     } catch {

@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/empleados/{idEmpleado}/beneficios")
@@ -40,7 +40,7 @@ public class BeneficiosEmpleadoController {
     @PutMapping
     @Transactional
     public Map<String, Object> guardarPerfil(@PathVariable Long idEmpleado, @RequestBody PerfilNominaRequestDTO dto) {
-        EmpleadoModel empleado = empleados.findById(idEmpleado).orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
+        EmpleadoModel empleado = empleados.findById(Objects.requireNonNull(idEmpleado)).orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
         String pension = "AFP".equalsIgnoreCase(dto.regimenPension) ? "AFP" : "ONP";
         EmpleadoDerechoHabientesModel p = perfiles.findByEmpleadoIdEmpleado(idEmpleado).orElseGet(EmpleadoDerechoHabientesModel::new);
         p.setEmpleado(empleado); p.setRegimenSalud(dto.regimenSalud == null ? "ESSALUD" : dto.regimenSalud.toUpperCase());
@@ -54,7 +54,7 @@ public class BeneficiosEmpleadoController {
     @PostMapping("/familiares")
     @Transactional
     public Map<String, Object> agregarFamiliar(@PathVariable Long idEmpleado, @RequestBody FamiliarRequestDTO dto) {
-        EmpleadoModel empleado = empleados.findById(idEmpleado).orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
+        EmpleadoModel empleado = empleados.findById(Objects.requireNonNull(idEmpleado)).orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
         if (dto.nombres == null || dto.nombres.isBlank() || dto.fechaNacimiento == null) throw new IllegalArgumentException("Nombres y fecha de nacimiento son requeridos");
         FamiliaInfoModel f = new FamiliaInfoModel(); aplicarFamiliar(f, dto); f.setEmpleado(empleado); f.setActivo(true);
         return familiarMap(familiares.save(f));
@@ -63,15 +63,15 @@ public class BeneficiosEmpleadoController {
     @PutMapping("/familiares/{idFamiliar}")
     @Transactional
     public Map<String, Object> actualizarFamiliar(@PathVariable Long idEmpleado, @PathVariable Integer idFamiliar, @RequestBody FamiliarRequestDTO dto) {
-        FamiliaInfoModel f = familiares.findById(idFamiliar).filter(x -> x.getEmpleado().getIdEmpleado().equals(idEmpleado))
+        FamiliaInfoModel f = familiares.findById(Objects.requireNonNull(idFamiliar)).filter(x -> x.getEmpleado().getIdEmpleado().equals(idEmpleado))
                 .orElseThrow(() -> new IllegalArgumentException("Familiar no encontrado"));
-        aplicarFamiliar(f, dto); return familiarMap(familiares.save(f));
+        aplicarFamiliar(f, dto); return familiarMap(familiares.save(Objects.requireNonNull(f)));
     }
 
     @DeleteMapping("/familiares/{idFamiliar}")
     @Transactional
     public ResponseEntity<Void> desactivarFamiliar(@PathVariable Long idEmpleado, @PathVariable Integer idFamiliar) {
-        FamiliaInfoModel f = familiares.findById(idFamiliar).filter(x -> x.getEmpleado().getIdEmpleado().equals(idEmpleado))
+        FamiliaInfoModel f = familiares.findById(Objects.requireNonNull(idFamiliar)).filter(x -> x.getEmpleado().getIdEmpleado().equals(idEmpleado))
                 .orElseThrow(() -> new IllegalArgumentException("Familiar no encontrado"));
         f.setActivo(false); familiares.save(f); return ResponseEntity.noContent().build();
     }

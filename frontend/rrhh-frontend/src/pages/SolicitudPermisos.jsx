@@ -669,14 +669,14 @@ function VistaGerencia() {
                     <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Motivo del Rechazo</th></tr>
                   </thead>
                   <tbody>
-                    {solRechazadas.map(s => {
+                    {solRechazadas.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{id}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
                           <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td>{s.fechaInicio ?? "—"}</td>

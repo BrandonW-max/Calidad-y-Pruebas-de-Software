@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -85,46 +84,72 @@ public class JustificacionService {
             j.setComentarioRevision(comentario);
         }
 
-        return em.merge(j);
-    }
-
-    private HorarioModel getHorarioAsignado(Long idEmpleado) {
-        List<AsignacionHorarioModel> asignaciones = em.createQuery(
-                "SELECT a FROM AsignacionHorarioModel a WHERE a.empleado.idEmpleado = :idEmpleado AND a.activo = true",
-                AsignacionHorarioModel.class)
-                .setParameter("idEmpleado", idEmpleado)
-                .getResultList();
-        if (!asignaciones.isEmpty() && asignaciones.get(0).getHorario() != null) {
-            return asignaciones.get(0).getHorario();
+        // Si se aprueba: anular la tardanza en el registro de asistencia
+        // para que la nómina no descuente esos minutos
+        if ("APROBADA".equals(decision) && j.getIdRegistroAsistencia() != null) {
+            RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
+            if (r != null) {
+                r.setMinutosTardanza(0);
+                r.setObservacion("Tardanza justificada y aprobada");
+                em.merge(r);
+            }
         }
-        return null;
+
+        return em.merge(j);
     }
 
     public List<JustificacionTardanzaModel> listarPendientes() {
         List<JustificacionTardanzaModel> pendientes = em.createQuery(
                 "SELECT j FROM JustificacionTardanzaModel j WHERE j.estado = 'PENDIENTE'",
                 JustificacionTardanzaModel.class).getResultList();
-        for (JustificacionTardanzaModel j : pendientes) {
-            if (j.getIdRegistroAsistencia() != null) {
-                RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
-                if (r != null) {
-                    if (r.getHoraEntrada() != null) {
-                        j.setHoraEntrada(r.getHoraEntrada().toString());
-                    }
-                    if (r.getFecha() != null) {
-                        j.setFechaAsistencia(r.getFecha().toString());
-                    }
-                }
-            }
-        }
+        pendientes.forEach(this::enriquecerConDatosAsistencia);
         return pendientes;
     }
 
     public List<JustificacionTardanzaModel> listarPorEmpleado(Long idEmpleado) {
-        return em.createQuery(
+        List<JustificacionTardanzaModel> lista = em.createQuery(
                 "SELECT j FROM JustificacionTardanzaModel j WHERE j.idEmpleado = :idEmpleado ORDER BY j.fechaJustificacion DESC",
                 JustificacionTardanzaModel.class)
                 .setParameter("idEmpleado", idEmpleado)
                 .getResultList();
+        lista.forEach(this::enriquecerConDatosAsistencia);
+        return lista;
+    }
+
+    private void enriquecerConDatosAsistencia(JustificacionTardanzaModel j) {
+        if (j.getIdRegistroAsistencia() == null) return;
+
+        RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
+        if (r == null) return;
+
+        if (r.getHoraEntrada() != null) {
+            j.setHoraEntrada(r.getHoraEntrada().toString().substring(0, 5));
+        }
+        if (r.getFecha() != null) {
+            j.setFechaAsistencia(r.getFecha().toString());
+        }
+        j.setMinutosTardanza(r.getMinutosTardanza());
+
+        // Buscar hora de entrada esperada según el horario asignado del empleado en esa fecha
+        if (j.getIdEmpleado() != null && r.getFecha() != null) {
+            List<AsignacionHorarioModel> asignaciones = em.createQuery(
+                    "SELECT a FROM AsignacionHorarioModel a " +
+                    "WHERE a.empleado.idEmpleado = :idEmpleado AND a.activo = true " +
+                    "AND a.fechaDesde <= :fecha " +
+                    "AND (a.fechaHasta IS NULL OR a.fechaHasta >= :fecha) " +
+                    "ORDER BY a.fechaDesde DESC",
+                    AsignacionHorarioModel.class)
+                    .setParameter("idEmpleado", j.getIdEmpleado())
+                    .setParameter("fecha", r.getFecha())
+                    .setMaxResults(1)
+                    .getResultList();
+
+            if (!asignaciones.isEmpty() && asignaciones.get(0).getHorario() != null) {
+                HorarioModel horario = asignaciones.get(0).getHorario();
+                if (horario.getHoraEntrada() != null) {
+                    j.setHoraEntradaEsperada(horario.getHoraEntrada().toString().substring(0, 5));
+                }
+            }
+        }
     }
 }

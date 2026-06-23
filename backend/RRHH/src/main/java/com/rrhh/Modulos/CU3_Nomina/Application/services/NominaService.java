@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,10 +82,15 @@ public class NominaService implements INominaService {
             throw new IllegalArgumentException("La fecha de inicio no puede ser mayor a la fecha fin.");
         }
 
-        YearMonth mesActual = YearMonth.now();
-        if (YearMonth.from(request.getFechaInicio()).isAfter(mesActual)
-                || YearMonth.from(request.getFechaFin()).isAfter(mesActual)) {
-            throw new IllegalArgumentException("No se puede calcular la nómina de meses futuros.");
+        // Solo se puede calcular la nómina de meses ya cerrados (mes anterior o antes)
+        YearMonth mesCerrado = YearMonth.now().minusMonths(1);
+        if (YearMonth.from(request.getFechaInicio()).isAfter(mesCerrado)
+                || YearMonth.from(request.getFechaFin()).isAfter(mesCerrado)) {
+            throw new IllegalArgumentException(
+                "Solo se puede calcular la nómina de meses anteriores. " +
+                "El mes actual (" + YearMonth.now().format(java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) +
+                ") aún no ha concluido."
+            );
         }
 
         List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request);
@@ -97,19 +103,47 @@ public class NominaService implements INominaService {
         }
 
         String periodo = generarPeriodo(request.getFechaInicio(), request.getFechaFin());
+
+        // Borrar nóminas previas del período en una sola transacción
+        nominaRepository.eliminarPorPeriodo(periodo);
+
+        List<Long> idsEmpleados = empleados.stream()
+            .map(EmpleadoModel::getIdEmpleado)
+            .collect(Collectors.toList());
+
+        // Pre-cargar TODO en 3 queries antes del bucle (evita N+1)
+        Map<Long, List<RegistroAsistenciaModel>> asistenciasPorEmpleado =
+            jpaRegistroAsistenciaRepository
+                .findByEmpleadoIdEmpleadoInAndFechaBetween(
+                    idsEmpleados,
+                    request.getFechaInicio(),
+                    request.getFechaFin()
+                )
+                .stream()
+                .collect(Collectors.groupingBy(r -> r.getEmpleado().getIdEmpleado()));
+
+        Map<Long, ContratoModel> contratosPorEmpleado =
+            jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(idsEmpleados, "ACTIVO")
+                .stream()
+                .collect(Collectors.toMap(
+                    c -> c.getEmpleado().getIdEmpleado(),
+                    c -> c,
+                    (c1, c2) -> c1
+                ));
+
+        Map<Long, List<FamiliaInfoModel>> familiaPorEmpleado =
+            jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(idsEmpleados)
+                .stream()
+                .collect(Collectors.groupingBy(f -> f.getEmpleado().getIdEmpleado()));
+
         List<NominaResponseDTO> resultados = new ArrayList<>();
 
         try {
             for (EmpleadoModel empleado : empleados) {
 
-                List<RegistroAsistenciaModel> registros = jpaRegistroAsistenciaRepository
-                    .findByEmpleadoIdEmpleadoAndFechaBetween(
-                        empleado.getIdEmpleado(),
-                        request.getFechaInicio(),
-                        request.getFechaFin()
-                    );
-
-                registros = filtrarRegistrosValidos(registros);
+                List<RegistroAsistenciaModel> registros = filtrarRegistrosValidos(
+                    asistenciasPorEmpleado.getOrDefault(empleado.getIdEmpleado(), List.of())
+                );
 
                 if (registros.isEmpty()) {
                     continue;
@@ -117,11 +151,11 @@ public class NominaService implements INominaService {
 
                 validarDatosAsistencia(registros, empleado);
 
-                ContratoModel contrato = jpaContratoRepository
-                    .findFirstByEmpleadoIdEmpleadoAndEstado(empleado.getIdEmpleado(), "ACTIVO")
-                    .orElseThrow(() -> new IllegalStateException(
-                        "El empleado " + empleado.getNombres() + " no tiene contrato activo."
-                    ));
+                ContratoModel contrato = Optional.ofNullable(
+                    contratosPorEmpleado.get(empleado.getIdEmpleado())
+                ).orElseThrow(() -> new IllegalStateException(
+                    "El empleado " + empleado.getNombres() + " no tiene contrato activo."
+                ));
                 BigDecimal sueldoBase = contrato.getSueldo();
                 String tipoPension = (contrato.getTipoPension() != null &&
                     (contrato.getTipoPension().equals("ONP") || contrato.getTipoPension().equals("AFP")))
@@ -160,7 +194,9 @@ public class NominaService implements INominaService {
                     .multiply(BigDecimal.valueOf(totalMinutosTardanza))
                     .setScale(2, RoundingMode.HALF_UP);
 
-                int cantidadHijos = contarHijos(empleado.getIdEmpleado());
+                int cantidadHijos = contarHijosDesdeCache(
+                    familiaPorEmpleado.getOrDefault(empleado.getIdEmpleado(), List.of())
+                );
                 // La asignación familiar se otorga una sola vez si existe un hijo elegible.
                 BigDecimal bonifFamiliar = cantidadHijos > 0
                     ? rrhhProperties.getRmv().multiply(rrhhProperties.getBonifFamiliar())
@@ -229,19 +265,9 @@ public class NominaService implements INominaService {
                 nomina.setTipoPensionAplicada(tipoPension);
                 nomina.setDetalles(detalles);
 
-                List<Nomina> existentes =
-                        nominaRepository.buscarPorEmpleadoYPeriodo(empleado.getIdEmpleado(), periodo);
-                if (!existentes.isEmpty()) {
-                    Nomina existente = existentes.get(0);
-                    nomina.setIdNomina(existente.getIdNomina());
-                    nomina.setVersion(existente.getVersion() != null ? existente.getVersion() + 1 : 2);
-                } else {
-                    nomina.setVersion(1);
-                }
+                nomina.setVersion(1);
 
                 Nomina nominaGuardada = nominaRepository.guardar(nomina);
-                // Borrar detalles previos (en recálculo) y guardar los nuevos
-                detalleNominaRepository.eliminarPorNomina(nominaGuardada.getIdNomina());
                 detalles.forEach(d -> d.setIdNomina(nominaGuardada.getIdNomina()));
                 detalleNominaRepository.guardarTodos(detalles);
 
@@ -275,11 +301,36 @@ public class NominaService implements INominaService {
 
     @Override
     public List<NominaResponseDTO> buscarPorPeriodo(String periodo) {
-        return nominaRepository.buscarPorPeriodo(periodo).stream()
-            .map(n -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(n.getIdEmpleado())).orElse(null);
-                return mapearAResponse(n, emp);
-            })
+        List<Nomina> nominas = nominaRepository.buscarPorPeriodo(periodo);
+
+        // Deduplicar: quedarse con la nómina de mayor id por empleado
+        List<Nomina> deduplicadas = new ArrayList<>(nominas.stream()
+            .collect(Collectors.toMap(
+                Nomina::getIdEmpleado,
+                n -> n,
+                (n1, n2) -> (n2.getIdNomina() != null && (n1.getIdNomina() == null || n2.getIdNomina() > n1.getIdNomina())) ? n2 : n1
+            ))
+            .values());
+        deduplicadas.sort((a, b) -> {
+            if (a.getIdNomina() == null) return 1;
+            if (b.getIdNomina() == null) return -1;
+            return Integer.compare(a.getIdNomina(), b.getIdNomina());
+        });
+
+        // Una sola query para todos los empleados en vez de N queries
+        List<Long> ids = deduplicadas.stream()
+            .map(Nomina::getIdEmpleado)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+        Map<Long, EmpleadoModel> empleadosPorId = ids.isEmpty() ? Map.of() :
+            jpaEmpleadoRepository.findAllById(ids)
+            .stream()
+            .collect(Collectors.toMap(EmpleadoModel::getIdEmpleado, e -> e));
+
+        return deduplicadas.stream()
+            .map(n -> mapearAResponse(n, empleadosPorId.get(n.getIdEmpleado())))
             .collect(Collectors.toList());
     }
 
@@ -532,9 +583,7 @@ public class NominaService implements INominaService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private int contarHijos(Long idEmpleado) {
-        List<FamiliaInfoModel> familia = jpaFamiliaInfoRepository
-            .findByEmpleadoIdEmpleadoAndActivoTrue(idEmpleado);
+    private int contarHijosDesdeCache(List<FamiliaInfoModel> familia) {
         return (int) familia.stream()
             .filter(f -> "HIJO".equals(f.getParentesco())
                     && Boolean.TRUE.equals(f.getElegibleAsignacionFamiliar())

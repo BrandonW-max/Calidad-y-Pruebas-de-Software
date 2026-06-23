@@ -13,6 +13,9 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarSancionReq
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.services.IEmpleadoService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.routes.EmpleadoApiRoutes;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaHistorialRepository;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailService;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
+import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
 
 import org.springframework.data.domain.Page;
@@ -35,10 +38,15 @@ public class EmpleadoController {
 
     private final IEmpleadoService empleadoService;
     private final JpaHistorialRepository historialRepository;
+    private final EmailService emailService;
+    private final JpaEmpleadoRepository jpaEmpleadoRepository;
 
-    public EmpleadoController(IEmpleadoService empleadoService, JpaHistorialRepository historialRepository) {
+    public EmpleadoController(IEmpleadoService empleadoService, JpaHistorialRepository historialRepository,
+                              EmailService emailService, JpaEmpleadoRepository jpaEmpleadoRepository) {
         this.empleadoService = empleadoService;
         this.historialRepository = historialRepository;
+        this.emailService = emailService;
+        this.jpaEmpleadoRepository = jpaEmpleadoRepository;
     }
 
     @PostMapping(EmpleadoApiRoutes.REGISTRAR)
@@ -134,6 +142,27 @@ public class EmpleadoController {
             @RequestBody CambioSalarialRequestDTO dto
     ) {
         return empleadoService.registrarCambioSalarial(idEmpleado, dto);
+    }
+
+    @PostMapping("/{idEmpleado}/enviar-app")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, String>> enviarLinkApp(@PathVariable Long idEmpleado) {
+        EmpleadoModel empleado = jpaEmpleadoRepository.findById(java.util.Objects.requireNonNull(idEmpleado))
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
+        if (empleado.getCorreo() == null || empleado.getCorreo().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "El empleado no tiene correo registrado."));
+        }
+        try {
+            emailService.enviarLinkDescargaApp(
+                    empleado.getCorreo(),
+                    empleado.getNombres() + " " + empleado.getApellidos()
+            );
+            return ResponseEntity.ok(Map.of("message", "Enlace enviado correctamente."));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("message", "No se pudo enviar el correo."));
+        }
     }
 
     @GetMapping(EmpleadoApiRoutes.HISTORIAL)

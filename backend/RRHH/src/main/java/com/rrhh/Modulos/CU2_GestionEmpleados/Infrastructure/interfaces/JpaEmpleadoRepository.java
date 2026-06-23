@@ -14,6 +14,8 @@ public interface JpaEmpleadoRepository extends JpaRepository<EmpleadoModel, Long
 
     boolean existsByNumeroDi(String numeroDi);
 
+    java.util.Optional<EmpleadoModel> findByNumeroDi(String numeroDi);
+
     List<EmpleadoModel> findByEstado(String estado);
 
     List<EmpleadoModel> findByNumeroDiContainingIgnoreCaseOrNombresContainingIgnoreCaseOrApellidosContainingIgnoreCase(

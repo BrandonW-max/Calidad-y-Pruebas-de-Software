@@ -69,4 +69,25 @@ public class EmailService {
 
         mailSender.send(mensaje);
     }
+
+    public void enviarLinkDescargaApp(String destinatario, String nombreEmpleado) {
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setTo(destinatario);
+        mensaje.setSubject("Descarga la App de Asistencia - Hospital San Gabriel");
+        mensaje.setText(
+            "Estimado/a " + nombreEmpleado + ",\n\n"
+            + "Se te ha enviado el enlace para descargar la aplicación móvil del\n"
+            + "Hospital San Gabriel para registrar tu asistencia con huella dactilar.\n\n"
+            + "Descarga la app aquí:\n"
+            + "https://expo.dev/@hospital-san-gabriel/asistencia\n\n"
+            + "Pasos:\n"
+            + "1. Descarga la app desde el enlace\n"
+            + "2. Ingresa tu número de empleado\n"
+            + "3. Registra tu huella dactilar\n"
+            + "4. ¡Listo! Podrás registrar tu entrada y salida diariamente.\n\n"
+            + "Saludos,\n"
+            + "Departamento de RRHH - Hospital San Gabriel"
+        );
+        mailSender.send(mensaje);
+    }
 }

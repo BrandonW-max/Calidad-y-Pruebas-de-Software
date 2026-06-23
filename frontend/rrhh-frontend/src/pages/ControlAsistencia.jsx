@@ -889,12 +889,19 @@ function VistaRRHH() {
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th><th>Empleado</th><th>Fecha Asistencia</th><th>Motivo</th><th>Estado</th>
+                      <th>#</th>
+                      <th>Empleado</th>
+                      <th>Fecha</th>
+                      <th>Debía llegar</th>
+                      <th>Llegó a</th>
+                      <th>Tardanza</th>
+                      <th>Motivo</th>
+                      <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
-                      <tr><td colSpan={5}>
+                      <tr><td colSpan={8}>
                         <div className="empty-state">
                           <div className="empty-state-icon">✅</div>
                           <p>No hay justificaciones pendientes de revisión</p>
@@ -914,6 +921,21 @@ function VistaRRHH() {
                         <td>{j.id ?? j.idJustificacion}</td>
                         <td>{getNombreEmpleado(j.idEmpleado)}</td>
                         <td>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
+                        <td style={{ fontWeight: 600, color: "var(--text-2)" }}>
+                          {j.horaEntradaEsperada ?? "—"}
+                        </td>
+                        <td style={{ fontWeight: 600, color: j.horaEntrada ? "#dc2626" : "var(--text-3)" }}>
+                          {j.horaEntrada ?? "—"}
+                        </td>
+                        <td>
+                          {j.minutosTardanza != null && j.minutosTardanza > 0 ? (
+                            <span className="badge badge-warning" style={{ fontSize: 11 }}>
+                              {Math.floor(j.minutosTardanza / 60) > 0
+                                ? `${Math.floor(j.minutosTardanza / 60)}h ${j.minutosTardanza % 60}min`
+                                : `${j.minutosTardanza} min`}
+                            </span>
+                          ) : "—"}
+                        </td>
                         <td>
                           <button
                             style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px" }}
@@ -1054,11 +1076,51 @@ function VistaRRHH() {
             </div>
             <div className="modal-body">
               <p style={{ fontWeight: 600, marginBottom: 12 }}>¿Desea aprobar o rechazar esta justificación?</p>
+
+              {/* Comparación de horas */}
+              {(modalDecision.justificacion.horaEntradaEsperada || modalDecision.justificacion.horaEntrada) && (
+                <div style={{
+                  display: "flex", gap: 12, marginBottom: 14, alignItems: "center",
+                  background: "var(--bg-2, #f8fafc)", borderRadius: 8, padding: "12px 16px",
+                  border: "1px solid var(--border)"
+                }}>
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 2 }}>Debía llegar</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#16a34a" }}>
+                      {modalDecision.justificacion.horaEntradaEsperada ?? "—"}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 20, color: "var(--text-3)" }}>→</div>
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 2 }}>Llegó a</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#dc2626" }}>
+                      {modalDecision.justificacion.horaEntrada ?? "—"}
+                    </div>
+                  </div>
+                  {modalDecision.justificacion.minutosTardanza != null && modalDecision.justificacion.minutosTardanza > 0 && (
+                    <>
+                      <div style={{ fontSize: 20, color: "var(--text-3)" }}>=</div>
+                      <div style={{ textAlign: "center", flex: 1 }}>
+                        <div style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 2 }}>Tardanza</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: "#d97706" }}>
+                          {Math.floor(modalDecision.justificacion.minutosTardanza / 60) > 0
+                            ? `${Math.floor(modalDecision.justificacion.minutosTardanza / 60)}h ${modalDecision.justificacion.minutosTardanza % 60}min`
+                            : `${modalDecision.justificacion.minutosTardanza} min`}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {modalDecision.justificacion.motivo && (
                 <div className="alert alert-info" style={{ marginBottom: 12, fontSize: 13, whiteSpace: "pre-wrap" }}>
                   <strong>Motivo:</strong> {modalDecision.justificacion.motivo}
                 </div>
               )}
+              <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>
+                Si aprueba: los minutos de tardanza se anulan y <strong>no se descontarán en nómina</strong>.
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModalDecision({ open: false, justificacion: null })}>Cancelar</button>

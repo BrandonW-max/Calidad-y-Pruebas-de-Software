@@ -45,6 +45,12 @@ public class JustificacionTardanzaModel {
     @Transient
     private String fechaAsistencia;
 
+    @Transient
+    private String horaEntradaEsperada;
+
+    @Transient
+    private Integer minutosTardanza;
+
     public JustificacionTardanzaModel() {}
 
     public Integer getIdJustificacion() { return idJustificacion; }
@@ -82,4 +88,10 @@ public class JustificacionTardanzaModel {
 
     public String getFechaAsistencia() { return fechaAsistencia; }
     public void setFechaAsistencia(String fechaAsistencia) { this.fechaAsistencia = fechaAsistencia; }
+
+    public String getHoraEntradaEsperada() { return horaEntradaEsperada; }
+    public void setHoraEntradaEsperada(String horaEntradaEsperada) { this.horaEntradaEsperada = horaEntradaEsperada; }
+
+    public Integer getMinutosTardanza() { return minutosTardanza; }
+    public void setMinutosTardanza(Integer minutosTardanza) { this.minutosTardanza = minutosTardanza; }
 }

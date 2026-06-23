@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { getUser, clearSession, enable2FA, verify2FA, saveSession, getMe } from "./services/api";
+import { getUser, clearSession, enable2FA, verify2FA, saveSession, getMe, logout } from "./services/api";
 import Login from "./pages/Login";
 import Acceso403 from "./pages/Acceso403";
 import DashboardRRHH from "./pages/DashboardRRHH";
@@ -112,7 +112,7 @@ function Setup2FAModal() {
 
   const overlay = {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000,
   };
   const box = {
     background: '#fff', borderRadius: 16, padding: '36px 32px',
@@ -349,12 +349,13 @@ function App() {
     }
   }, [navigate]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     clearTimeout(warningTimerRef.current);
     clearTimeout(logoutTimerRef.current);
     clearInterval(countdownIntervalRef.current);
     showAfkModalRef.current = false;
     setShowAfkModal(false);
+    try { await logout(); } catch {}
     clearSession();
     navigate('/', { replace: true });
   }, [navigate]);

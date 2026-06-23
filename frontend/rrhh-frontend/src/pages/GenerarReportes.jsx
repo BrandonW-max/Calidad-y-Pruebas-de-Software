@@ -167,8 +167,8 @@ export default function GenerarReportes() {
         }
         setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: lista.length > 0 ? "Generado" : "Sin datos" }, ...h].slice(0, 10));
       }
-    } catch {
-      setError("Error al generar el reporte. Verifique los filtros e intente de nuevo.");
+    } catch (e) {
+      setError(e.message || "Error al generar el reporte. Verifique los filtros e intente de nuevo.");
     } finally {
       setGenerando(false);
     }
@@ -277,7 +277,7 @@ export default function GenerarReportes() {
                       <select value={estado} onChange={e => setEstado(e.target.value)}>
                         <option value="">Todos</option>
                         {tipoSeleccionado === "solicitudes"
-                          ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="RECHAZADO">Rechazado</option></>
+                          ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADA">Aprobado</option><option value="RECHAZADA">Rechazado</option></>
                           : <><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></>
                         }
                       </select>

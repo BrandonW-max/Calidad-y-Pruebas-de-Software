@@ -87,6 +87,18 @@ public class NominaRepositoryImpl implements INominaRepository {
             .collect(Collectors.toList());
     }
 
+    @Override
+    public void eliminar(Integer idNomina) {
+        jpaDetalleNominaRepository.deleteByNominaIdNomina(idNomina);
+        jpaNominaRepository.deleteById(Objects.requireNonNull(idNomina));
+    }
+
+    @Override
+    public void eliminarPorPeriodo(String periodo) {
+        jpaNominaRepository.deleteDetallesByPeriodo(periodo);
+        jpaNominaRepository.deleteByPeriodo(periodo);
+    }
+
     private NominaModel mapearAModel(Nomina nomina) {
         NominaModel model = new NominaModel();
         model.setIdNomina(nomina.getIdNomina());

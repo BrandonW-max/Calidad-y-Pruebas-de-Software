@@ -53,7 +53,7 @@ export default function Login() {
         return;
       }
       saveSession(data.token, data.rol, username, data.idEmpleado ?? null, data.requiereCambioPassword ?? false);
-      if (data.requires2FASetup) sessionStorage.setItem('show2FAReminder', 'true');
+      if (data.requires2FASetup && !data.requiereCambioPassword) sessionStorage.setItem('show2FAReminder', 'true');
       if (data.requiereCambioPassword) {
         setPrimerUsername(username);
         setPrimerAcceso(true);

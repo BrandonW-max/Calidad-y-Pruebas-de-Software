@@ -247,6 +247,12 @@ export const descargarComprobante = (id) =>
     return r.blob();
   });
 
+// ── APP MÓVIL ─────────────────────────────────────────────────────────────────
+export const enviarLinkApp = (idEmpleado) =>
+  f(`${BASE}/api/v1/empleados/${idEmpleado}/enviar-app`, {
+    method: 'POST', headers: h(),
+  }).then(json);
+
 // ── SOLICITUDES ───────────────────────────────────────────────────────────────
 export const registrarSolicitud = (dto) =>
   f(`${BASE}/api/solicitud/registrar`, {

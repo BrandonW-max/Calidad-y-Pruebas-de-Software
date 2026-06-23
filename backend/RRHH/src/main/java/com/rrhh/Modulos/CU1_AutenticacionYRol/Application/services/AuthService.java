@@ -93,7 +93,8 @@ public class AuthService implements IAuthService {
                         permisos,
                         user.getTokenInvalidoDesde()
                 );
-                boolean recordar2FA = !user.getNombreUsuario().equals("admin.rrhh");
+                boolean recordar2FA = !user.getNombreUsuario().equals("admin.rrhh")
+                        && !user.getNombreUsuario().endsWith("_test");
                 boolean esPrimerAcceso = user.getNumeroDi() != null
                         && dto.getPassword().equals(user.getNumeroDi());
                 AuthResponseDTO resp = new AuthResponseDTO(

@@ -4,6 +4,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +20,12 @@ import java.util.List;
 public class JwtConfig {
 
     private final JwtProperties jwtProperties;
+
+    @Value("${cookie.secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${cookie.same-site:Lax}")
+    private String cookieSameSite;
 
     private final long expirationTime = 1000 * 60 * 15;
 
@@ -123,10 +132,10 @@ public class JwtConfig {
     }
 
     public ResponseCookie crearCookieJwt(String token) {
-        return ResponseCookie.from("jwt", token)
+        return ResponseCookie.from("jwt", Objects.requireNonNull(token))
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
                 .path("/")
                 .maxAge(expirationTime / 1000)
                 .build();
@@ -135,8 +144,8 @@ public class JwtConfig {
     public ResponseCookie crearCookieJwtVacia() {
         return ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
                 .path("/")
                 .maxAge(0)
                 .build();
