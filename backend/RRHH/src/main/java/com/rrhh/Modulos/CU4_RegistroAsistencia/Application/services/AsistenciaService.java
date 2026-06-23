@@ -85,7 +85,7 @@ public class AsistenciaService {
         RegistroAsistenciaModel registro = registroOptional.get();
 
         if (registro.getHoraEntrada() != null && registro.getHoraSalida() == null) {
-            return registrarSalida(registro, horaActual);
+            return registrarSalida(registro, horaActual, empleado);
         }
 
         if (registro.getHoraEntrada() != null && registro.getHoraSalida() != null) {
@@ -259,6 +259,12 @@ public class AsistenciaService {
         return todos.stream().filter(r -> "ORIGINAL".equals(r.getTipoRegistro()) || r.getTipoRegistro() == null).toList();
     }
 
+    public Optional<HorarioModel> getHorarioEmpleado(Integer idEmpleado) {
+        Optional<EmpleadoModel> empleadoOpt = empleadoRepository.findById(idEmpleado.longValue());
+        if (empleadoOpt.isEmpty()) return Optional.empty();
+        return Optional.ofNullable(obtenerHorarioAsignado(empleadoOpt.get()));
+    }
+
     public Optional<RegistroAsistenciaModel> buscarHoy(Integer idEmpleado) {
         Optional<RegistroAsistenciaModel> corr = registroAsistenciaRepository
                 .findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(idEmpleado, LocalDate.now(), "CORRECCION");
@@ -305,7 +311,11 @@ public class AsistenciaService {
     }
 
     private int obtenerJornadaLaboralMinutos(EmpleadoModel empleado) {
-        return 8 * 60;
+        HorarioModel horario = obtenerHorarioAsignado(empleado);
+        if (horario != null && horario.getHoraEntrada() != null && horario.getHoraSalida() != null) {
+            return (int) Duration.between(horario.getHoraEntrada(), horario.getHoraSalida()).toMinutes();
+        }
+        return 9 * 60; // fallback: 08:00–17:00
     }
 
     private MarcarAsistenciaResponseDTO registrarEntrada(EmpleadoModel empleado, LocalDate fechaActual, LocalTime horaActual) {
@@ -351,13 +361,13 @@ public class AsistenciaService {
         );
     }
 
-    private MarcarAsistenciaResponseDTO registrarSalida(RegistroAsistenciaModel registro, LocalTime horaSalida) {
+    private MarcarAsistenciaResponseDTO registrarSalida(RegistroAsistenciaModel registro, LocalTime horaSalida, EmpleadoModel empleado) {
 
         registro.setHoraSalida(horaSalida);
         registro.setTipoUltimoRegistro("SALIDA");
 
         BigDecimal horasTrabajadas = calcularHorasTrabajadas(registro.getHoraEntrada(), horaSalida);
-        int minutosExtra = calcularMinutosExtra(registro.getHoraEntrada(), horaSalida, 8 * 60);
+        int minutosExtra = calcularMinutosExtra(registro.getHoraEntrada(), horaSalida, obtenerJornadaLaboralMinutos(empleado));
 
         registro.setHorasTrabajadas(horasTrabajadas);
         registro.setMinutosExtra(minutosExtra);

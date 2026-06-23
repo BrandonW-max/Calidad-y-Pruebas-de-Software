@@ -22,7 +22,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+import com.rrhh.Shared.persistence.HorarioModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
+import com.rrhh.Shared.persistence.UsuarioModel;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,14 +38,17 @@ public class AsistenciaController {
 
     private final AsistenciaService asistenciaService;
     private final JustificacionService justificacionService;
+    private final JpaUsuarioRepository usuarioRepository;
 
     @Value("${app.upload-dir:uploads/evidencias}")
     private String uploadDir;
 
     public AsistenciaController(AsistenciaService asistenciaService,
-                                JustificacionService justificacionService) {
+                                JustificacionService justificacionService,
+                                JpaUsuarioRepository usuarioRepository) {
         this.asistenciaService = asistenciaService;
         this.justificacionService = justificacionService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @PostMapping(value = "/upload-evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -86,6 +92,7 @@ public class AsistenciaController {
         String motivo = Objects.requireNonNull(body.get("motivo"), "motivo es requerido").toString();
         String evidencia = Objects.toString(body.get("evidenciaUrl"), "");
         Long idEmpleado = Long.valueOf(Objects.requireNonNull(body.get("idEmpleado"), "idEmpleado es requerido").toString());
+        validarEmpleadoPropio(user, idEmpleado);
         JustificacionTardanzaModel j = justificacionService.registrar(idRegistro.intValue(), idEmpleado, motivo, evidencia);
         return ResponseEntity.ok(j);
     }
@@ -105,21 +112,46 @@ public class AsistenciaController {
     @GetMapping("/empleado/{idEmpleado}")
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
     public ResponseEntity<List<RegistroAsistenciaModel>> listarPorEmpleado(
-            @PathVariable Integer idEmpleado) {
+            @PathVariable Integer idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        validarEmpleadoPropio(user, idEmpleado.longValue());
         return ResponseEntity.ok(asistenciaService.listarPorEmpleado(idEmpleado));
+    }
+
+    @GetMapping("/horario/{idEmpleado}")
+    @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
+    public ResponseEntity<Map<String, Object>> getHorarioEmpleado(@PathVariable Integer idEmpleado) {
+        Optional<HorarioModel> horarioOpt = asistenciaService.getHorarioEmpleado(idEmpleado);
+        if (horarioOpt.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                "horaEntrada", "08:00",
+                "horaSalida", "17:00",
+                "nombreTurno", "Turno General",
+                "tolerancia", 10
+            ));
+        }
+        HorarioModel h = horarioOpt.get();
+        return ResponseEntity.ok(Map.of(
+            "horaEntrada", h.getHoraEntrada().toString().substring(0, 5),
+            "horaSalida", h.getHoraSalida().toString().substring(0, 5),
+            "nombreTurno", h.getNombreTurno() != null ? h.getNombreTurno() : "Turno General",
+            "tolerancia", h.getTolerancia() != null ? h.getTolerancia() : 10
+        ));
     }
 
     @GetMapping("/hoy/{idEmpleado}")
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
     public ResponseEntity<RegistroAsistenciaModel> buscarHoy(
-            @PathVariable Integer idEmpleado) {
+            @PathVariable Integer idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        validarEmpleadoPropio(user, idEmpleado.longValue());
         Optional<RegistroAsistenciaModel> registro = asistenciaService.buscarHoy(idEmpleado);
         return registro.map(ResponseEntity::ok)
                        .orElse(ResponseEntity.noContent().build());
     }
 
     @PostMapping("/manual")
-    @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
+    @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<MarcarAsistenciaResponseDTO> registrarManual(
             @RequestBody MarcarAsistenciaManualRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -141,7 +173,20 @@ public class AsistenciaController {
     @GetMapping("/justificaciones/empleado/{idEmpleado}")
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH')")
     public ResponseEntity<List<JustificacionTardanzaModel>> listarPorEmpleado(
-            @PathVariable Long idEmpleado) {
+            @PathVariable Long idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        validarEmpleadoPropio(user, idEmpleado);
         return ResponseEntity.ok(justificacionService.listarPorEmpleado(idEmpleado));
+    }
+
+    private void validarEmpleadoPropio(AuthenticatedUser user, Long idEmpleado) {
+        if (user == null || !"EMPLEADO".equals(user.getRol())) return;
+
+        UsuarioModel usuario = usuarioRepository.findById(user.getIdUsuario())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Usuario no encontrado."));
+        if (usuario.getEmpleado() == null
+                || !idEmpleado.equals(usuario.getEmpleado().getIdEmpleado())) {
+            throw new org.springframework.security.access.AccessDeniedException("No puede acceder a la asistencia de otro empleado.");
+        }
     }
 }

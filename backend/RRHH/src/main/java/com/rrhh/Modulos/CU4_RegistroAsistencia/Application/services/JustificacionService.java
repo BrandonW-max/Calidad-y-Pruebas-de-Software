@@ -28,6 +28,25 @@ public class JustificacionService {
             throw new RuntimeException("Registro de asistencia no encontrado");
         }
 
+        if (r.getEmpleado() == null || !idEmpleado.equals(r.getEmpleado().getIdEmpleado())) {
+            throw new RuntimeException("El registro de asistencia no corresponde al empleado.");
+        }
+
+        boolean tardanzaJustificable = r.getMinutosTardanza() != null && r.getMinutosTardanza() >= 60;
+        boolean esInasistencia = "INASISTENCIA".equals(r.getEstado());
+        if (!tardanzaJustificable && !esInasistencia) {
+            throw new RuntimeException("Solo se pueden justificar tardanzas de una hora o más e inasistencias.");
+        }
+
+        Long existentes = em.createQuery(
+                        "SELECT COUNT(j) FROM JustificacionTardanzaModel j WHERE j.idRegistroAsistencia = :idRegistro AND j.estado = 'PENDIENTE'",
+                        Long.class)
+                .setParameter("idRegistro", idRegistroAsistencia)
+                .getSingleResult();
+        if (existentes > 0) {
+            throw new RuntimeException("Ya existe una justificación pendiente para este registro.");
+        }
+
         LocalDate fechaRegistro = r.getFecha();
         if (LocalDate.now().isAfter(fechaRegistro.plusDays(1))) {
             throw new RuntimeException("El plazo de justificacion vencio. Solo puedes justificar el mismo dia o el dia siguiente.");
@@ -64,27 +83,6 @@ public class JustificacionService {
 
         if (comentario != null && !comentario.isBlank()) {
             j.setComentarioRevision(comentario);
-        }
-
-        RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
-        if (r != null && "APROBADA".equals(decision)) {
-            int tardanzaOriginal = r.getMinutosTardanza();
-            LocalTime entrada = r.getHoraEntrada() != null ? r.getHoraEntrada() : LocalTime.of(8, 0);
-            LocalTime salida = r.getHoraSalida() != null
-                    ? r.getHoraSalida().plusMinutes(tardanzaOriginal)
-                    : entrada.plusHours(8);
-
-            RegistroAsistenciaModel correccion = new RegistroAsistenciaModel();
-            correccion.setEmpleado(r.getEmpleado());
-            correccion.setFecha(r.getFecha());
-            correccion.setHoraEntrada(entrada);
-            correccion.setHoraSalida(salida);
-            correccion.setHorasTrabajadas(new java.math.BigDecimal("8.00"));
-            correccion.setMinutosTardanza(0);
-            correccion.setEstado("JUSTIFICADA");
-            correccion.setTipoRegistro("CORRECCION");
-            correccion.setObservacion("Tardanza original: " + tardanzaOriginal + " min. Horas recuperadas.");
-            em.persist(correccion);
         }
 
         return em.merge(j);

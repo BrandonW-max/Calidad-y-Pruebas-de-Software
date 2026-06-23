@@ -105,6 +105,7 @@ public class AuthService implements IAuthService {
                         recordar2FA
                 );
                 resp.setRequiereCambioPassword(esPrimerAcceso);
+                resp.setIdEmpleado(user.getIdEmpleado());
                 return resp;
             }
 
@@ -227,6 +228,7 @@ public class AuthService implements IAuthService {
                 token,
                 user.getNombreRol()
         );
+        resp2fa.setIdEmpleado(user.getIdEmpleado());
         return resp2fa;
     }
 

@@ -80,10 +80,10 @@ const ESTADO_TAB_CONFIG = {
 };
 
 const TIPO_LABELS = {
-  VACACIONES: "Vacaciones",
-  PERMISO:    "Permiso",
-  LICENCIA:   "Licencia",
-  OTROS:      "Otros",
+  VACACIONES:       "Vacaciones",
+  PERMISO_PERSONAL: "Permiso Personal",
+  PERMISO_MEDICO:   "Permiso Médico",
+  OTROS:            "Otros",
 };
 
 const estadoBadge = (estado) => {
@@ -142,7 +142,7 @@ function VistaEmpleado() {
       setForm({ tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "" });
       setTabActiva("lista");
       cargarMisSolicitudes();
-    } catch { setError("Error al enviar la solicitud. Intente de nuevo."); }
+    } catch (e) { setError(e.message || "Error al enviar la solicitud. Intente de nuevo."); }
     finally  { setEnviando(false); }
   };
 
@@ -192,14 +192,14 @@ function VistaEmpleado() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
-                    ) : solicitudes.map(s => {
+                    ) : solicitudes.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                           <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td>{s.fechaInicio ?? "—"}</td>
                           <td>{s.fechaFin ?? "—"}</td>
@@ -408,14 +408,14 @@ function VistaRRHH() {
                 <tbody>
                   {solicitudes.length === 0 ? (
                     <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
-                  ) : solicitudes.map(s => {
+                  ) : solicitudes.map((s, idx) => {
                     const id = s.idSolicitud ?? s.id;
                     const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                     return (
                       <tr key={id}
                         onClick={() => setSolicitudActiva(isSelected ? null : s)}
                         style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                         <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
                         <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                         <td>{s.fechaInicio ?? "—"}</td>
@@ -566,14 +566,14 @@ function VistaGerencia() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
-                    ) : solicitudes.map(s => {
+                    ) : solicitudes.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{id}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                           <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td>{s.fechaInicio ?? "—"}</td>
@@ -624,14 +624,14 @@ function VistaGerencia() {
                     <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Respuesta Gerencia</th></tr>
                   </thead>
                   <tbody>
-                    {solAprobadas.map(s => {
+                    {solAprobadas.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{id}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
                           <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td>{s.fechaInicio ?? "—"}</td>

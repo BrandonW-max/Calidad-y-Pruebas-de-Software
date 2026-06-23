@@ -68,6 +68,7 @@ public class UsuarioMapper {
 
         if (model.getEmpleado() != null) {
             domain.setNumeroDi(model.getEmpleado().getNumeroDi());
+            domain.setIdEmpleado(model.getEmpleado().getIdEmpleado());
         }
 
         // =========================

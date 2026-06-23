@@ -512,6 +512,44 @@ FROM empleado e CROSS JOIN rol r WHERE e.numero_di = '88990011' AND r.nombre_rol
   AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'a.vargas');
 
 
+-- =========================
+-- USUARIOS DE PRUEBA (SIN 2FA)
+-- Contraseña: admin123
+-- =========================
+
+INSERT INTO empleado(nombres, apellidos, doc_identidad, numero_di, fecha_nac, sexo, estado_civil, direccion, correo, telefono, estado, creado_el, actualizado_el)
+VALUES
+    ('Empleado', 'Prueba', 'DNI', '99990001', '1995-01-01', 'M', 'SOLTERO', 'Lima', 'empleado.test@hospitalsangabriel.com', '999900001', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Gerencia', 'Prueba', 'DNI', '99990002', '1980-01-01', 'F', 'SOLTERO', 'Lima', 'gerencia.test@hospitalsangabriel.com', '999900002', 'ACTIVO', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (numero_di) DO NOTHING;
+
+INSERT INTO contrato(cargo, tipo_contrato, fecha_inicio, fecha_fin, sueldo, estado, id_empleado, id_dpto, creado_el, actualizado_el)
+SELECT 'Empleado de Prueba', 'INDEFINIDO', CURRENT_DATE, NULL, 2500.00, 'ACTIVO', e.id_empleado, d.id_dpto, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e CROSS JOIN departamento d
+WHERE e.numero_di = '99990001' AND d.cod_dpto = 'ADM01'
+  AND NOT EXISTS (SELECT 1 FROM contrato c WHERE c.id_empleado = e.id_empleado AND c.estado = 'ACTIVO');
+
+INSERT INTO contrato(cargo, tipo_contrato, fecha_inicio, fecha_fin, sueldo, estado, id_empleado, id_dpto, creado_el, actualizado_el)
+SELECT 'Gerente de Prueba', 'INDEFINIDO', CURRENT_DATE, NULL, 9000.00, 'ACTIVO', e.id_empleado, d.id_dpto, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e CROSS JOIN departamento d
+WHERE e.numero_di = '99990002' AND d.cod_dpto = 'DIR01'
+  AND NOT EXISTS (SELECT 1 FROM contrato c WHERE c.id_empleado = e.id_empleado AND c.estado = 'ACTIVO');
+
+INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
+SELECT 'empleado_test', 'empleado.test@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+       0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e CROSS JOIN rol r
+WHERE e.numero_di = '99990001' AND r.nombre_rol = 'EMPLEADO'
+  AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'empleado_test');
+
+INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
+SELECT 'gerencia_test', 'gerencia.test@hospitalsangabriel.com', '$2b$10$FqG7zov.m5p.vDKZ.G1VqeHnAixs73S9Isob9DaAGf3LJBjAC/Qki',
+       0, false, NULL, false, NULL, true, e.id_empleado, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e CROSS JOIN rol r
+WHERE e.numero_di = '99990002' AND r.nombre_rol = 'GERENCIA'
+  AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'gerencia_test');
+
+
 -- ============================================================
 -- REGISTROS DE ASISTENCIA — Mayo 2026
 -- Para: Ana García, Carlos Méndez, Rosa Vargas, Elena Castro, Sofía Delgado, Miguel Paredes
@@ -1305,4 +1343,63 @@ WHERE h.nombre_turno = 'Turno Tarde'
   AND NOT EXISTS (
       SELECT 1 FROM asignacion_horario a
       WHERE a.id_empleado = e.id_empleado AND a.activo = true
+  );
+
+-- =========================
+-- TURNO GENERAL (empleado_test y gerencia_test)
+-- =========================
+
+INSERT INTO horario(nombre_turno, hora_entrada, hora_salida, tolerancia, umbral_extra, activo, creado_el, actualizado_el)
+SELECT 'Turno General', '08:00', '17:00', 10, 60, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM horario WHERE nombre_turno = 'Turno General');
+
+-- Asignación con fecha_desde retrocedida 7 días para cubrir los registros históricos de prueba
+INSERT INTO asignacion_horario(id_empleado, id_horario, fecha_desde, fecha_hasta, es_temporal, activo, creado_el, actualizado_el)
+SELECT e.id_empleado, h.id_horario, CURRENT_DATE - INTERVAL '7 days', NULL, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM empleado e
+CROSS JOIN horario h
+WHERE h.nombre_turno = 'Turno General'
+  AND e.numero_di IN ('99990001', '99990002')
+  AND NOT EXISTS (
+      SELECT 1 FROM asignacion_horario a
+      WHERE a.id_empleado = e.id_empleado AND a.activo = true
+  );
+
+-- =========================
+-- REGISTROS DE ASISTENCIA DE PRUEBA (empleado_test)
+-- Tardanza >= 60 min para poder probar el flujo de justificación
+-- =========================
+
+-- Ayer: entró 2 horas tarde (10:00), completó jornada hasta las 17:00
+INSERT INTO registro_asistencia (fecha, hora_entrada, hora_salida, horas_trabajadas, minutos_tardanza, minutos_extra, estado, tipo_ultimo_registro, tipo_registro, observacion, id_empleado)
+SELECT
+    CURRENT_DATE - INTERVAL '1 day',
+    '10:00:00', '17:00:00', 7.00, 120, 0,
+    'TARDANZA', 'SALIDA', 'ORIGINAL',
+    'Tardanza de prueba - pendiente justificación',
+    e.id_empleado
+FROM empleado e
+WHERE e.numero_di = '99990001'
+  AND NOT EXISTS (
+      SELECT 1 FROM registro_asistencia r
+      WHERE r.id_empleado = e.id_empleado
+        AND r.fecha = CURRENT_DATE - INTERVAL '1 day'
+        AND r.tipo_registro = 'ORIGINAL'
+  );
+
+-- Hoy: entró 90 minutos tarde (09:30), aún sin salida
+INSERT INTO registro_asistencia (fecha, hora_entrada, hora_salida, horas_trabajadas, minutos_tardanza, minutos_extra, estado, tipo_ultimo_registro, tipo_registro, observacion, id_empleado)
+SELECT
+    CURRENT_DATE,
+    '09:30:00', NULL, 0.00, 90, 0,
+    'TARDANZA', 'ENTRADA', 'ORIGINAL',
+    'Tardanza de prueba - pendiente justificación',
+    e.id_empleado
+FROM empleado e
+WHERE e.numero_di = '99990001'
+  AND NOT EXISTS (
+      SELECT 1 FROM registro_asistencia r
+      WHERE r.id_empleado = e.id_empleado
+        AND r.fecha = CURRENT_DATE
+        AND r.tipo_registro = 'ORIGINAL'
   );

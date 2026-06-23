@@ -14,8 +14,11 @@ const json = (r) => {
     window.location.href = '/';
     throw new Error('Sesión expirada');
   }
-  // Para 400, 500 y similares intentamos parsear el JSON del backend antes de fallar
-  if (!r.ok) return r.json().catch(() => { throw new Error(`HTTP ${r.status}`); });
+  if (!r.ok) return r.text().then(text => {
+    let msg = text;
+    try { const parsed = JSON.parse(text); msg = parsed?.message || parsed?.error || text; } catch {}
+    throw new Error(msg || `HTTP ${r.status}`);
+  });
   return r.json();
 };
 
@@ -183,6 +186,9 @@ export const listarJustificacionesPendientes = () =>
 
 export const listarJustificacionesEmpleado = (idEmpleado) =>
   f(`${BASE}/api/v1/asistencia/justificaciones/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+export const getHorarioEmpleado = (idEmpleado) =>
+  f(`${BASE}/api/v1/asistencia/horario/${idEmpleado}`, { headers: h() }).then(json);
 
 export const uploadEvidencia = (file) => {
   const fd = new FormData();

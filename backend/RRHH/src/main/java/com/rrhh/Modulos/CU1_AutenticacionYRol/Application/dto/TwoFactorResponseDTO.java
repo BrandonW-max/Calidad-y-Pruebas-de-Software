@@ -8,6 +8,7 @@ public class TwoFactorResponseDTO {
     private String token;
     private String rol;
     private boolean requiereCambioPassword;
+    private Long idEmpleado;
 
     public TwoFactorResponseDTO() {
     }
@@ -62,5 +63,13 @@ public class TwoFactorResponseDTO {
 
     public void setRequiereCambioPassword(boolean requiereCambioPassword) {
         this.requiereCambioPassword = requiereCambioPassword;
+    }
+
+    public Long getIdEmpleado() {
+        return idEmpleado;
+    }
+
+    public void setIdEmpleado(Long idEmpleado) {
+        this.idEmpleado = idEmpleado;
     }
 }

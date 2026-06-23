@@ -326,8 +326,15 @@ DECLARE
     v_h_esperada TIME;
     v_tolerancia INT;
 BEGIN
+    -- Las correcciones manuales no recalculan tardanza
+    IF NEW.tipo_registro = 'CORRECCION' THEN RETURN NEW; END IF;
+
     SELECT id_horario INTO v_id_horario FROM asignacion_horario
-    WHERE id_empleado = NEW.id_empleado AND NEW.fecha BETWEEN fecha_desde AND fecha_hasta AND activo = TRUE LIMIT 1;
+    WHERE id_empleado = NEW.id_empleado
+      AND NEW.fecha >= fecha_desde
+      AND (fecha_hasta IS NULL OR NEW.fecha <= fecha_hasta)
+      AND activo = TRUE
+    LIMIT 1;
     IF v_id_horario IS NULL THEN RETURN NEW; END IF;
     SELECT hora_entrada, tolerancia INTO v_h_esperada, v_tolerancia FROM horario WHERE id_horario = v_id_horario;
     IF NEW.hora_entrada > (v_h_esperada + (v_tolerancia || ' minutes')::interval) THEN
@@ -351,6 +358,7 @@ DECLARE
     v_minutos_reales INT;
 BEGIN
     IF NEW.hora_salida IS NULL THEN RETURN NEW; END IF;
+    IF NEW.id_horario IS NULL THEN RETURN NEW; END IF;
     SELECT hora_salida, umbral_extra INTO v_h_salida_esperada, v_umbral FROM horario WHERE id_horario = NEW.id_horario;
     v_minutos_reales := EXTRACT(EPOCH FROM (NEW.hora_salida - v_h_salida_esperada)) / 60;
     IF v_minutos_reales >= v_umbral THEN

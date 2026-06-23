@@ -7,6 +7,7 @@ import {
   listarJustificacionesEmpleado,
   listarAsistenciaEmpleado,
   getAsistenciaHoy,
+  getHorarioEmpleado,
   registrarManual,
   registrarJustificacion,
   uploadEvidencia,
@@ -33,6 +34,7 @@ function VistaEmpleado() {
   const [justificaciones, setJustificaciones] = useState([]);
   const [asistenciaHoy,   setAsistenciaHoy]   = useState(null);
   const [historial,       setHistorial]        = useState([]);
+  const [horario,         setHorario]          = useState({ horaEntrada: "08:00", horaSalida: "17:00" });
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error,   setError]     = useState("");
@@ -66,7 +68,15 @@ function VistaEmpleado() {
     cargarJustificaciones();
     cargarAsistenciaHoy();
     cargarHistorial();
+    cargarHorario();
   }, [idEmpleado]);
+
+  const cargarHorario = async () => {
+    try {
+      const data = await getHorarioEmpleado(idEmpleado);
+      if (data) setHorario(data);
+    } catch { /* silencioso */ }
+  };
 
   const cargarJustificaciones = async () => {
     try {
@@ -139,7 +149,7 @@ function VistaEmpleado() {
     setSaving(true);
     try {
       const now = new Date();
-      const fechaHora = now.toISOString().replace("T", " ").substring(0, 19);
+      const fechaHora = now.toISOString().substring(0, 19);
       await registrarManual({
         idEmpleado,
         tipo: modalManual.tipo,
@@ -170,7 +180,9 @@ function VistaEmpleado() {
     return m[estado] ?? "badge-gray";
   };
 
-  const puedeJustificar = asistenciaHoy?.minutosTardanza >= 60;
+  const puedeJustificar = historial.some(r =>
+    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+  );
 
   return (
     <div className="dashboard">
@@ -219,7 +231,7 @@ function VistaEmpleado() {
 
 
             <div className="asist-horario-tag">
-              🕐 Horario establecido: 08:00 a.m. - 05:00 p.m.
+              🕐 Horario establecido: {horario.horaEntrada} a.m. - {horario.horaSalida} p.m.
             </div>
           </div>
 
@@ -438,7 +450,7 @@ function VistaEmpleado() {
         ) : (
           <div className="section-card">
             <div className="alert alert-info">
-              📋 Para justificar necesitas al menos 1 hora de tardanza en tu registro de hoy.
+              📋 Para justificar necesitas al menos 1 hora de tardanza o una inasistencia en tu historial.
             </div>
           </div>
         ))}
@@ -705,7 +717,7 @@ function VistaRRHH() {
         await registrarManual({
           idEmpleado: parseInt(manualForm.idEmpleado),
           tipo: "ENTRADA",
-          fechaHora: correccionInfo.fechaCorreccion + " " + correccionInfo.horaCorregida + ":00",
+          fechaHora: correccionInfo.fechaCorreccion + "T" + correccionInfo.horaCorregida + ":00",
           motivo: manualForm.motivo || "Corrección de tardanza justificada",
           tipoRegistro: "CORRECCION",
         });
@@ -714,7 +726,7 @@ function VistaRRHH() {
         await registrarManual({
           idEmpleado: parseInt(manualForm.idEmpleado),
           tipo: "SALIDA",
-          fechaHora: correccionInfo.fechaCorreccion + " " + correccionInfo.salidaPropuesta + ":00",
+          fechaHora: correccionInfo.fechaCorreccion + "T" + correccionInfo.salidaPropuesta + ":00",
           motivo: manualForm.motivo || "Corrección de tardanza justificada",
           tipoRegistro: "CORRECCION",
         });
@@ -759,10 +771,21 @@ function VistaRRHH() {
     }
   };
 
-  const handleCorregirTardanza = (j) => {
+  const handleCorregirTardanza = async (j) => {
     setJustificacionSeleccionada(j.id ?? j.idJustificacion);
     const emp = empleados.find(e => e.idEmpleado == j.idEmpleado);
     if (emp) seleccionarEmpleado(emp);
+
+    let horEmp = { horaEntrada: "08:00", horaSalida: "17:00" };
+    try {
+      const h = await getHorarioEmpleado(j.idEmpleado);
+      if (h) horEmp = h;
+    } catch { /* usa defaults */ }
+
+    const entradaPartes = horEmp.horaEntrada.split(":");
+    const entradaMins = parseInt(entradaPartes[0]) * 60 + parseInt(entradaPartes[1] ?? "0");
+    const salidaPartes = horEmp.horaSalida.split(":");
+    const salidaMinsBase = parseInt(salidaPartes[0]) * 60 + parseInt(salidaPartes[1] ?? "0");
 
     const parseFecha = (str) => {
       const m = String(str ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -770,27 +793,27 @@ function VistaRRHH() {
     };
     const fechaStr = parseFecha(j.fechaAsistencia || j.fechaJustificacion || j.fechaRegistro);
 
-    let horaCorregida = "08:00";
+    let horaCorregida = horEmp.horaEntrada;
     let horaEntradaDisplay = "";
     let horaEntradaReal = "";
     let minsTard = 0;
-    let salidaReal = "17:00";
+    let salidaReal = horEmp.horaSalida;
 
     if (j.horaEntrada) {
       const parts = String(j.horaEntrada).split(":");
-      const hh = parseInt(parts[0] ?? "8");
+      const hh = parseInt(parts[0] ?? entradaPartes[0]);
       const mm = parseInt(parts[1] ?? "0");
       horaEntradaDisplay = String(hh).padStart(2, "0") + ":00";
       horaCorregida = String(hh).padStart(2, "0") + ":00";
       horaEntradaReal = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
-      minsTard = Math.max(0, hh * 60 - 8 * 60);
-      const minsRealTard = Math.max(0, hh * 60 + mm - 8 * 60);
-      const salidaRealMins = 17 * 60 + minsRealTard;
+      minsTard = Math.max(0, hh * 60 - entradaMins);
+      const minsRealTard = Math.max(0, hh * 60 + mm - entradaMins);
+      const salidaRealMins = salidaMinsBase + minsRealTard;
       salidaReal = String(Math.floor(salidaRealMins / 60)).padStart(2, "0") + ":" + String(salidaRealMins % 60).padStart(2, "0");
     }
 
-    const salidaMins = 17 * 60 + minsTard;
-    const salidaStr = String(Math.floor(salidaMins / 60)).padStart(2, "0") + ":" + String(salidaMins % 60).padStart(2, "0");
+    const salidaTotalMins = salidaMinsBase + minsTard;
+    const salidaStr = String(Math.floor(salidaTotalMins / 60)).padStart(2, "0") + ":" + String(salidaTotalMins % 60).padStart(2, "0");
 
     setManualForm(f => ({
       ...f,
@@ -800,12 +823,12 @@ function VistaRRHH() {
 
     setCorreccionInfo({
       fechaCorreccion: fechaStr,
-      entradaProgramada: "08:00",
+      entradaProgramada: horEmp.horaEntrada,
       horaCorregida,
       horaEntradaDisplay,
       horaEntradaReal,
       minutosTardanza: minsTard,
-      salidaProgramada: "17:00",
+      salidaProgramada: horEmp.horaSalida,
       salidaPropuesta: salidaStr,
       salidaReal,
       evidenciaUrl: j.evidenciaUrl || j.evidencia || "",
@@ -1108,6 +1131,7 @@ function VistaGerencia() {
   const [justificaciones, setJustificaciones] = useState([]);
   const [asistenciaHoy,   setAsistenciaHoy]   = useState(null);
   const [historial,       setHistorial]        = useState([]);
+  const [horario,         setHorario]          = useState({ horaEntrada: "08:00", horaSalida: "17:00" });
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
@@ -1138,7 +1162,15 @@ function VistaGerencia() {
     cargarJustificaciones();
     cargarAsistenciaHoy();
     cargarHistorial();
+    cargarHorario();
   }, [idEmpleado]);
+
+  const cargarHorario = async () => {
+    try {
+      const data = await getHorarioEmpleado(idEmpleado);
+      if (data) setHorario(data);
+    } catch { /* silencioso */ }
+  };
 
   const cargarJustificaciones = async () => {
     try {
@@ -1190,7 +1222,7 @@ function VistaGerencia() {
     setSaving(true);
     try {
       const now = new Date();
-      const fechaHora = now.toISOString().replace("T", " ").substring(0, 19);
+      const fechaHora = now.toISOString().substring(0, 19);
       await registrarManual({ idEmpleado, tipo: modalManual.tipo, fechaHora, motivo: manualMotivo });
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
@@ -1203,7 +1235,9 @@ function VistaGerencia() {
 
   const horaStr  = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   const fechaCorta = hora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const puedeJustificar = asistenciaHoy?.minutosTardanza >= 60;
+  const puedeJustificar = historial.some(r =>
+    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+  );
 
   const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADO: "badge-success", RECHAZADO: "badge-danger" }[estado] ?? "badge-gray");
 
@@ -1242,7 +1276,7 @@ function VistaGerencia() {
                 <span className="badge badge-gray" style={{ fontSize: 13, padding: "6px 18px" }}>Sin registro hoy</span>
               )}
             </div>
-            <div className="asist-horario-tag">🕐 Horario establecido: 08:00 a.m. - 05:00 p.m.</div>
+            <div className="asist-horario-tag">🕐 Horario establecido: {horario.horaEntrada} a.m. - {horario.horaSalida} p.m.</div>
           </div>
 
           <div className="section-card">

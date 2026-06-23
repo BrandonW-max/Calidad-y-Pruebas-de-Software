@@ -2,6 +2,8 @@ package com.rrhh.Modulos.CU6_Solicitud.Application.services;
 
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
+import com.rrhh.Shared.persistence.UsuarioModel;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.DecisionGerenciaRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RegistrarSolicitudRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RevisionRrhhRequestDTO;
@@ -32,19 +34,22 @@ public class SolicitudService implements ISolicitudService {
     private final ISolicitudRepository solicitudRepository;
     private final ISolicitudFactory solicitudFactory;
     private final com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository;
+    private final JpaUsuarioRepository jpaUsuarioRepository;
 
     public SolicitudService(
             ISolicitudRepository solicitudRepository,
             ISolicitudFactory solicitudFactory,
-            com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository) {
+            com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository jpaEmpleadoRepository,
+            JpaUsuarioRepository jpaUsuarioRepository) {
         this.solicitudRepository = solicitudRepository;
         this.solicitudFactory = solicitudFactory;
         this.jpaEmpleadoRepository = jpaEmpleadoRepository;
+        this.jpaUsuarioRepository = jpaUsuarioRepository;
     }
 
     @Override
     @Transactional
-    public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idEmpleado) {
+    public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
         if (request.getFechaInicio().isAfter(request.getFechaFin())) {
             throw new IllegalArgumentException(
@@ -56,8 +61,12 @@ public class SolicitudService implements ISolicitudService {
 
         int diasSolicitados = calcularDiasLaborables(request.getFechaInicio(), request.getFechaFin());
 
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado))
-            .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado."));
+        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+        EmpleadoModel empleado = usuario.getEmpleado();
+        if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
+        Long idEmpleado = empleado.getIdEmpleado();
+
         if (!"ACTIVO".equals(empleado.getEstado())) {
             throw new IllegalStateException("El empleado no esta activo en el sistema.");
         }
@@ -208,9 +217,15 @@ public class SolicitudService implements ISolicitudService {
 
     @Override
     @Transactional
-    public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idEmpleado) {
+    public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idUsuario) {
         Solicitud original = solicitudRepository.buscarPorId(idSolicitud)
             .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+
+        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+        EmpleadoModel empleado = usuario.getEmpleado();
+        if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
+        Long idEmpleado = empleado.getIdEmpleado();
 
         Solicitud clon = original.clonePrototype();
 
@@ -227,7 +242,6 @@ public class SolicitudService implements ISolicitudService {
         clon.setActualizadoEl(LocalDateTime.now());
 
         Solicitud guardada = solicitudRepository.guardar(clon);
-        EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
         return mapearAResponse(guardada, empleado);
     }
 
