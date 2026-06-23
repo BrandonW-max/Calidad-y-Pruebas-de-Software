@@ -198,7 +198,8 @@ CREATE TABLE nomina (
     id_empleado BIGINT REFERENCES empleado(id_empleado),
     calculado_por BIGINT REFERENCES usuario(id_usuario),
     creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_nomina_empleado_periodo UNIQUE (id_empleado, periodo)
 );
 
 CREATE TABLE detalle_nomina (

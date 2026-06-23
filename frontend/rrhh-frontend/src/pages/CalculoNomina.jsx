@@ -65,6 +65,18 @@ export default function CalculoNomina() {
   };
 
   const periodo = `${anio}-${mes}`;
+  const hoy = new Date();
+  const esPeriodoFuturo = (mesSeleccionado = mes, anioSeleccionado = anio) =>
+    Number(anioSeleccionado) > hoy.getFullYear() ||
+    (Number(anioSeleccionado) === hoy.getFullYear() && Number(mesSeleccionado) > hoy.getMonth() + 1);
+
+  const cambiarPeriodo = (campo, valor) => {
+    if (campo === "mes") setMes(valor);
+    else setAnio(valor);
+    setResultado(null);
+    setMensaje("");
+    setError("");
+  };
 
   const handleCalcular = async () => {
     setCalculando(true);
@@ -240,14 +252,14 @@ export default function CalculoNomina() {
                 <div className="form-grid" style={{ gap: 12, marginBottom: 12 }}>
                   <div className="form-group">
                     <label>Mes</label>
-                    <select value={mes} onChange={e => setMes(e.target.value)}>
-                      {MESES.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    <select value={mes} onChange={e => cambiarPeriodo("mes", e.target.value)}>
+                      {MESES.map(m => <option key={m.v} value={m.v} disabled={esPeriodoFuturo(m.v, anio)}>{m.l}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Año</label>
-                    <select value={anio} onChange={e => setAnio(e.target.value)}>
-                      {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+                    <select value={anio} onChange={e => cambiarPeriodo("anio", e.target.value)}>
+                      {ANIOS.map(a => <option key={a} value={a} disabled={esPeriodoFuturo(mes, a)}>{a}</option>)}
                     </select>
                   </div>
                 </div>
@@ -262,10 +274,10 @@ export default function CalculoNomina() {
               </div>
 
               <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-                <button className="btn btn-success" onClick={handleCalcular} disabled={calculando} style={{ flex: 1 }}>
+                <button className="btn btn-success" onClick={handleCalcular} disabled={calculando || esPeriodoFuturo()} style={{ flex: 1 }}>
                   {calculando ? "Calculando..." : "⚙️ Calcular Nómina"}
                 </button>
-                <button className="btn btn-secondary" onClick={handleCargarPeriodo} disabled={loading} style={{ flex: 1 }}>
+                <button className="btn btn-secondary" onClick={handleCargarPeriodo} disabled={loading || esPeriodoFuturo()} style={{ flex: 1 }}>
                   {loading ? "Cargando..." : "📋 Cargar Período"}
                 </button>
               </div>

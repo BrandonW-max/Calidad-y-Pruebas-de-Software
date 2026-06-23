@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,6 +81,12 @@ public class NominaService implements INominaService {
             throw new IllegalArgumentException("La fecha de inicio no puede ser mayor a la fecha fin.");
         }
 
+        YearMonth mesActual = YearMonth.now();
+        if (YearMonth.from(request.getFechaInicio()).isAfter(mesActual)
+                || YearMonth.from(request.getFechaFin()).isAfter(mesActual)) {
+            throw new IllegalArgumentException("No se puede calcular la nómina de meses futuros.");
+        }
+
         List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request);
 
         if (empleados.isEmpty()) {
@@ -103,6 +110,10 @@ public class NominaService implements INominaService {
                     );
 
                 registros = filtrarRegistrosValidos(registros);
+
+                if (registros.isEmpty()) {
+                    continue;
+                }
 
                 validarDatosAsistencia(registros, empleado);
 
@@ -219,10 +230,8 @@ public class NominaService implements INominaService {
                 nomina.setDetalles(detalles);
 
                 List<Nomina> existentes =
-                        nominaRepository.buscarPorEmpleadoYRango(empleado.getIdEmpleado(),
-                                request.getFechaInicio(), request.getFechaFin());
+                        nominaRepository.buscarPorEmpleadoYPeriodo(empleado.getIdEmpleado(), periodo);
                 if (!existentes.isEmpty()) {
-                    // Reutilizar el mismo registro: UPDATE en lugar de INSERT
                     Nomina existente = existentes.get(0);
                     nomina.setIdNomina(existente.getIdNomina());
                     nomina.setVersion(existente.getVersion() != null ? existente.getVersion() + 1 : 2);
