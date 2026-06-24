@@ -8,6 +8,7 @@ public class AuthResponseDTO {
     private String token;
     private boolean requires2FASetup;
     private boolean requiereCambioPassword;
+    private boolean dosFaYaConfigurado;
     private Long idEmpleado;
 
     public AuthResponseDTO(boolean success, String message) {
@@ -87,6 +88,9 @@ public class AuthResponseDTO {
     public void setRequiereCambioPassword(boolean requiereCambioPassword) {
         this.requiereCambioPassword = requiereCambioPassword;
     }
+
+    public boolean isDosFaYaConfigurado() { return dosFaYaConfigurado; }
+    public void setDosFaYaConfigurado(boolean dosFaYaConfigurado) { this.dosFaYaConfigurado = dosFaYaConfigurado; }
 
     public Long getIdEmpleado() {
         return idEmpleado;

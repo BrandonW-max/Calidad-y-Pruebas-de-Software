@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
-import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
-import { getNominasPorEmpleado, getIdEmpleado } from "../services/api";
-import { abrirComprobante } from "../services/comprobanteHtml";
+import { getNominasPorEmpleado, getIdEmpleado, descargarComprobante } from "../services/api";
 
 const getBonif = (n) =>
   (Number(n.bonifFamiliar)      || 0) +
@@ -40,13 +38,25 @@ export default function NominaEmpleado() {
     }
   };
 
-  const handleDescargar = (idNomina) => {
-    const n = nominas.find(x => String(x.idNomina ?? x.id) === String(idNomina));
-    if (n) {
-      const logoUrl = window.location.origin + logo;
-      abrirComprobante(n, logoUrl, "#0891b2", undefined, "Sistema de Recursos Humanos — Boleta de Pago");
-    } else {
-      setError("No se encontró la nómina. Recargue la página e intente de nuevo.");
+  const [descargando, setDescargando] = useState(null);
+
+  const handleDescargar = async (idNomina, periodo) => {
+    setDescargando(idNomina);
+    setError("");
+    try {
+      const blob = await descargarComprobante(idNomina);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Comprobante_Nomina_${periodo ?? idNomina}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("No se pudo descargar el comprobante. Intente de nuevo.");
+    } finally {
+      setDescargando(null);
     }
   };
 
@@ -131,10 +141,10 @@ export default function NominaEmpleado() {
                       <td>
                         <button
                           className="btn btn-secondary btn-sm"
-                          onClick={() => handleDescargar(n.idNomina)}
-                          disabled={!n.idNomina}
+                          onClick={() => handleDescargar(n.idNomina, n.periodo)}
+                          disabled={!n.idNomina || descargando === n.idNomina}
                         >
-                          ⬇ PDF
+                          {descargando === n.idNomina ? "..." : "⬇ PDF"}
                         </button>
                       </td>
                     </tr>
@@ -146,7 +156,7 @@ export default function NominaEmpleado() {
 
           {nominas.length > 0 && (
             <div className="table-footer-bar">
-              <span>ℹ️ Haga clic en ⬇ PDF para descargar el comprobante de cada período.</span>
+              <span>ℹ️ Haga clic en ⬇ PDF para descargar el comprobante de nómina en formato PDF.</span>
             </div>
           )}
         </div>

@@ -321,7 +321,7 @@ export default function GestionHorarios() {
 
       {/* ══ MODAL: CREAR / EDITAR ══ */}
       {modalForm.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarModal()}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -441,7 +441,7 @@ export default function GestionHorarios() {
 
       {/* ══ MODAL: ASIGNAR EMPLEADOS ══ */}
       {modalAsignar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarAsignar()}>
+        <div className="modal-overlay">
           <div className="modal-box" style={{ maxWidth: 560 }}>
             <div className="modal-header">
               <div>

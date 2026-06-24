@@ -4,6 +4,7 @@ import "../styles/Login.css";
 import logo from "../assets/logo.png";
 import TwoFA from "./TwoFA";
 import PrimerAccesoModal from "./PrimerAccesoModal";
+import DownloadAppModal from "../components/DownloadAppModal";
 import { login, saveSession, getUser, solicitarRecuperacion } from "../services/api";
 
 export default function Login() {
@@ -15,15 +16,29 @@ export default function Login() {
   const [intentos, setIntentos]     = useState(null);
   const [show2FA,        setShow2FA]        = useState(false);
   const [resetKey,       setResetKey]       = useState(0);
-  const [primerAcceso,   setPrimerAcceso]   = useState(false);
-  const [primerUsername, setPrimerUsername] = useState("");
+  const [primerAcceso,       setPrimerAcceso]       = useState(false);
+  const [primerUsername,     setPrimerUsername]     = useState("");
+  const [dosFaYaConfigurado, setDosFaYaConfigurado] = useState(false);
   const [showForgot,    setShowForgot]   = useState(false);
   const [forgotInput,   setForgotInput]  = useState("");
   const [forgotOk,      setForgotOk]    = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError,   setForgotError]  = useState("");
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [pendingRol,        setPendingRol]        = useState(null);
+
+  const USUARIOS_EXCLUIDOS = ['admin.rrhh', 'empleado_test', 'gerencia_test'];
 
   useEffect(() => {
+    // Si hay un primer acceso pendiente (por recarga de página), restaurar el modal
+    const pendingUser = sessionStorage.getItem('primerAccesoPendiente');
+    if (pendingUser) {
+      const dfa = sessionStorage.getItem('primerAccesoDosFa') === 'true';
+      setPrimerUsername(pendingUser);
+      setDosFaYaConfigurado(dfa);
+      setPrimerAcceso(true);
+      return;
+    }
     const user = getUser();
     if (user?.rol) redirectByRole(user.rol);
   }, []);
@@ -33,6 +48,15 @@ export default function Login() {
     else if (role === "RRHH")     navigate("/rrhh", { replace: true });
     else if (role === "EMPLEADO") navigate("/empleado", { replace: true });
     else setMensaje("Rol de usuario no reconocido.");
+  };
+
+  const redirigirConModal = (rol, idEmpleado) => {
+    if (idEmpleado && !USUARIOS_EXCLUIDOS.includes(username) && !localStorage.getItem(`mobileAppPrompt_${username}`)) {
+      setPendingRol(rol);
+      setShowDownloadModal(true);
+    } else {
+      redirectByRole(rol);
+    }
   };
 
   const handleLogin = async (e) => {
@@ -55,11 +79,15 @@ export default function Login() {
       saveSession(data.token, data.rol, username, data.idEmpleado ?? null, data.requiereCambioPassword ?? false);
       if (data.requires2FASetup && !data.requiereCambioPassword) sessionStorage.setItem('show2FAReminder', 'true');
       if (data.requiereCambioPassword) {
+        const dfa = data.dosFaYaConfigurado ?? false;
+        sessionStorage.setItem('primerAccesoPendiente', username);
+        sessionStorage.setItem('primerAccesoDosFa', dfa ? 'true' : 'false');
         setPrimerUsername(username);
+        setDosFaYaConfigurado(dfa);
         setPrimerAcceso(true);
         return;
       }
-      redirectByRole(data.rol);
+      redirigirConModal(data.rol, data.idEmpleado ?? null);
     } catch {
       setMensaje("Error de conexión con el servidor. Verifique que el servicio esté disponible.");
     }
@@ -183,7 +211,7 @@ export default function Login() {
               setPrimerAcceso(true);
               return;
             }
-            redirectByRole(rol);
+            redirigirConModal(rol, idEmpleado);
           }}
         />
       )}
@@ -191,16 +219,31 @@ export default function Login() {
       {primerAcceso && (
         <PrimerAccesoModal
           username={primerUsername}
+          dosFaYaConfigurado={dosFaYaConfigurado}
           onDone={(rol) => {
+            sessionStorage.removeItem('primerAccesoPendiente');
+            sessionStorage.removeItem('primerAccesoDosFa');
             setPrimerAcceso(false);
-            redirectByRole(rol);
+            setDosFaYaConfigurado(false);
+            redirigirConModal(rol, getUser().idEmpleado);
+          }}
+        />
+      )}
+
+      {showDownloadModal && (
+        <DownloadAppModal
+          idEmpleado={getUser().idEmpleado}
+          username={username}
+          onClose={() => {
+            setShowDownloadModal(false);
+            redirectByRole(pendingRol);
           }}
         />
       )}
 
       {/* ── MODAL RECUPERAR CONTRASEÑA ── */}
       {showForgot && (
-        <div className="login-modal-overlay" onClick={e => e.target === e.currentTarget && cerrarForgot()}>
+        <div className="login-modal-overlay">
           <div className="login-modal-box">
             <h3>🔑 Recuperar Contraseña</h3>
             {!forgotOk ? (

@@ -77,17 +77,11 @@ export default function GestionEmpleados() {
   const [modalSancion,    setModalSancion]    = useState({ open: false, id: null });
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
-  const [modalSueldo,     setModalSueldo]     = useState(false);
-  const [sueldoModo,      setSueldoModo]      = useState("editar"); // "nuevo" | "editar"
   const [showFechas,      setShowFechas]      = useState(false);
-  const [sueldoForm,      setSueldoForm]      = useState({
-    sueldoBase: "", bonifAsistencia: 0, bonifFamiliar: 0, bonifExtraordinaria: 0,
-    sistemaPensionario: "AFP", descuentoTardanza: 0, otrosDescuentos: 0,
-    horasSemanales: 48, horasExtra: 0,
-  });
 
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
+  const [dropPos,  setDropPos]  = useState({ top: 0, left: 0 });
   const dropRef = useRef(null);
 
   // Historial modal
@@ -113,11 +107,15 @@ export default function GestionEmpleados() {
   }, []);
 
   useEffect(() => {
-    const handler = (e) => {
+    const close = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) setOpenDrop(null);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("scroll", () => setOpenDrop(null), true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("scroll", () => setOpenDrop(null), true);
+    };
   }, []);
 
   // Efecto unificado: re-fetcha automáticamente al cambiar cualquier filtro, página o pageSize.
@@ -293,7 +291,12 @@ export default function GestionEmpleados() {
     }
   };
 
-  const openDropMenu = (id) => { setOpenDrop(openDrop === id ? null : id); };
+  const openDropMenu = (id, e) => {
+    if (openDrop === id) { setOpenDrop(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropPos({ top: rect.bottom + 4, left: rect.right });
+    setOpenDrop(id);
+  };
 
   const abrirModalHorario = async (emp) => {
     setOpenDrop(null);
@@ -334,26 +337,7 @@ export default function GestionEmpleados() {
     }
   };
 
-  const abrirSueldoDetalle = (modo = "editar") => {
-    const base = modo === "nuevo" ? (form.sueldo ?? "") : (modalEditar?.sueldo ?? "");
-    setSueldoForm(f => ({ ...f, sueldoBase: base }));
-    setSueldoModo(modo);
-    setModalSueldo(true);
-  };
-
-  const aplicarCambioSueldo = () => {
-    if (sueldoModo === "nuevo") {
-      setForm(f => ({ ...f, sueldo: sueldoForm.sueldoBase }));
-    } else {
-      setModalEditar(prev => ({ ...prev, sueldo: sueldoForm.sueldoBase }));
-    }
-    setModalSueldo(false);
-  };
-
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
-
-  const formatSueldo = (v) =>
-    v != null ? `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}` : "—";
 
 
   return (
@@ -419,7 +403,7 @@ export default function GestionEmpleados() {
             <select className="filter-select" value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
               <option value="">Todos</option>
               <option value="ACTIVO">Activo</option>
-              <option value="INACTIVO">Inactivo</option>
+              <option value="DESVINCULADO">Inactivo</option>
             </select>
           </div>
           <div className="filter-group filter-search">
@@ -506,11 +490,16 @@ export default function GestionEmpleados() {
                           </button>
                           <div className="action-drop-wrap">
                             <button className="action-drop-btn"
-                              onClick={() => openDropMenu(emp.idEmpleado)}>
+                              onClick={(e) => openDropMenu(emp.idEmpleado, e)}>
                               ⋯
                             </button>
                             {openDrop === emp.idEmpleado && (
-                              <div className="action-drop-menu">
+                              <div className="action-drop-menu" style={{
+                                position: "fixed",
+                                top: dropPos.top,
+                                left: dropPos.left,
+                                transform: "translateX(-100%)",
+                              }}>
                                 {emp.estado === "ACTIVO" ? (
                                   <div className="action-drop-item drop-red"
                                     onClick={() => { setModalDesactivar({ open: true, id: emp.idEmpleado, motivo: "" }); setOpenDrop(null); }}>
@@ -529,14 +518,6 @@ export default function GestionEmpleados() {
                                 <div className="action-drop-item drop-green"
                                   onClick={() => { setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   ↑ Registrar ascenso
-                                </div>
-                                <div className="action-drop-item drop-blue"
-                                  onClick={() => { setModalCambio({ open: true, id: emp.idEmpleado }); setCambioForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
-                                  💲 Cambio salarial
-                                </div>
-                                <div className="action-drop-item drop-blue"
-                                  onClick={() => abrirModalHorario(emp)}>
-                                  📅 Asignar horario
                                 </div>
                                 <div className="action-drop-item drop-gray"
                                   onClick={async () => {
@@ -605,7 +586,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: NUEVO EMPLEADO ══ */}
       {modalNuevo && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && (setModalNuevo(false), setForm(FORM_VACIO), setShowFechas(false))}>
+        <div className="modal-overlay">
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>➕ Registrar Nuevo Empleado</h3></div>
@@ -710,14 +691,10 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Sueldo Base (S/) *</label>
-                    <button type="button" className="sueldo-detalle-btn" onClick={() => abrirSueldoDetalle("nuevo")}>
-                      <span className="sueldo-detalle-valor">
-                        {form.sueldo ? formatSueldo(form.sueldo) : "Sin definir"}
-                      </span>
-                      <span className="sueldo-detalle-hint">Ver estructura salarial →</span>
-                    </button>
-                    {/* campo oculto para validación required */}
-                    <input type="hidden" value={form.sueldo} required />
+                    <input type="number" step="0.01" min="0" placeholder="0.00"
+                      value={form.sueldo}
+                      onChange={e => setForm({ ...form, sueldo: e.target.value })}
+                      required />
                   </div>
 
                   {form.tipoContrato && (
@@ -760,7 +737,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: EDITAR ══ */}
       {modalEditar && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalEditar(null)}>
+        <div className="modal-overlay">
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>✏️ Editar Empleado</h3><p>{modalEditar.nombres} {modalEditar.apellidos} — {modalEditar.numeroDi}</p></div>
@@ -785,10 +762,9 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Sueldo Base (S/)</label>
-                    <button type="button" className="sueldo-detalle-btn" onClick={abrirSueldoDetalle}>
-                      <span className="sueldo-detalle-valor">{formatSueldo(modalEditar.sueldo)}</span>
-                      <span className="sueldo-detalle-hint">Ver estructura salarial →</span>
-                    </button>
+                    <input type="number" step="0.01" min="0" placeholder="0.00"
+                      value={modalEditar.sueldo ?? ""}
+                      onChange={e => setModalEditar({ ...modalEditar, sueldo: e.target.value })} />
                   </div>
                   <div className="form-group">
                     <label>Departamento</label>
@@ -868,7 +844,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: SANCIÓN ══ */}
       {modalSancion.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalSancion({ open: false, id: null })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>⚠️ Registrar Sanción</h3><p>Empleado #{modalSancion.id}</p></div>
@@ -912,7 +888,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: ASCENSO ══ */}
       {modalAscenso.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAscenso({ open: false, id: null })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>↑ Registrar Ascenso</h3><p>Empleado #{modalAscenso.id}</p></div>
@@ -938,7 +914,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: CAMBIO SALARIAL ══ */}
       {modalCambio.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCambio({ open: false, id: null })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>💲 Cambio Salarial</h3><p>Empleado #{modalCambio.id}</p></div>
@@ -962,138 +938,9 @@ export default function GestionEmpleados() {
         </div>
       )}
 
-      {/* ══ SUB-MODAL: ESTRUCTURA SALARIAL ══ */}
-      {modalSueldo && (sueldoModo === "nuevo" || modalEditar) && (() => {
-        const empleadoNombre = sueldoModo === "nuevo"
-          ? `${form.nombres || "—"} ${form.apellidos || ""}`.trim()
-          : `${modalEditar?.nombres ?? ""} ${modalEditar?.apellidos ?? ""}`.trim();
-        const empleadoCargo = sueldoModo === "nuevo" ? (form.cargo ?? "—") : (modalEditar?.cargo ?? "—");
-        const base      = parseFloat(sueldoForm.sueldoBase       || 0);
-        const bAsist    = parseFloat(sueldoForm.bonifAsistencia   || 0);
-        const bFam      = parseFloat(sueldoForm.bonifFamiliar     || 0);
-        const bExtra    = parseFloat(sueldoForm.bonifExtraordinaria || 0);
-        const bruto     = base + bAsist + bFam + bExtra;
-        const tasaPens  = sueldoForm.sistemaPensionario === "ONP" ? 0.13 : 0.1317;
-        const descPens  = bruto * tasaPens;
-        const descTard  = parseFloat(sueldoForm.descuentoTardanza || 0);
-        const descOtros = parseFloat(sueldoForm.otrosDescuentos   || 0);
-        const totalDesc = descPens + descTard + descOtros;
-        const neto      = bruto - totalDesc;
-        const fmt       = (n) => `S/ ${Number(n).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
-        return (
-          <div className="modal-overlay" style={{ zIndex: 1100 }}
-            onClick={e => e.target === e.currentTarget && setModalSueldo(false)}>
-            <div className="modal-box modal-box-wide">
-              <div className="modal-header">
-                <div>
-                  <h3>💰 Estructura Salarial</h3>
-                  <p>{empleadoNombre || "Nuevo empleado"} — {empleadoCargo}</p>
-                </div>
-                <button className="modal-close" onClick={() => setModalSueldo(false)}>×</button>
-              </div>
-              <div className="modal-body">
-                <div className="sueldo-detalle-grid">
-
-                  {/* Columna izquierda: inputs */}
-                  <div className="sueldo-col">
-                    <p className="sueldo-section-title">Jornada</p>
-                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                      <div className="form-group">
-                        <label>Horas semanales</label>
-                        <input type="number" min="0" value={sueldoForm.horasSemanales}
-                          onChange={e => setSueldoForm(f => ({ ...f, horasSemanales: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Horas extra</label>
-                        <input type="number" min="0" value={sueldoForm.horasExtra}
-                          onChange={e => setSueldoForm(f => ({ ...f, horasExtra: e.target.value }))} />
-                      </div>
-                    </div>
-
-                    <p className="sueldo-section-title" style={{ marginTop: "14px" }}>Remuneración</p>
-                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                      <div className="form-group">
-                        <label>Sueldo Base (S/) *</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.sueldoBase}
-                          onChange={e => setSueldoForm(f => ({ ...f, sueldoBase: e.target.value }))} autoFocus />
-                      </div>
-                      <div className="form-group">
-                        <label>Bonif. asistencia (S/)</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifAsistencia}
-                          onChange={e => setSueldoForm(f => ({ ...f, bonifAsistencia: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Bonif. familiar (S/)</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifFamiliar}
-                          onChange={e => setSueldoForm(f => ({ ...f, bonifFamiliar: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Bonif. extraordinaria (S/)</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.bonifExtraordinaria}
-                          onChange={e => setSueldoForm(f => ({ ...f, bonifExtraordinaria: e.target.value }))} />
-                      </div>
-                    </div>
-
-                    <p className="sueldo-section-title" style={{ marginTop: "14px" }}>Descuentos</p>
-                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                      <div className="form-group">
-                        <label>Sistema pensionario</label>
-                        <select value={sueldoForm.sistemaPensionario}
-                          onChange={e => setSueldoForm(f => ({ ...f, sistemaPensionario: e.target.value }))}>
-                          <option value="AFP">AFP (~13.17%)</option>
-                          <option value="ONP">ONP (13%)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Desc. por tardanza (S/)</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.descuentoTardanza}
-                          onChange={e => setSueldoForm(f => ({ ...f, descuentoTardanza: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Otros descuentos (S/)</label>
-                        <input type="number" step="0.01" min="0" value={sueldoForm.otrosDescuentos}
-                          onChange={e => setSueldoForm(f => ({ ...f, otrosDescuentos: e.target.value }))} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Columna derecha: resumen */}
-                  <div className="sueldo-resumen">
-                    <p className="sueldo-section-title">Resumen</p>
-                    <div className="sueldo-resumen-row">
-                      <span>Sueldo base</span><span>{fmt(base)}</span>
-                    </div>
-                    <div className="sueldo-resumen-row">
-                      <span>Bonificaciones</span><span>+ {fmt(bAsist + bFam + bExtra)}</span>
-                    </div>
-                    <div className="sueldo-resumen-row sueldo-resumen-subtotal">
-                      <span>Total bruto</span><span>{fmt(bruto)}</span>
-                    </div>
-                    <div className="sueldo-resumen-row sueldo-resumen-neg">
-                      <span>{sueldoForm.sistemaPensionario} ({sueldoForm.sistemaPensionario === "ONP" ? "13%" : "13.17%"})</span>
-                      <span>− {fmt(descPens)}</span>
-                    </div>
-                    <div className="sueldo-resumen-row sueldo-resumen-neg">
-                      <span>Tardanza / otros</span><span>− {fmt(descTard + descOtros)}</span>
-                    </div>
-                    <div className="sueldo-resumen-row sueldo-resumen-neto">
-                      <span>Neto a pagar</span><span>{fmt(neto)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalSueldo(false)}>Cancelar</button>
-                <button className="btn btn-success" onClick={aplicarCambioSueldo}>✅ Aplicar sueldo base</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ══ MODAL: ASIGNAR HORARIO ══ */}
       {modalHorario.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHorario(m => ({ ...m, open: false }))}>
+        <div className="modal-overlay">
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div>
@@ -1221,7 +1068,7 @@ export default function GestionEmpleados() {
 
       {/* ══ MODAL: HISTORIAL DEL EMPLEADO ══ */}
       {modalHistorial.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHistorial({ open: false, empleado: null })}>
+        <div className="modal-overlay">
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div>
@@ -1269,15 +1116,27 @@ export default function GestionEmpleados() {
                               {h.accion ?? "—"}
                             </span>
                           </td>
-                          <td style={{ fontSize: 12, color: "var(--text-2)", maxWidth: 220 }}>
-                            <span title={h.valorAnterior ?? ""} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <td style={{ fontSize: 12, color: "var(--text-2)", maxWidth: 160 }}>
+                            <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                               {h.valorAnterior ?? "—"}
                             </span>
                           </td>
-                          <td style={{ fontSize: 12, color: "var(--text-1)", maxWidth: 280 }}>
-                            <span title={h.valorNuevo ?? ""} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {h.valorNuevo ?? "—"}
-                            </span>
+                          <td style={{ fontSize: 12, color: "var(--text-1)", maxWidth: 300 }}>
+                            {(() => {
+                              const raw = h.valorNuevo ?? "—";
+                              const sepIdx = raw.indexOf(" | ");
+                              if (sepIdx === -1) return <span>{raw}</span>;
+                              const estado  = raw.slice(0, sepIdx);
+                              const detalle = raw.slice(sepIdx + 3);
+                              return (
+                                <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                  <span style={{ fontWeight: 600 }}>{estado}</span>
+                                  <span style={{ color: "var(--text-3)", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.4 }}>
+                                    {detalle}
+                                  </span>
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))}

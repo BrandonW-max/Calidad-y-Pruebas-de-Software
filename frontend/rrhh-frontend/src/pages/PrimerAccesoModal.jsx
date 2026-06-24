@@ -9,14 +9,16 @@ const PASO = {
   CAMBIAR_PASS:    "CAMBIAR_PASS",
 };
 
-export default function PrimerAccesoModal({ username, onDone }) {
-  const [paso,      setPaso]      = useState(PASO.ELECCION);
+export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado = false }) {
+  // Si 2FA ya fue configurado pero la contraseña no fue cambiada (PC se apagó en ese paso),
+  // saltamos directo al paso de cambio de contraseña sin regenerar el QR
+  const [paso,      setPaso]      = useState(dosFaYaConfigurado ? PASO.CAMBIAR_PASS : PASO.ELECCION);
   const [qrSrc,     setQrSrc]    = useState(null);
   const [codigo2fa, setCodigo2fa] = useState("");
-  const [nueva,     setNueva]     = useState("");
-  const [confirmar, setConfirmar] = useState("");
   const [error,     setError]     = useState("");
   const [loading,   setLoading]   = useState(false);
+  const [nueva,     setNueva]     = useState("");
+  const [confirmar, setConfirmar] = useState("");
   const [showNueva, setShowNueva] = useState(false);
   const [showConf,  setShowConf]  = useState(false);
 
@@ -74,27 +76,19 @@ export default function PrimerAccesoModal({ username, onDone }) {
     setPaso(PASO.CAMBIAR_PASS);
   };
 
-  // ── ESTABLECER CONTRASEÑA (Siempre obligatorio al final) ──
+  // ── ESTABLECER CONTRASEÑA ──
   const handleSetPassword = async (e) => {
     e.preventDefault();
     setError("");
-    if (nueva.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
-      return;
-    }
-    if (nueva !== confirmar) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
+    if (nueva.length < 8) { setError("La contraseña debe tener al menos 8 caracteres."); return; }
+    if (nueva !== confirmar) { setError("Las contraseñas no coinciden."); return; }
     setLoading(true);
     try {
       const data = await setPassword(nueva, confirmar);
-      if (!data.success) {
-        setError(data.message || "No se pudo actualizar la contraseña.");
-        return;
-      }
-      // Limpiar flag en sesión y finalizar
+      if (!data.success) { setError(data.message || "No se pudo actualizar la contraseña."); return; }
       sessionStorage.removeItem('show2FAReminder');
+      sessionStorage.removeItem('primerAccesoPendiente');
+      sessionStorage.removeItem('primerAccesoDosFa');
       saveSession(user.token, user.rol, username, user.idEmpleado, false);
       onDone(user.rol);
     } catch {
@@ -215,14 +209,14 @@ export default function PrimerAccesoModal({ username, onDone }) {
           </>
         )}
 
-        {/* ── PASO 4: Cambiar contraseña (Obligatorio) ── */}
+        {/* ── PASO 4: Establecer contraseña ── */}
         {paso === PASO.CAMBIAR_PASS && (
           <>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 32, marginBottom: 6 }}>🔑</div>
               <h3 style={{ margin: 0 }}>Establece tu contraseña</h3>
               <p style={{ color: "#6b7280", fontSize: 14, marginTop: 6 }}>
-                Por favor elige una contraseña segura para finalizar tu acceso.
+                Elige una contraseña segura para finalizar tu acceso al sistema.
               </p>
             </div>
             <form onSubmit={handleSetPassword}>

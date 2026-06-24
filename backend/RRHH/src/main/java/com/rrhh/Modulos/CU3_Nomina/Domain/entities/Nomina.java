@@ -51,6 +51,9 @@ public class Nomina implements Prototype<Nomina> {
     private Long idEmpleado;
     private Long calculadoPor;
 
+    private Boolean esEmpleadoClinico;
+    private Boolean tieneHorarioNocturno;
+
     private List<DetalleNomina> detalles;
 
     public Nomina(Integer idNomina, String periodo, LocalDate fechaInicio, LocalDate fechaFin,
@@ -65,6 +68,7 @@ public class Nomina implements Prototype<Nomina> {
                   BigDecimal totalHorasNocturnas, String tipoPensionAplicada,
                   String estadoPago, Integer version,
                   Integer nominaAnteriorId, Long idEmpleado, Long calculadoPor,
+                  Boolean esEmpleadoClinico, Boolean tieneHorarioNocturno,
                   List<DetalleNomina> detalles) {
         this.idNomina = idNomina;
         this.periodo = periodo;
@@ -95,6 +99,8 @@ public class Nomina implements Prototype<Nomina> {
         this.nominaAnteriorId = nominaAnteriorId;
         this.idEmpleado = idEmpleado;
         this.calculadoPor = calculadoPor;
+        this.esEmpleadoClinico = esEmpleadoClinico;
+        this.tieneHorarioNocturno = tieneHorarioNocturno;
         this.detalles = detalles;
     }
 
@@ -187,6 +193,12 @@ public class Nomina implements Prototype<Nomina> {
 
     public List<DetalleNomina> getDetalles() { return detalles; }
     public void setDetalles(List<DetalleNomina> detalles) { this.detalles = detalles; }
+
+    public Boolean getEsEmpleadoClinico() { return esEmpleadoClinico; }
+    public void setEsEmpleadoClinico(Boolean esEmpleadoClinico) { this.esEmpleadoClinico = esEmpleadoClinico; }
+
+    public Boolean getTieneHorarioNocturno() { return tieneHorarioNocturno; }
+    public void setTieneHorarioNocturno(Boolean tieneHorarioNocturno) { this.tieneHorarioNocturno = tieneHorarioNocturno; }
 
     @Override
     public Nomina clonePrototype() {

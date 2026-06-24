@@ -441,7 +441,7 @@ function VistaRRHH() {
       </main>
 
       {modalRevision.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalRevision({ ...modalRevision, open: false })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -695,7 +695,7 @@ function VistaGerencia() {
       </main>
 
       {modalDecision.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDecision({ ...modalDecision, open: false })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>

@@ -1,6 +1,8 @@
 package com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.controllers;
 
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.OtpService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Infrastructure.interfaces.JpaDispositivoEmpleadoRepository;
 import com.rrhh.Shared.persistence.DispositivoEmpleadoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
@@ -16,17 +18,66 @@ public class DispositivoController {
 
     private final JpaDispositivoEmpleadoRepository dispositivoRepository;
     private final JpaEmpleadoRepository empleadoRepository;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
     public DispositivoController(JpaDispositivoEmpleadoRepository dispositivoRepository,
-                                 JpaEmpleadoRepository empleadoRepository) {
+                                 JpaEmpleadoRepository empleadoRepository,
+                                 OtpService otpService,
+                                 EmailService emailService) {
         this.dispositivoRepository = dispositivoRepository;
         this.empleadoRepository    = empleadoRepository;
+        this.otpService            = otpService;
+        this.emailService          = emailService;
     }
 
-    /** Vincula o actualiza el celular de un empleado (acepta idEmpleado o numeroDi) */
+    /** Envía un código OTP al correo del empleado para verificar su identidad */
+    @PostMapping("/enviar-otp")
+    public ResponseEntity<Map<String, Object>> enviarOtp(@RequestBody Map<String, String> body) {
+        String dni = body.get("numeroDi");
+        if (dni == null || dni.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "DNI requerido."));
+        }
+
+        EmpleadoModel emp = empleadoRepository.findByNumeroDi(dni)
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con DNI: " + dni));
+
+        if (!"ACTIVO".equals(emp.getEstado())) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "Empleado inactivo o desvinculado."));
+        }
+
+        if (emp.getCorreo() == null || emp.getCorreo().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "El empleado no tiene correo registrado."));
+        }
+
+        OtpService.OtpResult otp = otpService.generarOtp(dni);
+        emailService.enviarCodigoOtp(emp.getCorreo(), emp.getNombres() + " " + emp.getApellidos(), otp.codigo());
+
+        return ResponseEntity.ok(Map.of("sessionId", otp.sessionId()));
+    }
+
+    /** Vincula o actualiza el celular de un empleado, previa verificación OTP */
     @PostMapping("/registrar")
     public ResponseEntity<Map<String, Object>> registrar(@RequestBody Map<String, Object> body) {
         String token = body.get("deviceToken").toString();
+        String sessionId = body.getOrDefault("sessionId", "").toString();
+        String codigo = body.getOrDefault("codigo", "").toString();
+
+        if (sessionId.isBlank() || codigo.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "sessionId y codigo son requeridos."));
+        }
+
+        OtpService.VerificacionResult verificacion = otpService.verificarOtp(sessionId, codigo);
+        switch (verificacion) {
+            case INVALIDO:
+                return ResponseEntity.status(401).body(Map.of("mensaje", "Código OTP inválido."));
+            case EXPIRADO_O_INEXISTENTE:
+                return ResponseEntity.status(401).body(Map.of("mensaje", "Código OTP expirado o inválido. Solicita uno nuevo."));
+            case SIN_INTENTOS:
+                return ResponseEntity.status(429).body(Map.of("mensaje", "Demasiados intentos fallidos. Solicita un nuevo código."));
+            case OK:
+                break;
+        }
 
         EmpleadoModel emp;
         if (body.containsKey("numeroDi")) {

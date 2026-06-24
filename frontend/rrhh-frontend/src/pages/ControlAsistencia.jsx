@@ -528,7 +528,7 @@ function VistaEmpleado() {
 
       {/* ── MODAL: JUSTIFICACIÓN DE TARDANZA (ECU-03 A4) ── */}
       {modalJustificar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarModalJustif()}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -579,7 +579,7 @@ function VistaEmpleado() {
 
       {/* ── MODAL REGISTRO MANUAL ── */}
       {modalManual.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalManual({ open: false, tipo: "ENTRADA" })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -633,7 +633,6 @@ function VistaRRHH() {
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
-  const [modalMotivo,    setModalMotivo]    = useState({ open: false, texto: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
   const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
@@ -895,13 +894,12 @@ function VistaRRHH() {
                       <th>Debía llegar</th>
                       <th>Llegó a</th>
                       <th>Tardanza</th>
-                      <th>Motivo</th>
                       <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
-                      <tr><td colSpan={8}>
+                      <tr><td colSpan={7}>
                         <div className="empty-state">
                           <div className="empty-state-icon">✅</div>
                           <p>No hay justificaciones pendientes de revisión</p>
@@ -935,15 +933,6 @@ function VistaRRHH() {
                                 : `${j.minutosTardanza} min`}
                             </span>
                           ) : "—"}
-                        </td>
-                        <td>
-                          <button
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px" }}
-                            title="Ver motivo"
-                            onClick={e => { e.stopPropagation(); setModalMotivo({ open: true, texto: j.motivo ?? "" }); }}
-                          >
-                            📄
-                          </button>
                         </td>
                         <td><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
                       </tr>
@@ -1012,24 +1001,6 @@ function VistaRRHH() {
                     style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }}
                   />
                 </div>
-                <div className="form-group form-full" style={{ maxWidth: 320 }}>
-                  <label>Motivo / Evidencia</label>
-                  {correccionInfo.horaCorregida ? (
-                    correccionInfo.evidenciaUrl ? (
-                      <img src={correccionInfo.evidenciaUrl} alt="Evidencia"
-                        style={{ width: "100%", maxHeight: 400, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)" }} />
-                    ) : (
-                      <div style={{ border: "2px dashed var(--border)", borderRadius: 8, padding: 48, textAlign: "center", color: "var(--text-3)" }}>
-                        <div style={{ fontSize: 40, marginBottom: 8 }}>📷</div>
-                        <div>Sin evidencia adjunta</div>
-                      </div>
-                    )
-                  ) : (
-                    <div style={{ border: "2px dashed var(--border)", borderRadius: 8, padding: 48, textAlign: "center", color: "var(--text-3)" }}>
-                      <div style={{ fontSize: 40 }}>📷</div>
-                    </div>
-                  )}
-                </div>
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn btn-success">💾 Guardar Registro Manual</button>
@@ -1060,7 +1031,7 @@ function VistaRRHH() {
 
       {/* ── MODAL: DECISIÓN ── */}
       {modalDecision.open && modalDecision.justificacion && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDecision({ open: false, justificacion: null })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -1113,11 +1084,43 @@ function VistaRRHH() {
                 </div>
               )}
 
-              {modalDecision.justificacion.motivo && (
-                <div className="alert alert-info" style={{ marginBottom: 12, fontSize: 13, whiteSpace: "pre-wrap" }}>
-                  <strong>Motivo:</strong> {modalDecision.justificacion.motivo}
+              {/* Motivo */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 6 }}>
+                  Motivo del empleado
                 </div>
-              )}
+                <div style={{
+                  background: "var(--bg-2, #f8fafc)", border: "1px solid var(--border)",
+                  borderRadius: 8, padding: "12px 14px", fontSize: 13,
+                  color: "var(--text-1)", whiteSpace: "pre-wrap", lineHeight: 1.6,
+                  minHeight: 48,
+                }}>
+                  {modalDecision.justificacion.motivo || <span style={{ color: "var(--text-3)" }}>Sin motivo registrado.</span>}
+                </div>
+              </div>
+
+              {/* Evidencia */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 6 }}>
+                  Evidencia adjunta
+                </div>
+                {modalDecision.justificacion.evidenciaUrl || modalDecision.justificacion.evidencia ? (
+                  <img
+                    src={modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia}
+                    alt="Evidencia"
+                    style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)" }}
+                  />
+                ) : (
+                  <div style={{
+                    border: "2px dashed var(--border)", borderRadius: 8, padding: "24px",
+                    textAlign: "center", color: "var(--text-3)", fontSize: 13,
+                  }}>
+                    <div style={{ fontSize: 32, marginBottom: 6 }}>📷</div>
+                    Sin evidencia adjunta
+                  </div>
+                )}
+              </div>
+
               <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>
                 Si aprueba: los minutos de tardanza se anulan y <strong>no se descontarán en nómina</strong>.
               </div>
@@ -1131,27 +1134,9 @@ function VistaRRHH() {
         </div>
       )}
 
-      {/* ── MODAL: VER MOTIVO ── */}
-      {modalMotivo.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMotivo({ open: false, texto: "" })}>
-          <div className="modal-box">
-            <div className="modal-header">
-              <div><h3>📄 Motivo de la Justificación</h3></div>
-              <button className="modal-close" onClick={() => setModalMotivo({ open: false, texto: "" })}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{modalMotivo.texto || "Sin motivo registrado."}</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalMotivo({ open: false, texto: "" })}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── MODAL: RECHAZAR JUSTIFICACIÓN ── */}
       {modalRechazar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalRechazar({ open: false, id: null, comentario: "" })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>❌ Rechazar Justificación</h3><p>Justificación #{modalRechazar.id}</p></div>
@@ -1544,7 +1529,7 @@ function VistaGerencia() {
       </main>
 
       {modalJustificar.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && cerrarModalJustif()}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>
@@ -1588,7 +1573,7 @@ function VistaGerencia() {
       )}
 
       {modalManual.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalManual({ open: false, tipo: "ENTRADA" })}>
+        <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div>

@@ -70,6 +70,23 @@ public class EmailService {
         mailSender.send(mensaje);
     }
 
+    public void enviarCodigoOtp(String destinatario, String nombreEmpleado, String codigo) {
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setTo(destinatario);
+        mensaje.setSubject("Código de verificación - App Asistencia - Hospital San Gabriel");
+        mensaje.setText(
+            "Estimado/a " + nombreEmpleado + ",\n\n"
+            + "Has solicitado vincular tu dispositivo móvil para registrar asistencia.\n\n"
+            + "Tu código de verificación es:\n\n"
+            + codigo + "\n\n"
+            + "Este código expira en 5 minutos.\n"
+            + "Si no solicitaste este registro, ignora este mensaje.\n\n"
+            + "Saludos,\n"
+            + "Departamento de RRHH - Hospital San Gabriel"
+        );
+        mailSender.send(mensaje);
+    }
+
     public void enviarLinkDescargaApp(String destinatario, String nombreEmpleado) {
         SimpleMailMessage mensaje = new SimpleMailMessage();
         mensaje.setTo(destinatario);
@@ -79,12 +96,12 @@ public class EmailService {
             + "Se te ha enviado el enlace para descargar la aplicación móvil del\n"
             + "Hospital San Gabriel para registrar tu asistencia con huella dactilar.\n\n"
             + "Descarga la app aquí:\n"
-            + "https://expo.dev/@hospital-san-gabriel/asistencia\n\n"
+            + "https://drive.google.com/uc?export=download&id=1YzmCYq-r6BI3lXNtgYkcqp2wgeY3dIuA\n\n"
             + "Pasos:\n"
-            + "1. Descarga la app desde el enlace\n"
-            + "2. Ingresa tu número de empleado\n"
-            + "3. Registra tu huella dactilar\n"
-            + "4. ¡Listo! Podrás registrar tu entrada y salida diariamente.\n\n"
+            + "1. Descarga e instala la app desde el enlace\n"
+            + "2. Abre la app e ingresa tu DNI\n"
+            + "3. Revisa tu correo personal e ingresa el código de verificación\n"
+            + "4. ¡Listo! Podrás registrar tu entrada y salida con huella dactilar.\n\n"
             + "Saludos,\n"
             + "Departamento de RRHH - Hospital San Gabriel"
         );

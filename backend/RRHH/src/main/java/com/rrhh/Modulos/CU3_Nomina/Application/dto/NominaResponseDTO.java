@@ -126,4 +126,14 @@ public class NominaResponseDTO {
 
     public List<DetalleNominaResponseDTO> getDetalles() { return detalles; }
     public void setDetalles(List<DetalleNominaResponseDTO> detalles) { this.detalles = detalles; }
+
+    // Flags de elegibilidad — indican si la bonificación aplica al empleado (no solo si cobró algo)
+    private Boolean esEmpleadoClinico;
+    private Boolean tieneHorarioNocturno;
+
+    public Boolean getEsEmpleadoClinico() { return esEmpleadoClinico; }
+    public void setEsEmpleadoClinico(Boolean esEmpleadoClinico) { this.esEmpleadoClinico = esEmpleadoClinico; }
+
+    public Boolean getTieneHorarioNocturno() { return tieneHorarioNocturno; }
+    public void setTieneHorarioNocturno(Boolean tieneHorarioNocturno) { this.tieneHorarioNocturno = tieneHorarioNocturno; }
 }

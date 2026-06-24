@@ -128,6 +128,8 @@ public class NominaRepositoryImpl implements INominaRepository {
         model.setCantidadGuardias(nomina.getCantidadGuardias() != null ? nomina.getCantidadGuardias() : 0);
         model.setTotalHorasNocturnas(nomina.getTotalHorasNocturnas() != null ? nomina.getTotalHorasNocturnas() : java.math.BigDecimal.ZERO);
         model.setTipoPensionAplicada(nomina.getTipoPensionAplicada() != null ? nomina.getTipoPensionAplicada() : "ONP");
+        model.setEsEmpleadoClinico(nomina.getEsEmpleadoClinico() != null ? nomina.getEsEmpleadoClinico() : false);
+        model.setTieneHorarioNocturno(nomina.getTieneHorarioNocturno() != null ? nomina.getTieneHorarioNocturno() : false);
 
         EmpleadoModel emp = new EmpleadoModel();
         emp.setIdEmpleado(nomina.getIdEmpleado());
@@ -171,6 +173,8 @@ public class NominaRepositoryImpl implements INominaRepository {
         nomina.setCantidadGuardias(model.getCantidadGuardias());
         nomina.setTotalHorasNocturnas(model.getTotalHorasNocturnas());
         nomina.setTipoPensionAplicada(model.getTipoPensionAplicada());
+        nomina.setEsEmpleadoClinico(model.getEsEmpleadoClinico() != null ? model.getEsEmpleadoClinico() : false);
+        nomina.setTieneHorarioNocturno(model.getTieneHorarioNocturno() != null ? model.getTieneHorarioNocturno() : false);
         if (model.getEmpleado() != null) {
             nomina.setIdEmpleado(model.getEmpleado().getIdEmpleado());
         }

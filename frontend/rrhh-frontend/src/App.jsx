@@ -338,6 +338,11 @@ function App() {
   const showAfkModalRef      = useRef(false); // ref para leer en el event handler sin closure stale
 
   useEffect(() => {
+    // Si hay un primer acceso pendiente y NO estamos en reset-password, volver al login
+    if (sessionStorage.getItem('primerAccesoPendiente') && !location.pathname.startsWith('/reset-password')) {
+      navigate('/', { replace: true });
+      return;
+    }
     const user = getUser();
     if (!user?.rol) {
       getMe()
@@ -347,7 +352,7 @@ function App() {
         })
         .catch(() => {});
     }
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const handleLogout = useCallback(async () => {
     clearTimeout(warningTimerRef.current);

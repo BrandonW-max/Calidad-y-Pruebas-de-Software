@@ -876,7 +876,7 @@ table tr:hover td { background: #f8fafc; }
 }
 .action-drop-btn:hover { background: var(--bg); }
 .action-drop-menu {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 200;
+  position: fixed; z-index: 9999;
   background: #fff; border: 1px solid var(--border); border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 190px; overflow: hidden;
 }

@@ -354,7 +354,7 @@ export default function GenerarReportes() {
       </main>
 
       {modalPreview && resultado && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPreview(false)}>
+        <div className="modal-overlay">
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>👁 Vista Previa — {tipoActual?.label}</h3></div>

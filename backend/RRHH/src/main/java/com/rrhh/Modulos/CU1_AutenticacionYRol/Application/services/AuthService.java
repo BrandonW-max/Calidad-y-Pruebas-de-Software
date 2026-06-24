@@ -84,7 +84,12 @@ public class AuthService implements IAuthService {
 
             historialRepository.save(log);
 
-            if (!user.isDosFAActivado()) {
+            // Primer acceso incompleto: contraseña sigue siendo el DNI (no completó la configuración)
+            // Puede ocurrir si el PC se apagó después de activar 2FA pero antes de verificarlo/cambiar contraseña
+            boolean esPrimerAcceso = user.getNumeroDi() != null
+                    && dto.getPassword().equals(user.getNumeroDi());
+
+            if (!user.isDosFAActivado() || esPrimerAcceso) {
                 List<String> permisos = getPermisosPorRol(user.getNombreRol());
                 String token = jwtConfig.generarToken(
                         user.getNombreUsuario(),
@@ -95,8 +100,6 @@ public class AuthService implements IAuthService {
                 );
                 boolean recordar2FA = !user.getNombreUsuario().equals("admin.rrhh")
                         && !user.getNombreUsuario().endsWith("_test");
-                boolean esPrimerAcceso = user.getNumeroDi() != null
-                        && dto.getPassword().equals(user.getNumeroDi());
                 AuthResponseDTO resp = new AuthResponseDTO(
                         true,
                         "Acceso concedido.",
@@ -106,6 +109,8 @@ public class AuthService implements IAuthService {
                         recordar2FA
                 );
                 resp.setRequiereCambioPassword(esPrimerAcceso);
+                // Si 2FA ya fue activado pero contraseña no cambiada: saltar al paso de contraseña
+                resp.setDosFaYaConfigurado(esPrimerAcceso && user.isDosFAActivado());
                 resp.setIdEmpleado(user.getIdEmpleado());
                 return resp;
             }

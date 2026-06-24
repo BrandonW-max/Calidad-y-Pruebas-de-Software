@@ -96,6 +96,12 @@ public class NominaModel {
     @Column(name = "tipo_pension_aplicada", length = 10)
     private String tipoPensionAplicada = "ONP";
 
+    @Column(name = "es_empleado_clinico")
+    private Boolean esEmpleadoClinico = false;
+
+    @Column(name = "tiene_horario_nocturno")
+    private Boolean tieneHorarioNocturno = false;
+
     @Column(name = "estado_pago", length = 20)
     private String estadoPago = "CALCULADA";
 

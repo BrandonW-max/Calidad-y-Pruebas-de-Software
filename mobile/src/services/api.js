@@ -18,17 +18,26 @@ export const buscarEmpleadoPorDni = async (numeroDi) => {
   return res.json();
 };
 
-export const registrarDispositivo = async (numeroDi, deviceToken) => {
+export const enviarOtp = async (numeroDi) => {
+  const res = await fetch(`${BASE_URL}/api/dispositivos/enviar-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ numeroDi }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.mensaje || `HTTP ${res.status}`);
+  return data; // { sessionId }
+};
+
+export const registrarDispositivo = async (numeroDi, deviceToken, sessionId, codigo) => {
   const res = await fetch(`${BASE_URL}/api/dispositivos/registrar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ numeroDi, deviceToken }),
+    body: JSON.stringify({ numeroDi, deviceToken, sessionId, codigo }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
-  }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.mensaje || `HTTP ${res.status}`);
+  return data;
 };
 
 export const registrarAsistenciaBiometrica = async (idEmpleado, deviceToken, tipo) => {
