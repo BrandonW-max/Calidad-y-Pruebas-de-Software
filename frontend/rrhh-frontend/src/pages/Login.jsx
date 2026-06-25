@@ -88,8 +88,8 @@ export default function Login() {
         return;
       }
       redirigirConModal(data.rol, data.idEmpleado ?? null);
-    } catch {
-      setMensaje("Error de conexión con el servidor. Verifique que el servicio esté disponible.");
+    } catch (err) {
+      setMensaje(err?.message || "Error de conexión con el servidor. Verifique que el servicio esté disponible.");
     }
   };
 
@@ -112,8 +112,8 @@ export default function Login() {
       } else {
         setForgotError(data.message || "No se pudo procesar la solicitud.");
       }
-    } catch {
-      setForgotError("Error de conexión con el servidor.");
+    } catch (err) {
+      setForgotError(err?.message || "Error de conexión con el servidor.");
     } finally {
       setForgotLoading(false);
     }
