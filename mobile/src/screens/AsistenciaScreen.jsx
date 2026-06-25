@@ -7,13 +7,14 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { registrarAsistenciaBiometrica, getEstadoAsistenciaHoy } from '../services/api';
 
-export default function AsistenciaScreen() {
+export default function AsistenciaScreen({ onDesvincular }) {
   const [nombre,      setNombre]      = useState('');
   const [hora,        setHora]        = useState('');
   const [cargando,    setCargando]    = useState(false);
   const [cargandoEstado, setCargandoEstado] = useState(true);
   const [resultado,   setResultado]   = useState(null);
-  const [tieneHuella, setTieneHuella] = useState(false);
+  const [authDisponible, setAuthDisponible] = useState(false);
+  const [authMensaje, setAuthMensaje] = useState('Verificando seguridad del dispositivo...');
 
   // Estado del día: null = sin datos aún
   const [estadoHoy, setEstadoHoy] = useState({
@@ -46,7 +47,25 @@ export default function AsistenciaScreen() {
     tick();
     const t = setInterval(tick, 1000);
     SecureStore.getItemAsync('nombreEmpleado').then(n => setNombre(n || 'Empleado'));
-    LocalAuthentication.hasHardwareAsync().then(setTieneHuella);
+    const verificarAutenticacionLocal = async () => {
+      try {
+        const tieneHardware = await LocalAuthentication.hasHardwareAsync();
+        const tieneBiometria = await LocalAuthentication.isEnrolledAsync();
+        const tiposSoportados = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        const tipoHuella = LocalAuthentication.AuthenticationType?.FINGERPRINT ?? 1;
+        const tieneHuella = tiposSoportados.includes(tipoHuella);
+        const disponible = tieneHardware && tieneBiometria && tieneHuella;
+
+        setAuthDisponible(disponible);
+        setAuthMensaje(disponible
+          ? 'Se pedira verificacion con huella'
+          : 'Configura una huella digital en este telefono');
+      } catch {
+        setAuthDisponible(false);
+        setAuthMensaje('No se pudo verificar la seguridad del dispositivo');
+      }
+    };
+    verificarAutenticacionLocal();
     cargarEstado();
     return () => clearInterval(t);
   }, [cargarEstado]);
@@ -69,8 +88,8 @@ export default function AsistenciaScreen() {
       Alert.alert('Día completado', 'Tu asistencia de hoy ya está completa.');
       return;
     }
-    if (!tieneHuella) {
-      Alert.alert('Sin sensor', 'Este dispositivo no tiene sensor biométrico.');
+    if (!authDisponible) {
+      Alert.alert('Huella requerida', 'Configura una huella digital en este telefono para marcar asistencia.');
       return;
     }
 
@@ -80,17 +99,26 @@ export default function AsistenciaScreen() {
       const auth = await LocalAuthentication.authenticateAsync({
         promptMessage: `Verifica tu identidad para registrar ${tipo === 'ENTRADA' ? 'entrada' : 'salida'}`,
         cancelLabel: 'Cancelar',
-        disableDeviceFallback: false,
+        disableDeviceFallback: true,
+        biometricsSecurityLevel: 'strong',
       });
       if (!auth.success) { setCargando(false); return; }
 
       const deviceToken = await SecureStore.getItemAsync('deviceToken');
       const idEmpleado  = await SecureStore.getItemAsync('idEmpleado');
+      if (!deviceToken || !idEmpleado) {
+        throw new Error('Dispositivo no vinculado. Registra nuevamente el celular.');
+      }
 
-      await registrarAsistenciaBiometrica(Number(idEmpleado), deviceToken, tipo);
+      const resp = await registrarAsistenciaBiometrica(Number(idEmpleado), deviceToken, tipo);
 
       const horaReg = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-      setResultado({ tipo, hora: horaReg, exito: true });
+      setResultado({
+        tipo: resp.tipoRegistro || tipo,
+        hora: horaReg,
+        exito: true,
+        mensaje: resp.message,
+      });
 
       // Recargar estado para actualizar botones
       await cargarEstado();
@@ -99,6 +127,26 @@ export default function AsistenciaScreen() {
     } finally {
       setCargando(false);
     }
+  };
+
+  const desvincular = () => {
+    Alert.alert(
+      'Desvincular dispositivo',
+      'Se borrara el registro local para vincular otro empleado o repetir la demo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desvincular',
+          style: 'destructive',
+          onPress: async () => {
+            await SecureStore.deleteItemAsync('deviceToken');
+            await SecureStore.deleteItemAsync('idEmpleado');
+            await SecureStore.deleteItemAsync('nombreEmpleado');
+            onDesvincular?.();
+          },
+        },
+      ],
+    );
   };
 
   // Determina si cada botón está habilitado
@@ -198,8 +246,12 @@ export default function AsistenciaScreen() {
       )}
 
       <Text style={s.hint}>
-        {tieneHuella ? '👆 Se pedirá verificación biométrica' : '⚠️ Dispositivo sin sensor biométrico'}
+        {authMensaje}
       </Text>
+
+      <TouchableOpacity style={s.linkButton} onPress={desvincular} disabled={cargando}>
+        <Text style={s.linkButtonText}>Desvincular dispositivo</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -250,4 +302,6 @@ const s = StyleSheet.create({
   btnText:       { color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center', lineHeight: 22 },
   btnTextDisabled: { color: '#94a3b8' },
   hint:          { textAlign: 'center', color: '#94a3b8', fontSize: 12, marginTop: 24 },
+  linkButton:    { alignSelf: 'center', marginTop: 16, paddingVertical: 8, paddingHorizontal: 12 },
+  linkButtonText:{ color: '#64748b', fontSize: 12, fontWeight: '600' },
 });

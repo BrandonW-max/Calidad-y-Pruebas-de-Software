@@ -43,6 +43,15 @@ public class AsistenciaService {
     }
 
     public MarcarAsistenciaResponseDTO marcarAsistencia(MarcarAsistenciaRequestDTO request, String ip) {
+        return marcarAsistencia(request, ip, true);
+    }
+
+    public MarcarAsistenciaResponseDTO marcarAsistenciaMovil(MarcarAsistenciaRequestDTO request, String ip) {
+        return marcarAsistencia(request, ip, false);
+    }
+
+    private MarcarAsistenciaResponseDTO marcarAsistencia(MarcarAsistenciaRequestDTO request, String ip,
+                                                         boolean validarHuellaTemplate) {
 
         if (request.getIdEmpleado() == null) {
             registrarLogFallo(null, "ID_EMPLEADO_NULO", ip);
@@ -63,12 +72,14 @@ public class AsistenciaService {
             return new MarcarAsistenciaResponseDTO(false, "Usuario denegado. El empleado esta inactivo.");
         }
 
-        String huellaTemplate = request.getHuellaTemplate();
-        if (huellaTemplate == null || huellaTemplate.isBlank()
-                || empleado.getHuellaTemplate() == null
-                || !huellaTemplate.equals(empleado.getHuellaTemplate())) {
-            registrarLogFallo(empleado.getIdEmpleado(), "HUELLA_NO_COINCIDE", ip);
-            return new MarcarAsistenciaResponseDTO(false, "Usuario denegado. La huella no coincide.");
+        if (validarHuellaTemplate) {
+            String huellaTemplate = request.getHuellaTemplate();
+            if (huellaTemplate == null || huellaTemplate.isBlank()
+                    || empleado.getHuellaTemplate() == null
+                    || !huellaTemplate.equals(empleado.getHuellaTemplate())) {
+                registrarLogFallo(empleado.getIdEmpleado(), "HUELLA_NO_COINCIDE", ip);
+                return new MarcarAsistenciaResponseDTO(false, "Usuario denegado. La huella no coincide.");
+            }
         }
 
         LocalDate fechaActual = LocalDate.now();

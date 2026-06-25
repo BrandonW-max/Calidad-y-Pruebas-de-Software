@@ -181,7 +181,7 @@ public class AsistenciaController {
         MarcarAsistenciaRequestDTO req = new MarcarAsistenciaRequestDTO();
         req.setIdEmpleado(idEmpleado.intValue());
 
-        MarcarAsistenciaResponseDTO response = asistenciaService.marcarAsistencia(req, httpRequest.getRemoteAddr());
+        MarcarAsistenciaResponseDTO response = asistenciaService.marcarAsistenciaMovil(req, httpRequest.getRemoteAddr());
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 

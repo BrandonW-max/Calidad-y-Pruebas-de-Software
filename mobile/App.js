@@ -7,10 +7,14 @@ import AsistenciaScreen from './src/screens/AsistenciaScreen';
 export default function App() {
   const [registrado, setRegistrado] = useState(null); // null=cargando, false=nuevo, true=vinculado
 
-  useEffect(() => {
+  const verificarRegistro = () => {
     SecureStore.getItemAsync('deviceToken').then(token => {
       setRegistrado(!!token);
     });
+  };
+
+  useEffect(() => {
+    verificarRegistro();
   }, []);
 
   if (registrado === null) return null; // splash nativo mientras carga
@@ -19,7 +23,7 @@ export default function App() {
     <>
       <StatusBar style="dark" />
       {registrado
-        ? <AsistenciaScreen />
+        ? <AsistenciaScreen onDesvincular={() => setRegistrado(false)} />
         : <RegistroScreen onRegistrado={() => setRegistrado(true)} />
       }
     </>

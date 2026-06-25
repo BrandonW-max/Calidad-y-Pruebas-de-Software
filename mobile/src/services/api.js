@@ -2,6 +2,22 @@
 // AZURE: usa la URL pública del backend, ej: 'https://mi-backend.azurewebsites.net'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.100:8080';
 
+const leerRespuesta = async (res) => {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+const mensajeError = (data, fallback) => {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  return data.mensaje || data.message || fallback;
+};
+
 export const getEstadoAsistenciaHoy = async (idEmpleado, deviceToken) => {
   const res = await fetch(
     `${BASE_URL}/api/v1/asistencia/biometrico/estado/${idEmpleado}?deviceToken=${encodeURIComponent(deviceToken)}`
@@ -24,8 +40,8 @@ export const enviarOtp = async (numeroDi) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ numeroDi }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.mensaje || `HTTP ${res.status}`);
+  const data = await leerRespuesta(res);
+  if (!res.ok) throw new Error(mensajeError(data, `HTTP ${res.status}`));
   return data; // { sessionId }
 };
 
@@ -35,8 +51,8 @@ export const registrarDispositivo = async (numeroDi, deviceToken, sessionId, cod
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ numeroDi, deviceToken, sessionId, codigo }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.mensaje || `HTTP ${res.status}`);
+  const data = await leerRespuesta(res);
+  if (!res.ok) throw new Error(mensajeError(data, `HTTP ${res.status}`));
   return data;
 };
 
@@ -46,9 +62,7 @@ export const registrarAsistenciaBiometrica = async (idEmpleado, deviceToken, tip
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idEmpleado, deviceToken, tipo }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
-  }
-  return res.json();
+  const data = await leerRespuesta(res);
+  if (!res.ok) throw new Error(mensajeError(data, `HTTP ${res.status}`));
+  return data;
 };
