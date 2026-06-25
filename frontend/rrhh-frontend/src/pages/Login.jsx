@@ -41,14 +41,14 @@ export default function Login() {
     }
     const user = getUser();
     if (user?.rol) redirectByRole(user.rol);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const redirectByRole = (role) => {
+  function redirectByRole(role) {
     if      (role === "GERENCIA") navigate("/gerencia", { replace: true });
     else if (role === "RRHH")     navigate("/rrhh", { replace: true });
     else if (role === "EMPLEADO") navigate("/empleado", { replace: true });
     else setMensaje("Rol de usuario no reconocido.");
-  };
+  }
 
   const redirigirConModal = (rol, idEmpleado) => {
     if (idEmpleado && !USUARIOS_EXCLUIDOS.includes(username) && !localStorage.getItem(`mobileAppPrompt_${username}`)) {

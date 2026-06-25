@@ -35,7 +35,7 @@ export default function GestionHorarios() {
 
   useEffect(() => { cargar(); }, []);
 
-  const cargar = async () => {
+  async function cargar() {
     setLoading(true);
     try {
       const data = await getHorarios();
@@ -46,7 +46,7 @@ export default function GestionHorarios() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const abrirCrear = () => {
     setForm(FORM_VACIO);
@@ -181,8 +181,8 @@ export default function GestionHorarios() {
     <div className="dashboard">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content">
-        <header className="main-header header-rrhh">
+      <main className="main-content horarios-home">
+        <header className="main-header header-rrhh horarios-header">
           <div className="header-left">
             <span className="page-breadcrumb">Dashboard / Gestión de Empleados / Horarios</span>
             <h1>Gestión de Horarios</h1>
@@ -203,7 +203,7 @@ export default function GestionHorarios() {
 
         {/* ── TARJETAS RESUMEN ── */}
         {!loading && horarios.length > 0 && (
-          <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+          <div className="horarios-summary-grid">
             {horarios.map(h => (
               <div key={h.idHorario} style={{
                 background: "#fff", border: "1px solid var(--border)", borderRadius: 12,
@@ -229,7 +229,7 @@ export default function GestionHorarios() {
         )}
 
         {/* ── TABLA ── */}
-        <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="section-card horarios-list-card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="table-wrapper" style={{ marginBottom: 0 }}>
             {loading ? (
               <div className="loading-text">Cargando horarios...</div>

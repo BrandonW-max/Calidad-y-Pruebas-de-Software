@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -9,7 +9,6 @@ import {
   revisarSolicitudRRHH,
   decidirSolicitudGerencia,
   getIdEmpleado,
-  getUser,
 } from "../services/api";
 
 const STEP_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
@@ -116,9 +115,9 @@ function VistaEmpleado() {
     tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "",
   });
 
-  useEffect(() => { if (idEmpleado) cargarMisSolicitudes(); }, [idEmpleado]);
+  useEffect(() => { if (idEmpleado) cargarMisSolicitudes(); }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cargarMisSolicitudes = async () => {
+  async function cargarMisSolicitudes() {
     setLoading(true);
     setError("");
     try {
@@ -126,7 +125,7 @@ function VistaEmpleado() {
       setSolicitudes(Array.isArray(data) ? data : []);
     } catch { setError("No se pudieron cargar tus solicitudes."); }
     finally  { setLoading(false); }
-  };
+  }
 
   const handleEnviar = async (e) => {
     e.preventDefault();
@@ -299,7 +298,7 @@ function VistaRRHH() {
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
-  const cargarSolicitudes = async () => {
+  async function cargarSolicitudes() {
     setLoading(true); setError("");
     try {
       const [pend, enRev, apro, rech] = await Promise.all([
@@ -316,7 +315,7 @@ function VistaRRHH() {
       ]);
     } catch { setError("No se pudieron cargar las solicitudes"); }
     finally  { setLoading(false); }
-  };
+  }
 
   const contarPorEstado = (e) => todasSolicitudes.filter(s => s.estado === e).length;
 
@@ -497,7 +496,7 @@ function VistaGerencia() {
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
-  const cargarSolicitudes = async () => {
+  async function cargarSolicitudes() {
     setLoading(true); setError("");
     try {
       const [enRev, aprob, recha] = await Promise.all([
@@ -510,7 +509,7 @@ function VistaGerencia() {
       setSolRechazadas(Array.isArray(recha) ? recha : []);
     } catch { setError("No se pudieron cargar las solicitudes"); }
     finally  { setLoading(false); }
-  };
+  }
 
   const handleDecidir = async () => {
     if (!modalDecision.decision || !modalDecision.comentario.trim()) return;

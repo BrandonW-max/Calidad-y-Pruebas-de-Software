@@ -19,13 +19,8 @@ export default function NominaEmpleado() {
   const [nominas,  setNominas]  = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
-  const [mensaje,  setMensaje]  = useState("");
-  useEffect(() => {
-    if (idEmpleado) cargarNominas();
-    else setError("No se pudo obtener tu ID de empleado. Contacta a RRHH.");
-  }, [idEmpleado]);
 
-  const cargarNominas = async () => {
+  async function cargarNominas() {
     setLoading(true);
     setError("");
     try {
@@ -36,7 +31,12 @@ export default function NominaEmpleado() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (idEmpleado) cargarNominas();
+    else setError("No se pudo obtener tu ID de empleado. Contacta a RRHH.");
+  }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [descargando, setDescargando] = useState(null);
 
@@ -86,7 +86,6 @@ export default function NominaEmpleado() {
           <span className="role-pill role-pill-empleado">Empleado</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>

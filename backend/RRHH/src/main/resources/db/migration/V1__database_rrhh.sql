@@ -192,7 +192,9 @@ CREATE TABLE nomina (
     cantidad_guardias INT DEFAULT 0,
     total_horas_nocturnas DECIMAL(6,2) DEFAULT 0,
     tipo_pension_aplicada VARCHAR(10) DEFAULT 'ONP',
-    estado_pago VARCHAR(20) DEFAULT 'PENDIENTE' CHECK (estado_pago IN ('PENDIENTE','CALCULADA','DISPONIBLE','PAGADA')),
+    es_empleado_clinico BOOLEAN NOT NULL DEFAULT FALSE,
+    tiene_horario_nocturno BOOLEAN NOT NULL DEFAULT FALSE,
+    estado_pago VARCHAR(20) DEFAULT 'PENDIENTE' CHECK (estado_pago IN ('PENDIENTE','CALCULADA','DISPONIBLE','PAGADA','AJUSTADA')),
     version INT DEFAULT 1,
     nomina_anterior_id INT NULL,
     id_empleado BIGINT REFERENCES empleado(id_empleado),
@@ -384,3 +386,11 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tr_act_empleado BEFORE UPDATE ON empleado FOR EACH ROW EXECUTE FUNCTION fn_timestamp_update();
 CREATE TRIGGER tr_act_contrato BEFORE UPDATE ON contrato FOR EACH ROW EXECUTE FUNCTION fn_timestamp_update();
 CREATE TRIGGER tr_act_usuario BEFORE UPDATE ON usuario FOR EACH ROW EXECUTE FUNCTION fn_timestamp_update();
+
+CREATE TABLE dispositivo_empleado (
+    id_dispositivo BIGSERIAL PRIMARY KEY,
+    id_empleado    BIGINT NOT NULL REFERENCES empleado(id_empleado) ON DELETE CASCADE,
+    device_token   VARCHAR(255) NOT NULL,
+    registrado_el  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (id_empleado)
+);

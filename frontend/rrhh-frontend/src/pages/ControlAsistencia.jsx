@@ -13,9 +13,7 @@ import {
   uploadEvidencia,
   revisarJustificacion,
   listarEmpleados,
-  buscarEmpleados,
   getIdEmpleado,
-  getUser,
 } from "../services/api";
 
 function getRolFromPath(pathname) {
@@ -69,30 +67,30 @@ function VistaEmpleado() {
     cargarAsistenciaHoy();
     cargarHistorial();
     cargarHorario();
-  }, [idEmpleado]);
+  }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cargarHorario = async () => {
+  async function cargarHorario() {
     try {
       const data = await getHorarioEmpleado(idEmpleado);
       if (data) setHorario(data);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarJustificaciones = async () => {
+  async function cargarJustificaciones() {
     try {
       const data = await listarJustificacionesEmpleado(idEmpleado);
       setJustificaciones(Array.isArray(data) ? data : []);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarAsistenciaHoy = async () => {
+  async function cargarAsistenciaHoy() {
     try {
       const data = await getAsistenciaHoy(idEmpleado);
       setAsistenciaHoy(data);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarHistorial = async () => {
+  async function cargarHistorial() {
     setLoading(true);
     try {
       const data = await listarAsistenciaEmpleado(idEmpleado);
@@ -102,13 +100,7 @@ function VistaEmpleado() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const abrirModal = (tipo) => {
-    setModalManual({ open: true, tipo });
-    setManualMotivo("");
-    setMensaje("");
-  };
+  }
 
   // ECU-03 A4: empleado envía justificación de tardanza
   const handleEnviarJustificacion = async () => {
@@ -168,7 +160,6 @@ function VistaEmpleado() {
   };
 
   const horaStr = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const fechaStr = hora.toLocaleDateString("es-PE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const fechaCorta = hora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   const estadoBadge = (estado) => {
@@ -662,7 +653,7 @@ function VistaRRHH() {
     listarEmpleados(0, 100).then(d => setEmpleados(d.content ?? [])).catch(() => {});
   }, []);
 
-  const cargarJustificaciones = async () => {
+  async function cargarJustificaciones() {
     setLoading(true);
     setError("");
     try {
@@ -673,20 +664,7 @@ function VistaRRHH() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleBuscarEmpleado = (valor) => {
-    setBusquedaNombre(valor);
-    setEmpleadoSelec(null);
-    setManualForm(f => ({ ...f, idEmpleado: "" }));
-    if (valor.trim().length < 2) { setSugerencias([]); setMostrarSugere(false); return; }
-    const filtro = valor.toLowerCase();
-    const hits = empleados.filter(e =>
-      `${e.nombres} ${e.apellidos}`.toLowerCase().includes(filtro)
-    ).slice(0, 8);
-    setSugerencias(hits);
-    setMostrarSugere(true);
-  };
+  }
 
   const seleccionarEmpleado = (emp) => {
     setEmpleadoSelec(emp);
@@ -843,11 +821,12 @@ function VistaRRHH() {
     <div className="dashboard">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content">
-        <header className="main-header header-rrhh">
+      <main className="main-content asistencia-rrhh">
+        <header className="main-header header-rrhh asistencia-header">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Control de Asistencia</span>
             <h1>Control de Asistencia</h1>
+            <p>Gestión diaria de registros y control biométrico del personal.</p>
           </div>
           <span className="role-pill role-pill-rrhh">ECU-03</span>
         </header>
@@ -855,7 +834,7 @@ function VistaRRHH() {
         {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <div className="biometric-banner">
+        <div className="biometric-banner asistencia-biometric">
           <div className="biometric-banner-icon">🖐️</div>
           <div className="biometric-banner-text">
             <h3>Sistema Biométrico Activo</h3>
@@ -863,9 +842,10 @@ function VistaRRHH() {
           </div>
         </div>
 
+        <div className="asistencia-grid">
         {/* ── SECCIÓN 1: JUSTIFICACIONES PENDIENTES ── */}
-        <div className="section-card">
-          <div className="section-header" style={{ marginBottom: "14px" }}>
+        <div className="section-card asistencia-panel asistencia-justificaciones">
+          <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>
               📋 Justificaciones Pendientes
               {justificaciones.length > 0 && (
@@ -944,8 +924,8 @@ function VistaRRHH() {
         </div>
 
         {/* ── SECCIÓN 2: REGISTRO MANUAL ── */}
-        <div className="section-card">
-          <div className="section-header" style={{ marginBottom: "14px" }}>
+        <div className="section-card asistencia-panel asistencia-manual">
+          <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>✏️ Registro Manual de Asistencia</h2>
             <span style={{ fontSize: "12px", color: "var(--text-3)" }}>Corrección · requiere solicitud previa del empleado</span>
           </div>
@@ -1026,6 +1006,7 @@ function VistaRRHH() {
               )}
             </form>
           </div>
+        </div>
 
       </main>
 
@@ -1122,7 +1103,7 @@ function VistaRRHH() {
               </div>
 
               <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>
-                Si aprueba: los minutos de tardanza se anulan y <strong>no se descontarán en nómina</strong>.
+                Si aprueba: los minutos de tardanza se anulan y<strong>no se descontarán en nómina</strong>.
               </div>
             </div>
             <div className="modal-footer">
@@ -1210,37 +1191,37 @@ function VistaGerencia() {
     cargarAsistenciaHoy();
     cargarHistorial();
     cargarHorario();
-  }, [idEmpleado]);
+  }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cargarHorario = async () => {
+  async function cargarHorario() {
     try {
       const data = await getHorarioEmpleado(idEmpleado);
       if (data) setHorario(data);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarJustificaciones = async () => {
+  async function cargarJustificaciones() {
     try {
       const data = await listarJustificacionesEmpleado(idEmpleado);
       setJustificaciones(Array.isArray(data) ? data : []);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarAsistenciaHoy = async () => {
+  async function cargarAsistenciaHoy() {
     try {
       const data = await getAsistenciaHoy(idEmpleado);
       setAsistenciaHoy(data);
     } catch { /* silencioso */ }
-  };
+  }
 
-  const cargarHistorial = async () => {
+  async function cargarHistorial() {
     setLoading(true);
     try {
       const data = await listarAsistenciaEmpleado(idEmpleado);
       setHistorial(Array.isArray(data) ? data : []);
     } catch { setError("No se pudo cargar el historial"); }
     finally  { setLoading(false); }
-  };
+  }
 
   const handleEnviarJustificacion = async () => {
     if (!justifMotivo.trim()) return;

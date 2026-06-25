@@ -9,18 +9,14 @@ export default function DashboardEmpleado() {
   const idEmpleado = getIdEmpleado();
 
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
-  const [asistenciaHoy,         setAsistenciaHoy]         = useState(null);
-  const [vacacionesDias,        setVacacionesDias]        = useState(null);
+  const [asistenciaHoy] = useState(null);
+  const [vacacionesDias] = useState(null);
   const [hora, setHora] = useState(new Date());
 
   useEffect(() => {
     const t = setInterval(() => setHora(new Date()), 60000);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    if (idEmpleado) cargarDatos();
-  }, [idEmpleado]);
 
   const cargarDatos = async () => {
     try {
@@ -33,6 +29,10 @@ export default function DashboardEmpleado() {
       }
     } catch { /* silently fail */ }
   };
+
+  useEffect(() => {
+    if (idEmpleado) cargarDatos();
+  }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const horaFmt = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
   const displayName = user?.username || "Usuario";

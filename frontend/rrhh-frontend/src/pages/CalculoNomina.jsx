@@ -44,6 +44,7 @@ export default function CalculoNomina() {
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const [previewNomina, setPreviewNomina] = useState(null);
   const [modalEstructura, setModalEstructura] = useState(null);
+  const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [datosBase, setDatosBase] = useState({
     sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0,
     horasNocturnas: 0, minutosLate: 0, tieneHijos: false,
@@ -98,6 +99,7 @@ export default function CalculoNomina() {
     setPeriodoCalculado(false);
     setMensaje("");
     setError("");
+    setSelectedEmpleado(null);
   };
 
   const verificarPeriodo = useCallback(async (m, a) => {
@@ -217,6 +219,7 @@ export default function CalculoNomina() {
       return Array.isArray(prev) ? nuevaLista : nuevaLista[0];
     });
     setModalEstructura(actualizada);
+    setSelectedEmpleado(actualizada);
   };
 
   const handleGuardarAjuste = async (calculos) => {
@@ -282,13 +285,40 @@ export default function CalculoNomina() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
-
         <div className="nomina-layout">
 
           {/* ── COLUMNA IZQUIERDA ── */}
           <div className="nomina-left">
+
+            {selectedEmpleado && (() => {
+              const se = selectedEmpleado;
+              return (
+                <div className="section-card" style={{ padding: 0, overflow: "hidden", marginBottom: 12, cursor: "pointer", border: "2px solid #2563eb" }}
+                  onClick={() => abrirEstructura(se)}>
+                  <div style={{ padding: "14px 18px", background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", color: "#fff", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                      ✏️
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{se.nombreEmpleado ?? se.empleadoNombre ?? `Empleado #${se.idEmpleado}`}</div>
+                      <div style={{ fontSize: 11, opacity: 0.72, marginTop: 1 }}>Nómina #{se.idNomina} · Haz clic para modificar</div>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); setSelectedEmpleado(null); }}
+                      style={{ background: "rgba(255,255,255,0.18)", border: "none", color: "#fff", width: 26, height: 26, borderRadius: 6, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ padding: "12px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, background: "#f8fafc" }}>
+                    <div><span style={{ color: "var(--text-3)" }}>Sueldo base</span><br /><strong>{fmtS(se.sueldoBase)}</strong></div>
+                    <div><span style={{ color: "var(--text-3)" }}>Sueldo bruto</span><br /><strong style={{ color: "#16a34a" }}>{fmtS(se.sueldoBruto)}</strong></div>
+                    <div><span style={{ color: "var(--text-3)" }}>Sueldo neto</span><br /><strong style={{ color: "#2563eb" }}>{fmtS(se.sueldoNeto)}</strong></div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+            {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
             <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)", display: "flex", alignItems: "center", gap: 12 }}>
@@ -404,7 +434,10 @@ export default function CalculoNomina() {
                     </thead>
                     <tbody>
                       {resultList.map((n, i) => (
-                        <tr key={n.idNomina ?? i}>
+                        <tr key={n.idNomina ?? i}
+                          onClick={() => setSelectedEmpleado(n)}
+                          style={{ cursor: "pointer" }}
+                          className={selectedEmpleado?.idNomina === n.idNomina ? "tr-selected" : ""}>
                           <td>
                             <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
                           </td>
@@ -421,15 +454,15 @@ export default function CalculoNomina() {
                               </button>
                               <button className="btn btn-secondary btn-sm"
                                 title="Vista previa detallada"
-                                onClick={() => setPreviewNomina(n)}>
+                                onClick={e => { e.stopPropagation(); setPreviewNomina(n); }}>
                                 👁
                               </button>
                               <button className="btn btn-secondary btn-sm"
-                                onClick={() => handleDescargar(n.idNomina)}>
+                                onClick={e => { e.stopPropagation(); handleDescargar(n.idNomina); }}>
                                 ⬇ PDF
                               </button>
                               <button className="btn btn-primary btn-sm"
-                                onClick={() => handleEnviarComprobante(n.idNomina)}
+                                onClick={e => { e.stopPropagation(); handleEnviarComprobante(n.idNomina); }}
                                 disabled={enviando[n.idNomina]}>
                                 {enviando[n.idNomina] ? "..." : "📧 Email"}
                               </button>

@@ -77,7 +77,7 @@ export default function GestionEmpleados() {
   const [modalSancion,    setModalSancion]    = useState({ open: false, id: null });
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
-  const [showFechas,      setShowFechas]      = useState(false);
+  const [, setShowFechas]      = useState(false);
 
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
@@ -298,6 +298,7 @@ export default function GestionEmpleados() {
     setOpenDrop(id);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const abrirModalHorario = async (emp) => {
     setOpenDrop(null);
     setHorarioForm(HORARIO_VACIO);
@@ -344,8 +345,8 @@ export default function GestionEmpleados() {
     <div className="dashboard">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content">
-        <header className="main-header header-rrhh">
+      <main className="main-content empleados-home">
+        <header className="main-header header-rrhh empleados-header">
           <div className="header-left">
             <span className="page-breadcrumb">Dashboard / Gestión de Empleados</span>
             <h1>Gestión de Empleados</h1>
@@ -368,8 +369,8 @@ export default function GestionEmpleados() {
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         {/* ── FILTER ROW ── */}
-        <div className="filter-row">
-          <div className="filter-group">
+        <div className="filter-row empleados-filters">
+          <div className="filter-group empleados-field">
             <label className="filter-label">Tipo Documento</label>
             <select className="filter-select" value={filterDocType} onChange={e => setFilterDocType(e.target.value)}>
               <option value="">Todos</option>
@@ -377,7 +378,7 @@ export default function GestionEmpleados() {
               <option value="CE">Carnet Ext.</option>
             </select>
           </div>
-          <div className="filter-group">
+          <div className="filter-group empleados-field">
             <label className="filter-label">Departamento</label>
             <select className="filter-select" value={filterArea} onChange={e => { setFilterArea(e.target.value); setFilterCargo(""); }}>
               <option value="">Todos</option>
@@ -386,7 +387,7 @@ export default function GestionEmpleados() {
               ))}
             </select>
           </div>
-          <div className="filter-group">
+          <div className="filter-group empleados-field">
             <label className="filter-label">Cargo</label>
             <select className="filter-select" value={filterCargo} onChange={e => setFilterCargo(e.target.value)}>
               <option value="">Todos</option>
@@ -398,7 +399,7 @@ export default function GestionEmpleados() {
               ))}
             </select>
           </div>
-          <div className="filter-group">
+          <div className="filter-group empleados-field">
             <label className="filter-label">Estado</label>
             <select className="filter-select" value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
               <option value="">Todos</option>
@@ -406,7 +407,7 @@ export default function GestionEmpleados() {
               <option value="DESVINCULADO">Inactivo</option>
             </select>
           </div>
-          <div className="filter-group filter-search">
+          <div className="filter-group filter-search empleados-field empleados-search">
             <label className="filter-label">Buscar por nombre</label>
             <div className="filter-search-wrap">
               <input className="filter-input" placeholder="Ingrese nombre" value={searchName}
@@ -415,8 +416,8 @@ export default function GestionEmpleados() {
               <span className="filter-search-icon">🔍</span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", position: "relative", top: "-5px" }}>
-            <button className="btn btn-primary btn-sm" onClick={handleBuscar}>Buscar</button>
+          <div className="empleados-filter-actions">
+            <button className="btn btn-primary btn-sm empleados-search-btn" onClick={handleBuscar}>Buscar</button>
             <button className="btn btn-secondary btn-sm" onClick={handleLimpiar}>☰ Limpiar filtros</button>
           </div>
         </div>
@@ -454,13 +455,13 @@ export default function GestionEmpleados() {
                     );
                     return visibles.map(emp => (
                     <tr key={emp.idEmpleado}>
-                      <td>{emp.nombres} {emp.apellidos}</td>
-                      <td style={{ color: "var(--text-2)" }}>
+                      <td data-label="Nombre Completo">{emp.nombres} {emp.apellidos}</td>
+                      <td data-label="Tipo Doc / DNI" style={{ color: "var(--text-2)" }}>
                         {emp.docIdentidad ?? "DNI"} · {emp.numeroDi}
                       </td>
                       <td>{emp.departamento ?? "—"}</td>
                       <td>{emp.cargo ?? "—"}</td>
-                      <td style={{ textAlign: "center" }}>
+                      <td data-label="Turno" style={{ textAlign: "center" }}>
                         {turnosMap[emp.idEmpleado] ? (
                           <span style={{
                             display: "inline-flex", flexDirection: "column", alignItems: "center",
@@ -477,12 +478,12 @@ export default function GestionEmpleados() {
                           <span style={{ color: "var(--text-3)", fontSize: 12 }}>—</span>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Estado">
                         <span className={`emp-status-dot ${emp.estado === "ACTIVO" ? "emp-status-active" : "emp-status-inactive"}`}>
                           {emp.estado === "ACTIVO" ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Acciones">
                         <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                           <button className="btn btn-secondary btn-sm"
                             onClick={() => setModalEditar({ ...emp })}>

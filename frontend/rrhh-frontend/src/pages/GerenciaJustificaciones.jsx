@@ -16,7 +16,7 @@ export default function GerenciaJustificaciones() {
 
   useEffect(() => { cargar(); }, []);
 
-  const cargar = async () => {
+  async function cargar() {
     setLoading(true); setError("");
     try {
       const data = await listarJustificacionesPendientes();
@@ -26,7 +26,7 @@ export default function GerenciaJustificaciones() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const pendientes = justificaciones.filter(j => (j.estado ?? "PENDIENTE") === "PENDIENTE").length;
   const aprobadas  = justificaciones.filter(j => j.estado === "APROBADO").length;
