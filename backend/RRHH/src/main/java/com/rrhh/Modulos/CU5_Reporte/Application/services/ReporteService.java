@@ -8,6 +8,8 @@ import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteEmpleado
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteAsistenciaRepository;
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteNominaRepository;
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteSolicitudRepository;
+import com.rrhh.Modulos.CU5_Reporte.Infrastructure.specifications.ReporteAsistenciaSpecification;
+import com.rrhh.Modulos.CU5_Reporte.Infrastructure.specifications.ReporteNominaSpecification;
 import com.rrhh.Modulos.CU5_Reporte.Application.factory.IReporteFactory;
 import com.rrhh.Shared.export.ExportAbstractFactory;
 import com.rrhh.Shared.persistence.*;
@@ -101,13 +103,16 @@ public class ReporteService implements IReporteService {
     @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteAsistencia(FiltroAsistenciaDTO filtro, Long idUsuario) {
 
+        if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
-        List<RegistroAsistenciaModel> registros = jpaAsistenciaRepository.buscarConFiltros(
-            filtro.getIdEmpleado(),
-            filtro.getArea(),
-            filtro.getFechaInicio(),
-            filtro.getFechaFin()
+        List<RegistroAsistenciaModel> registros = jpaAsistenciaRepository.findAll(
+            ReporteAsistenciaSpecification.conFiltros(
+                filtro.getIdEmpleado(),
+                filtro.getArea(),
+                filtro.getFechaInicio(),
+                filtro.getFechaFin()
+            )
         );
 
         if (registros.isEmpty()) {
@@ -137,15 +142,18 @@ public class ReporteService implements IReporteService {
     @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteNomina(FiltroNominaDTO filtro, Long idUsuario) {
 
+        if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
-        List<NominaModel> nominas = jpaNominaRepository.buscarConFiltros(
-            filtro.getIdEmpleado(),
-            filtro.getArea(),
-            filtro.getFechaInicio(),
-            filtro.getFechaFin(),
-            filtro.getSalarioMin(),
-            filtro.getSalarioMax()
+        List<NominaModel> nominas = jpaNominaRepository.findAll(
+            ReporteNominaSpecification.conFiltros(
+                filtro.getIdEmpleado(),
+                filtro.getArea(),
+                filtro.getFechaInicio(),
+                filtro.getFechaFin(),
+                filtro.getSalarioMin(),
+                filtro.getSalarioMax()
+            )
         );
 
         if (nominas.isEmpty()) {
@@ -176,6 +184,7 @@ public class ReporteService implements IReporteService {
     @Transactional(timeout = 30)
     public ReporteResponseDTO generarReporteSolicitudes(FiltroSolicitudDTO filtro, Long idUsuario) {
 
+        if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
         List<SolicitudModel> solicitudes = jpaSolicitudRepository.buscarConFiltros(

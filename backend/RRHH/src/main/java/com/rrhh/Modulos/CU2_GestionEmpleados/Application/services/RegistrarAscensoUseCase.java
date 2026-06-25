@@ -183,7 +183,7 @@ public class RegistrarAscensoUseCase {
         auditoriaEmpleadoService.registrar(
                 empleado.getIdEmpleado(),
                 "ASCENSO_EMPLEADO",
-                "CONTRATO",
+                "EMPLEADO",
                 valorAnterior,
                 valorNuevo
         );

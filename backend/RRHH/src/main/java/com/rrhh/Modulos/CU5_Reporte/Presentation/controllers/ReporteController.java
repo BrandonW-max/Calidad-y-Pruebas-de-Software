@@ -38,6 +38,8 @@ public class ReporteController {
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error interno: " + e.getMessage());
         }
     }
 
@@ -58,6 +60,8 @@ public class ReporteController {
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error interno: " + e.getMessage());
         }
     }
 
@@ -78,6 +82,8 @@ public class ReporteController {
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error interno: " + e.getMessage());
         }
     }
 
@@ -98,6 +104,8 @@ public class ReporteController {
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error interno: " + e.getMessage());
         }
     }
 
