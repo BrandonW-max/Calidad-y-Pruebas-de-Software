@@ -162,7 +162,7 @@ CREATE TABLE registro_asistencia (
     observacion VARCHAR(255),
     estado VARCHAR(30),
     id_empleado BIGINT REFERENCES empleado(id_empleado),
-    id_horario BIGINT REFERENCES horario(id_horario),
+    id_horario INT REFERENCES horario(id_horario),
     creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -70,6 +70,35 @@ public class EmailService {
         mailSender.send(mensaje);
     }
 
+    public int enviarComprobanteNominaConReintentos(
+            String destinatario,
+            String nombreEmpleado,
+            String periodo,
+            byte[] pdf,
+            int maxIntentos
+    ) {
+        Exception ultimoError = null;
+        for (int intento = 1; intento <= maxIntentos; intento++) {
+            try {
+                enviarComprobanteNomina(destinatario, nombreEmpleado, periodo, pdf);
+                return intento;
+            } catch (Exception e) {
+                ultimoError = e;
+                if (intento < maxIntentos) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        }
+        throw new RuntimeException(
+                "Error al enviar tras " + maxIntentos + " intentos: " + ultimoError.getMessage(),
+                ultimoError
+        );
+    }
+
     public void enviarCodigoOtp(String destinatario, String nombreEmpleado, String codigo) {
         SimpleMailMessage mensaje = new SimpleMailMessage();
         mensaje.setTo(destinatario);

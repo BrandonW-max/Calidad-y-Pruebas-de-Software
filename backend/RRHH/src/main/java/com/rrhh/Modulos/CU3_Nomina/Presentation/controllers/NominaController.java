@@ -4,13 +4,13 @@ import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.INominaService;
-import com.rrhh.Modulos.CU3_Nomina.Application.services.NominaService;
 import com.rrhh.Modulos.CU3_Nomina.Presentation.routes.NominaApiRoutes;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.UsuarioGestion;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
 import com.rrhh.Shared.persistence.NotificacionEnvioModel;
+import com.rrhh.Shared.security.AuthUtils;
 import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -30,7 +30,6 @@ import java.util.Objects;
 public class NominaController {
 
     private final INominaService nominaService;
-    private final NominaService nominaServicePdf;
     private final EmailService emailService;
     private final IUsuarioGestionRepository usuarioGestionRepository;
     private final JpaEmpleadoRepository jpaEmpleadoRepository;
@@ -39,12 +38,10 @@ public class NominaController {
     private EntityManager em;
 
     public NominaController(INominaService nominaService,
-                            NominaService nominaServicePdf,
                             EmailService emailService,
                             IUsuarioGestionRepository usuarioGestionRepository,
                             JpaEmpleadoRepository jpaEmpleadoRepository) {
         this.nominaService = nominaService;
-        this.nominaServicePdf = nominaServicePdf;
         this.emailService = emailService;
         this.usuarioGestionRepository = usuarioGestionRepository;
         this.jpaEmpleadoRepository = jpaEmpleadoRepository;
@@ -56,7 +53,7 @@ public class NominaController {
             @RequestBody CalcularNominaRequestDTO request,
             Authentication authentication) {
         try {
-            Long idUsuario = obtenerIdUsuario(authentication);
+            Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
             List<NominaResponseDTO> resultado = nominaService.calcularNomina(request, idUsuario);
             return ResponseEntity.ok(resultado);
         } catch (IllegalStateException e) {
@@ -119,7 +116,7 @@ public class NominaController {
         if (hayRol(user, "EMPLEADO") && !esPropia(nomina.getIdEmpleado(), user.getIdUsuario())) {
             return ResponseEntity.status(403).body("No tiene permiso para este comprobante.");
         }
-        byte[] pdf = nominaServicePdf.generarComprobantePDF(id);
+        byte[] pdf = nominaService.generarComprobantePDF(id);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=Comprobante_Nomina_" + nomina.getPeriodo() + ".pdf")
@@ -134,7 +131,7 @@ public class NominaController {
             @RequestBody AjustarNominaRequestDTO request,
             Authentication authentication) {
         try {
-            Long idUsuario = obtenerIdUsuario(authentication);
+            Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
             return ResponseEntity.ok(nominaService.ajustarNomina(id, request, idUsuario));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -146,7 +143,7 @@ public class NominaController {
     public ResponseEntity<?> enviarComprobanteEmail(@PathVariable Integer id) {
         try {
             NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
-            byte[] pdf = nominaServicePdf.generarComprobantePDF(id);
+            byte[] pdf = nominaService.generarComprobantePDF(id);
 
             var empleadoOpt = jpaEmpleadoRepository.findById(Objects.requireNonNull(nomina.getIdEmpleado()));
             if (empleadoOpt.isEmpty()) {
@@ -167,35 +164,24 @@ public class NominaController {
             }
 
             String errorMsg = null;
-            boolean exito = false;
 
-            for (int intento = 1; intento <= 3; intento++) {
-                try {
-                    emailService.enviarComprobanteNomina(correo,
-                            empleado.getNombres() + " " + empleado.getApellidos(),
-                            nomina.getPeriodo(), pdf);
+            try {
+                int intentosUsados = emailService.enviarComprobanteNominaConReintentos(correo,
+                        empleado.getNombres() + " " + empleado.getApellidos(),
+                        nomina.getPeriodo(), pdf, 3);
 
-                    NotificacionEnvioModel notif = new NotificacionEnvioModel();
-                    notif.setIdNomina(id);
-                    notif.setTipo("COMPROBANTE_NOMINA");
-                    notif.setEstado("ENVIADO");
-                    notif.setIntentos(intento);
-                    notif.setFechaEnvio(java.time.LocalDateTime.now());
-                    em.persist(notif);
+                NotificacionEnvioModel notif = new NotificacionEnvioModel();
+                notif.setIdNomina(id);
+                notif.setTipo("COMPROBANTE_NOMINA");
+                notif.setEstado("ENVIADO");
+                notif.setIntentos(intentosUsados);
+                notif.setFechaEnvio(java.time.LocalDateTime.now());
+                em.persist(notif);
 
-                    exito = true;
-                    break;
-                } catch (Exception e) {
-                    errorMsg = e.getMessage();
-                    if (intento < 3) {
-                        Thread.sleep(1000);
-                    }
-                }
-            }
-
-            if (exito) {
                 return ResponseEntity.ok(Map.of("success", true, "message",
                         "Comprobante enviado a " + correo));
+            } catch (Exception e) {
+                errorMsg = e.getMessage();
             }
 
             NotificacionEnvioModel notif = new NotificacionEnvioModel();
@@ -223,16 +209,5 @@ public class NominaController {
         UsuarioGestion usuario = usuarioGestionRepository.findByEmpleadoId(idEmpleadoNomina);
         return usuario != null && usuario.getIdUsuario() != null
                 && usuario.getIdUsuario().equals(idUsuario);
-    }
-
-    private Long obtenerIdUsuario(Authentication authentication) {
-        if (authentication.getPrincipal() instanceof AuthenticatedUser authUser) {
-            return authUser.getIdUsuario();
-        }
-        try {
-            return Long.parseLong(authentication.getName());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 }

@@ -19,4 +19,6 @@ public interface INominaService {
     List<NominaResponseDTO> buscarPorNombreEmpleado(String nombre);
 
     NominaResponseDTO ajustarNomina(Integer idNomina, AjustarNominaRequestDTO request, Long idUsuarioRrhh);
+
+    byte[] generarComprobantePDF(Integer idNomina);
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
-import { getUser, getIdEmpleado, getSolicitudesPorEmpleado } from "../services/api";
+import { getUser, getIdEmpleado, getSolicitudesPorEmpleado, getNotificacionesEmpleado } from "../services/api";
 
 export default function DashboardEmpleado() {
   const user = getUser();
@@ -12,6 +12,7 @@ export default function DashboardEmpleado() {
   const [asistenciaHoy] = useState(null);
   const [vacacionesDias] = useState(null);
   const [hora, setHora] = useState(new Date());
+  const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => setHora(new Date()), 60000);
@@ -27,6 +28,10 @@ export default function DashboardEmpleado() {
         ).length;
         setSolicitudesPendientes(pendientes);
       }
+    } catch { /* silently fail */ }
+    try {
+      const notif = await getNotificacionesEmpleado(idEmpleado);
+      if (Array.isArray(notif)) setNotifCount(notif.length);
     } catch { /* silently fail */ }
   };
 
@@ -139,7 +144,7 @@ export default function DashboardEmpleado() {
             <Link to="/empleado/solicitudes" className="emp-acceso-item" style={{ position: "relative" }}>
               <div className="emp-acceso-icon emp-acceso-sand" style={{ position: "relative" }}>
                 🔔
-                <span className="emp-notif-dot">1</span>
+                {notifCount > 0 && <span className="emp-notif-dot">{notifCount}</span>}
               </div>
               <span className="emp-acceso-label">Ver Notificaciones</span>
             </Link>

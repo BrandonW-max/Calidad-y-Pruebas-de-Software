@@ -12,4 +12,5 @@ public class SolicitudApiRoutes {
     public static final String POR_EMPLEADO     = BASE + "/empleado/{idEmpleado}";
     public static final String BUSCAR_ID        = BASE + "/{id}";
     public static final String CLONAR           = BASE + "/{id}/clonar";
+    public static final String NOTIFICACIONES   = BASE + "/notificaciones/{idEmpleado}";
 }

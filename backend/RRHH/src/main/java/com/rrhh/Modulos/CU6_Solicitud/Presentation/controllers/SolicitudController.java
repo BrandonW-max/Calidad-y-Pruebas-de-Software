@@ -5,7 +5,6 @@ import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RegistrarSolicitudRequestD
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.RevisionRrhhRequestDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.SolicitudResponseDTO;
 import com.rrhh.Modulos.CU6_Solicitud.Application.services.ISolicitudService;
-import com.rrhh.Modulos.CU6_Solicitud.Application.services.SolicitudService;
 import com.rrhh.Modulos.CU6_Solicitud.Presentation.routes.SolicitudApiRoutes;
 import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -20,12 +19,9 @@ import java.util.List;
 public class SolicitudController {
 
     private final ISolicitudService solicitudService;
-    private final SolicitudService solicitudServiceImpl;
 
-    public SolicitudController(ISolicitudService solicitudService,
-                                SolicitudService solicitudServiceImpl) {
+    public SolicitudController(ISolicitudService solicitudService) {
         this.solicitudService = solicitudService;
-        this.solicitudServiceImpl = solicitudServiceImpl;
     }
 
     @PostMapping(SolicitudApiRoutes.REGISTRAR)
@@ -102,10 +98,10 @@ public class SolicitudController {
         }
     }
 
-    @GetMapping("/api/v1/solicitudes/notificaciones/{idEmpleado}")
+    @GetMapping(SolicitudApiRoutes.NOTIFICACIONES)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<List<SolicitudResponseDTO>> listarNotificaciones(
             @PathVariable Long idEmpleado) {
-        return ResponseEntity.ok(solicitudServiceImpl.listarNotificacionesPorEmpleado(idEmpleado));
+        return ResponseEntity.ok(solicitudService.listarNotificacionesPorEmpleado(idEmpleado));
     }
 }

@@ -225,7 +225,7 @@ export const calcularNomina = (mes, anio) => {
 
 // ECU-04: cargar nóminas de un período ya calculado
 export const getNominasPorPeriodo = (mes, anio) =>
-  f(`${BASE}/api/nomina/periodo/${anio}-${mes}`, { headers: h() }).then(json);
+  f(`${BASE}/api/nomina/periodo/${anio}-${String(mes).padStart(2, '0')}`, { headers: h() }).then(json);
 
 export const getNominasPorEmpleado = (idEmpleado) =>
   f(`${BASE}/api/nomina/empleado/${idEmpleado}`, { headers: h() }).then(json);
@@ -286,6 +286,9 @@ export const getSolicitudesPorEstado = (estado) =>
 
 export const getSolicitudesPorEmpleado = (idEmpleado) =>
   f(`${BASE}/api/solicitud/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+export const getNotificacionesEmpleado = (idEmpleado) =>
+  f(`${BASE}/api/solicitud/notificaciones/${idEmpleado}`, { headers: h() }).then(json);
 
 // ── REPORTES ──────────────────────────────────────────────────────────────────
 // ECU-06: params = { tipo, formato, mes, anio, fechaInicio, fechaFin, estado, ... }
