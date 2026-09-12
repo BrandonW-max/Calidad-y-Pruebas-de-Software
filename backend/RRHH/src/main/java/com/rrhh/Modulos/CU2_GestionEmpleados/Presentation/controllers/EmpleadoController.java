@@ -161,7 +161,7 @@ public class EmpleadoController {
             return ResponseEntity.ok(Map.of("message", "Enlace enviado correctamente."));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                    .body(Map.of("message", "No se pudo enviar el correo."));
+                    .body(Map.of("message", "No se pudo enviar el correo: " + e.getMessage()));
         }
     }
 

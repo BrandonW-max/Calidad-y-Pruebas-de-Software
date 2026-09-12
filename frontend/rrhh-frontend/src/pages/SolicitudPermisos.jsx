@@ -186,14 +186,20 @@ function VistaEmpleado() {
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
                   <thead>
-                    <tr><th>#</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Estado</th><th>Observación</th></tr>
+                    <tr><th>#</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Estado</th><th>Respuesta</th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.length === 0 ? (
-                      <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
+                      <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
                     ) : solicitudes.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
+                      const respuestaVisible =
+                        (s.estado === "OBSERVADO" || s.estado === "OBSERVADA")
+                          ? s.observacionRrhh
+                          : (s.estado === "APROBADA" || s.estado === "APROBADO" || s.estado === "RECHAZADA" || s.estado === "RECHAZADO")
+                            ? s.respuesta
+                            : null;
                       return (
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
@@ -202,8 +208,9 @@ function VistaEmpleado() {
                           <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td>{s.fechaInicio ?? "—"}</td>
                           <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo ?? "—"}</td>
                           <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                          <td>{s.observacionRrhh ?? s.comentarioRRHH ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
+                          <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{respuestaVisible ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
                         </tr>
                       );
                     })}
@@ -294,21 +301,26 @@ function VistaRRHH() {
   const [procesando,       setProcesando]       = useState(false);
 
   // Derivado: solo las del filtro activo (para la tabla)
-  const solicitudes = todasSolicitudes.filter(s => s.estado === filtroEstado);
+  // "PENDIENTE" incluye también OBSERVADO (devueltas), que se revisan de nuevo
+  const solicitudes = todasSolicitudes.filter(s =>
+    filtroEstado === "PENDIENTE" ? (s.estado === "PENDIENTE" || s.estado === "OBSERVADO") : s.estado === filtroEstado
+  );
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
   async function cargarSolicitudes() {
     setLoading(true); setError("");
     try {
-      const [pend, enRev, apro, rech] = await Promise.all([
+      const [pend, obs, enRev, apro, rech] = await Promise.all([
         getSolicitudesPorEstado("PENDIENTE"),
+        getSolicitudesPorEstado("OBSERVADO"),
         getSolicitudesPorEstado("PROCESADO"),
         getSolicitudesPorEstado("APROBADA"),
         getSolicitudesPorEstado("RECHAZADA"),
       ]);
       setTodasSolicitudes([
         ...(Array.isArray(pend)  ? pend  : []),
+        ...(Array.isArray(obs)   ? obs   : []),
         ...(Array.isArray(enRev) ? enRev : []),
         ...(Array.isArray(apro)  ? apro  : []),
         ...(Array.isArray(rech)  ? rech  : []),
@@ -336,7 +348,7 @@ function VistaRRHH() {
   };
 
   const stats = [
-    { label: "Pendientes",  value: contarPorEstado("PENDIENTE"),  color: "#f59e0b" },
+    { label: "Pendientes",  value: contarPorEstado("PENDIENTE") + contarPorEstado("OBSERVADO"),  color: "#f59e0b" },
     { label: "En revisión", value: contarPorEstado("PROCESADO"),  color: "#3b82f6" },
     { label: "Aprobadas",   value: contarPorEstado("APROBADA"),   color: "#10b981" },
     { label: "Rechazadas",  value: contarPorEstado("RECHAZADA"),  color: "#ef4444" },
@@ -402,11 +414,11 @@ function VistaRRHH() {
             {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
               <table>
                 <thead>
-                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr>
+                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Estado</th>{filtroEstado !== "PROCESADO" && <th>Acciones</th>}</tr>
                 </thead>
                 <tbody>
                   {solicitudes.length === 0 ? (
-                    <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
+                    <tr><td colSpan={filtroEstado === "PROCESADO" ? 7 : 8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
                   ) : solicitudes.map((s, idx) => {
                     const id = s.idSolicitud ?? s.id;
                     const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
@@ -421,14 +433,16 @@ function VistaRRHH() {
                         <td>{s.fechaFin ?? "—"}</td>
                         <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
                         <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                        <td>
-                          {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
-                            <button className="btn btn-primary btn-sm"
-                              onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
-                              Revisar
-                            </button>
-                          )}
-                        </td>
+                        {filtroEstado !== "PROCESADO" && (
+                          <td>
+                            {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
+                              <button className="btn btn-primary btn-sm"
+                                onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
+                                Revisar
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -450,6 +464,12 @@ function VistaRRHH() {
               <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}>×</button>
             </div>
             <div className="modal-body">
+              <div className="form-group">
+                <label>Motivo del empleado</label>
+                <div style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, color: "var(--text-2)", whiteSpace: "pre-wrap" }}>
+                  {modalRevision.solicitud?.motivo ?? "—"}
+                </div>
+              </div>
               <div className="form-group">
                 <label>Decisión *</label>
                 <select value={modalRevision.decision}

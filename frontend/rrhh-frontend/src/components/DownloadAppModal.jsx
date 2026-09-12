@@ -5,6 +5,7 @@ export default function DownloadAppModal({ idEmpleado, username, onClose }) {
   const STORAGE_KEY = `mobileAppPrompt_${username}`;
   const [enviando, setEnviando] = useState(false);
   const [enviado,  setEnviado]  = useState(false);
+  const [error,    setError]    = useState("");
 
   const cerrar = () => {
     localStorage.setItem(STORAGE_KEY, '1');
@@ -13,14 +14,15 @@ export default function DownloadAppModal({ idEmpleado, username, onClose }) {
 
   const handleEnviar = async () => {
     setEnviando(true);
+    setError("");
     try {
       await enviarLinkApp(idEmpleado);
-    } catch {
-      /* cerrar igual aunque falle */
-    } finally {
-      setEnviando(false);
       setEnviado(true);
       setTimeout(cerrar, 1500);
+    } catch (err) {
+      setError(err?.message || "No se pudo enviar el correo.");
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -48,6 +50,9 @@ export default function DownloadAppModal({ idEmpleado, username, onClose }) {
           <p style={{ color: '#94a3b8', fontSize: 12, margin: '0 0 24px' }}>
             Te enviaremos el enlace de descarga a tu correo registrado.
           </p>
+          {error && (
+            <p style={{ color: '#ef4444', fontSize: 13, margin: '0 0 16px' }}>⚠️ {error}</p>
+          )}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
               onClick={cerrar}

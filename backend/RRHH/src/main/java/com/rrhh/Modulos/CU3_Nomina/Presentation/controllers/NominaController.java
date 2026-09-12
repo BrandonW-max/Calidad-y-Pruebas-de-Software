@@ -153,11 +153,6 @@ public class NominaController {
             var empleado = empleadoOpt.get();
             String correo = empleado.getCorreo() != null ? empleado.getCorreo() : "";
 
-            UsuarioGestion usuario = usuarioGestionRepository.findByEmpleadoId(nomina.getIdEmpleado());
-            if (usuario != null && usuario.getCorreoInst() != null && !usuario.getCorreoInst().isBlank()) {
-                correo = usuario.getCorreoInst();
-            }
-
             if (correo.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message",
                         "El empleado no tiene correo registrado."));

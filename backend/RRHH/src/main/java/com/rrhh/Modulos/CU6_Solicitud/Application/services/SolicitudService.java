@@ -108,6 +108,7 @@ public class SolicitudService implements ISolicitudService {
 
         if (request.isAprobado()) {
             solicitud.setEstado("PROCESADO");
+            solicitud.setObservacionRrhh(request.getObservacionRrhh());
         } else {
             if (request.getObservacionRrhh() == null || request.getObservacionRrhh().isBlank()) {
                 throw new IllegalArgumentException("Debe ingresar una observacion para devolver la solicitud.");
@@ -147,7 +148,11 @@ public class SolicitudService implements ISolicitudService {
 
         if (request.isAprobado()) {
             solicitud.setEstado("APROBADA");
-            solicitud.setRespuesta("Su solicitud de vacaciones o permisos ha sido aprobada por Gerencia.");
+            solicitud.setRespuesta(
+                (request.getRespuesta() != null && !request.getRespuesta().isBlank())
+                    ? request.getRespuesta()
+                    : "Su solicitud de vacaciones o permisos ha sido aprobada por Gerencia."
+            );
 
             // RNF86: Descontar saldo de vacaciones
             if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
