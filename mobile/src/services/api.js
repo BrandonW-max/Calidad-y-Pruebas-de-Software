@@ -20,14 +20,15 @@ const mensajeError = (data, fallback) => {
 
 export const getEstadoAsistenciaHoy = async (idEmpleado, deviceToken) => {
   const res = await fetch(
-    `${BASE_URL}/api/v1/asistencia/biometrico/estado/${idEmpleado}?deviceToken=${encodeURIComponent(deviceToken)}`
+    `${BASE_URL}/api/v1/asistencia/biometrico/estado/${idEmpleado}`,
+    { headers: { 'X-Device-Token': deviceToken } }
   );
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return res.json();
 };
 
 export const buscarEmpleadoPorDni = async (numeroDi) => {
-  const res = await fetch(`${BASE_URL}/api/dispositivos/dni/${numeroDi}`);
+  const res = await fetch(`${BASE_URL}/api/v1/dispositivos/dni/${numeroDi}`);
   if (res.status === 404) throw new Error('DNI no encontrado. Verifica tu número de documento.');
   if (res.status === 400) throw new Error('Empleado inactivo o desvinculado.');
   if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -35,7 +36,7 @@ export const buscarEmpleadoPorDni = async (numeroDi) => {
 };
 
 export const enviarOtp = async (numeroDi) => {
-  const res = await fetch(`${BASE_URL}/api/dispositivos/enviar-otp`, {
+  const res = await fetch(`${BASE_URL}/api/v1/dispositivos/enviar-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ numeroDi }),
@@ -46,7 +47,7 @@ export const enviarOtp = async (numeroDi) => {
 };
 
 export const registrarDispositivo = async (numeroDi, deviceToken, sessionId, codigo) => {
-  const res = await fetch(`${BASE_URL}/api/dispositivos/registrar`, {
+  const res = await fetch(`${BASE_URL}/api/v1/dispositivos/registrar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ numeroDi, deviceToken, sessionId, codigo }),

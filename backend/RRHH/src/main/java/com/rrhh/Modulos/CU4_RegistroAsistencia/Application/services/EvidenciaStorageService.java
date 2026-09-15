@@ -46,11 +46,19 @@ public class EvidenciaStorageService {
      * Sube el archivo y devuelve la URL pública de acceso.
      * En local → disco. En Azure → Blob Storage.
      */
+    private static final java.util.Set<String> EXTENSIONES_PERMITIDAS =
+            java.util.Set.of(".jpg", ".jpeg", ".png", ".pdf");
+
     public String guardar(MultipartFile file) throws IOException {
         String ext = "";
         String original = file.getOriginalFilename();
         if (original != null && original.contains(".")) {
-            ext = original.substring(original.lastIndexOf("."));
+            ext = original.substring(original.lastIndexOf("."))
+                    .toLowerCase()
+                    .replaceAll("[^a-z0-9.]", "");
+        }
+        if (!EXTENSIONES_PERMITIDAS.contains(ext)) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Use jpg, png o pdf.");
         }
         String filename = UUID.randomUUID() + ext;
 

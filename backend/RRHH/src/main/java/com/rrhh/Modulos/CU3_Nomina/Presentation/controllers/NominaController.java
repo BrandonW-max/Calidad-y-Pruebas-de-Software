@@ -14,9 +14,11 @@ import com.rrhh.Shared.security.AuthUtils;
 import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -49,34 +51,24 @@ public class NominaController {
 
     @PostMapping(NominaApiRoutes.CALCULAR)
     @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<?> calcularNomina(
-            @RequestBody CalcularNominaRequestDTO request,
+    public ResponseEntity<List<NominaResponseDTO>> calcularNomina(
+            @Valid @RequestBody CalcularNominaRequestDTO request,
             Authentication authentication) {
-        try {
-            Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
-            List<NominaResponseDTO> resultado = nominaService.calcularNomina(request, idUsuario);
-            return ResponseEntity.ok(resultado);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
+        List<NominaResponseDTO> resultado = nominaService.calcularNomina(request, idUsuario);
+        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping(NominaApiRoutes.BUSCAR_ID)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<?> buscarPorId(
+    public ResponseEntity<NominaResponseDTO> buscarPorId(
             @PathVariable Integer id,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        try {
-            NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
-            if (hayRol(user, "EMPLEADO") && !esPropia(nomina.getIdEmpleado(), user.getIdUsuario())) {
-                return ResponseEntity.status(403).body("No tiene permiso para ver esta nomina.");
-            }
-            return ResponseEntity.ok(nomina);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+        NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
+        if (hayRol(user, "EMPLEADO") && !esPropia(nomina.getIdEmpleado(), user.getIdUsuario())) {
+            throw new AccessDeniedException("No tiene permiso para ver esta nomina.");
         }
+        return ResponseEntity.ok(nomina);
     }
 
     @GetMapping(NominaApiRoutes.POR_PERIODO)
@@ -88,20 +80,20 @@ public class NominaController {
 
     @GetMapping(NominaApiRoutes.POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<?> buscarPorEmpleado(
+    public ResponseEntity<List<NominaResponseDTO>> buscarPorEmpleado(
             @PathVariable Long idEmpleado,
             @AuthenticationPrincipal AuthenticatedUser user) {
         if (hayRol(user, "EMPLEADO") && !esPropia(idEmpleado, user.getIdUsuario())) {
-            return ResponseEntity.status(403).body("No tiene permiso para ver nominas de otros empleados.");
+            throw new AccessDeniedException("No tiene permiso para ver nominas de otros empleados.");
         }
         return ResponseEntity.ok(nominaService.buscarPorEmpleado(idEmpleado));
     }
 
     @GetMapping(NominaApiRoutes.POR_NOMBRE)
     @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<?> buscarPorNombre(@RequestParam String nombre) {
+    public ResponseEntity<List<NominaResponseDTO>> buscarPorNombre(@RequestParam String nombre) {
         if (nombre == null || nombre.isBlank()) {
-            return ResponseEntity.badRequest().body("El parametro 'nombre' es obligatorio.");
+            throw new IllegalArgumentException("El parametro 'nombre' es obligatorio.");
         }
         List<NominaResponseDTO> resultados = nominaService.buscarPorNombreEmpleado(nombre);
         return ResponseEntity.ok(resultados);
@@ -109,12 +101,12 @@ public class NominaController {
 
     @GetMapping(NominaApiRoutes.BUSCAR_ID + "/comprobante")
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<?> descargarComprobante(
+    public ResponseEntity<byte[]> descargarComprobante(
             @PathVariable Integer id,
             @AuthenticationPrincipal AuthenticatedUser user) {
         NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
         if (hayRol(user, "EMPLEADO") && !esPropia(nomina.getIdEmpleado(), user.getIdUsuario())) {
-            return ResponseEntity.status(403).body("No tiene permiso para este comprobante.");
+            throw new AccessDeniedException("No tiene permiso para este comprobante.");
         }
         byte[] pdf = nominaService.generarComprobantePDF(id);
         return ResponseEntity.ok()
@@ -126,21 +118,17 @@ public class NominaController {
 
     @PutMapping(NominaApiRoutes.AJUSTAR)
     @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<?> ajustarNomina(
+    public ResponseEntity<NominaResponseDTO> ajustarNomina(
             @PathVariable Integer id,
-            @RequestBody AjustarNominaRequestDTO request,
+            @Valid @RequestBody AjustarNominaRequestDTO request,
             Authentication authentication) {
-        try {
-            Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
-            return ResponseEntity.ok(nominaService.ajustarNomina(id, request, idUsuario));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
+        return ResponseEntity.ok(nominaService.ajustarNomina(id, request, idUsuario));
     }
 
     @PostMapping(NominaApiRoutes.BUSCAR_ID + "/enviar")
     @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<?> enviarComprobanteEmail(@PathVariable Integer id) {
+    public ResponseEntity<Map<String, Object>> enviarComprobanteEmail(@PathVariable Integer id) {
         try {
             NominaResponseDTO nomina = nominaService.buscarNominaPorId(id);
             byte[] pdf = nominaService.generarComprobantePDF(id);

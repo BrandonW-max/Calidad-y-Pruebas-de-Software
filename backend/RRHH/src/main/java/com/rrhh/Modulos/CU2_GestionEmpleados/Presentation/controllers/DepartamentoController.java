@@ -2,6 +2,7 @@ package com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.controllers;
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.DepartamentoDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IDepartamentoRepository;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.routes.DepartamentoApiRoutes;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/departamentos")
+@RequestMapping(DepartamentoApiRoutes.BASE)
 public class DepartamentoController {
 
     private final IDepartamentoRepository departamentoRepository;
@@ -21,7 +22,7 @@ public class DepartamentoController {
         this.departamentoRepository = departamentoRepository;
     }
 
-    @GetMapping("/listar")
+    @GetMapping(DepartamentoApiRoutes.LISTAR)
     @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA')")
     public List<DepartamentoDTO> listar() {
         return departamentoRepository.findAll()

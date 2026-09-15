@@ -81,9 +81,13 @@ export default function RegistroScreen({ onRegistrado }) {
     }
     setCargando(true);
     try {
+      const randomBytes = await Crypto.getRandomBytesAsync(32);
+      const randomHex = Array.from(randomBytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
       const deviceToken = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        `${dni}-${Date.now()}-${Math.random()}`
+        `${dni}-${Date.now()}-${randomHex}`
       );
       const resp = await registrarDispositivo(dni.trim(), deviceToken, sessionId, codigo.trim());
 

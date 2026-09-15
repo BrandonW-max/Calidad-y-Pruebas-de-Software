@@ -40,7 +40,7 @@ public class SolicitudController {
     @PutMapping(SolicitudApiRoutes.REVISAR_RRHH)
     @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<?> revisarRrhh(
-            @RequestBody RevisionRrhhRequestDTO request,
+            @Valid @RequestBody RevisionRrhhRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user) {
         try {
             SolicitudResponseDTO response = solicitudService.revisarSolicitudRrhh(request, user.getIdUsuario());
@@ -53,7 +53,7 @@ public class SolicitudController {
     @PutMapping(SolicitudApiRoutes.DECIDIR_GERENCIA)
     @PreAuthorize("hasRole('GERENCIA')")
     public ResponseEntity<?> decidirGerencia(
-            @RequestBody DecisionGerenciaRequestDTO request,
+            @Valid @RequestBody DecisionGerenciaRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user) {
         try {
             SolicitudResponseDTO response = solicitudService.decidirSolicitudGerencia(request, user.getIdUsuario());

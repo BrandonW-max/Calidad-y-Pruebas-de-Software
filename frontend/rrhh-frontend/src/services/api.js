@@ -218,31 +218,31 @@ export const calcularNomina = (mes, anio) => {
   const ultimoDia = new Date(Number(anioStr), Number(mesStr), 0).getDate();
   const fechaInicio = `${anioStr}-${mesStr}-01`;
   const fechaFin = `${anioStr}-${mesStr}-${String(ultimoDia).padStart(2, '0')}`;
-  return f(`${BASE}/api/nomina/calcular`, {
+  return f(`${BASE}/api/v1/nomina/calcular`, {
     method: 'POST', headers: h(), body: JSON.stringify({ fechaInicio, fechaFin }),
   }).then(json);
 };
 
 // ECU-04: cargar nóminas de un período ya calculado
 export const getNominasPorPeriodo = (mes, anio) =>
-  f(`${BASE}/api/nomina/periodo/${anio}-${String(mes).padStart(2, '0')}`, { headers: h() }).then(json);
+  f(`${BASE}/api/v1/nomina/periodo/${anio}-${String(mes).padStart(2, '0')}`, { headers: h() }).then(json);
 
 export const getNominasPorEmpleado = (idEmpleado) =>
-  f(`${BASE}/api/nomina/empleado/${idEmpleado}`, { headers: h() }).then(json);
+  f(`${BASE}/api/v1/nomina/empleado/${idEmpleado}`, { headers: h() }).then(json);
 
 export const enviarComprobante = (id) =>
-  f(`${BASE}/api/nomina/${id}/enviar`, {
+  f(`${BASE}/api/v1/nomina/${id}/enviar`, {
     method: 'POST', headers: h(),
   }).then(json);
 
 export const ajustarNomina = (id, dto) =>
-  f(`${BASE}/api/nomina/${id}/ajustar`, {
+  f(`${BASE}/api/v1/nomina/${id}/ajustar`, {
     method: 'PUT', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 // Returns a Blob for PDF download
 export const descargarComprobante = (id) =>
-  f(`${BASE}/api/nomina/${id}/comprobante`, { headers: h() }).then(r => {
+  f(`${BASE}/api/v1/nomina/${id}/comprobante`, { headers: h() }).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.blob();
   });
@@ -255,13 +255,13 @@ export const enviarLinkApp = (idEmpleado) =>
 
 // ── SOLICITUDES ───────────────────────────────────────────────────────────────
 export const registrarSolicitud = (dto) =>
-  f(`${BASE}/api/solicitud/registrar`, {
+  f(`${BASE}/api/v1/solicitud/registrar`, {
     method: 'POST', headers: h(), body: JSON.stringify(dto),
   }).then(json);
 
 // ECU-05: RRHH revisa y envía a Gerencia (decision: "APROBAR" | "DEVOLVER")
 export const revisarSolicitudRRHH = (idSolicitud, { decision, comentario } = {}) =>
-  f(`${BASE}/api/solicitud/revisar`, {
+  f(`${BASE}/api/v1/solicitud/revisar`, {
     method: 'PUT', headers: h(),
     body: JSON.stringify({
       idSolicitud,
@@ -272,7 +272,7 @@ export const revisarSolicitudRRHH = (idSolicitud, { decision, comentario } = {})
 
 // ECU-05: Gerencia aprueba o rechaza (decision: "APROBAR" | "RECHAZAR")
 export const decidirSolicitudGerencia = (idSolicitud, { decision, comentario } = {}) =>
-  f(`${BASE}/api/solicitud/decidir`, {
+  f(`${BASE}/api/v1/solicitud/decidir`, {
     method: 'PUT', headers: h(),
     body: JSON.stringify({
       idSolicitud,
@@ -282,13 +282,13 @@ export const decidirSolicitudGerencia = (idSolicitud, { decision, comentario } =
   }).then(json);
 
 export const getSolicitudesPorEstado = (estado) =>
-  f(`${BASE}/api/solicitud/estado/${estado}`, { headers: h() }).then(json);
+  f(`${BASE}/api/v1/solicitud/estado/${estado}`, { headers: h() }).then(json);
 
 export const getSolicitudesPorEmpleado = (idEmpleado) =>
-  f(`${BASE}/api/solicitud/empleado/${idEmpleado}`, { headers: h() }).then(json);
+  f(`${BASE}/api/v1/solicitud/empleado/${idEmpleado}`, { headers: h() }).then(json);
 
 export const getNotificacionesEmpleado = (idEmpleado) =>
-  f(`${BASE}/api/solicitud/notificaciones/${idEmpleado}`, { headers: h() }).then(json);
+  f(`${BASE}/api/v1/solicitud/notificaciones/${idEmpleado}`, { headers: h() }).then(json);
 
 // ── REPORTES ──────────────────────────────────────────────────────────────────
 // ECU-06: params = { tipo, formato, mes, anio, fechaInicio, fechaFin, estado, ... }

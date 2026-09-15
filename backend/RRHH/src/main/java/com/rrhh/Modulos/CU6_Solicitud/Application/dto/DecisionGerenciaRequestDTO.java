@@ -1,7 +1,10 @@
 package com.rrhh.Modulos.CU6_Solicitud.Application.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class DecisionGerenciaRequestDTO {
 
+    @NotNull(message = "El id de la solicitud es obligatorio")
     private Integer idSolicitud;
     private boolean aprobado;
     private String respuesta;

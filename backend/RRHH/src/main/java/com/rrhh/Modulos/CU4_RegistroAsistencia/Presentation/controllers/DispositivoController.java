@@ -4,6 +4,7 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailServi
 import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.OtpService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Infrastructure.interfaces.JpaDispositivoEmpleadoRepository;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.routes.DispositivoApiRoutes;
 import com.rrhh.Shared.persistence.DispositivoEmpleadoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/dispositivos")
+@RequestMapping(DispositivoApiRoutes.BASE)
 public class DispositivoController {
 
     private final JpaDispositivoEmpleadoRepository dispositivoRepository;
@@ -32,7 +33,7 @@ public class DispositivoController {
     }
 
     /** Envía un código OTP al correo del empleado para verificar su identidad */
-    @PostMapping("/enviar-otp")
+    @PostMapping(DispositivoApiRoutes.ENVIAR_OTP)
     public ResponseEntity<Map<String, Object>> enviarOtp(@RequestBody Map<String, String> body) {
         String dni = body.get("numeroDi");
         if (dni == null || dni.isBlank()) {
@@ -40,7 +41,7 @@ public class DispositivoController {
         }
 
         EmpleadoModel emp = empleadoRepository.findByNumeroDi(dni)
-                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con DNI: " + dni));
+                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado con DNI: " + dni));
 
         if (!"ACTIVO".equals(emp.getEstado())) {
             return ResponseEntity.badRequest().body(Map.of("mensaje", "Empleado inactivo o desvinculado."));
@@ -57,7 +58,7 @@ public class DispositivoController {
     }
 
     /** Vincula o actualiza el celular de un empleado, previa verificación OTP */
-    @PostMapping("/registrar")
+    @PostMapping(DispositivoApiRoutes.REGISTRAR)
     public ResponseEntity<Map<String, Object>> registrar(@RequestBody Map<String, Object> body) {
         String token = body.get("deviceToken").toString();
         String sessionId = body.getOrDefault("sessionId", "").toString();
@@ -83,11 +84,11 @@ public class DispositivoController {
         if (body.containsKey("numeroDi")) {
             String dni = body.get("numeroDi").toString();
             emp = empleadoRepository.findByNumeroDi(dni)
-                    .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con DNI: " + dni));
+                    .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado con DNI: " + dni));
         } else {
             Long idEmpleado = Long.valueOf(body.get("idEmpleado").toString());
             emp = empleadoRepository.findById(java.util.Objects.requireNonNull(idEmpleado))
-                    .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
+                    .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado"));
         }
 
         if (!"ACTIVO".equals(emp.getEstado())) {
@@ -110,31 +111,16 @@ public class DispositivoController {
         ));
     }
 
-    /** Busca empleado por DNI — usado por la app móvil al registrarse */
-    @GetMapping("/dni/{numeroDi}")
+    /**
+     * Confirma que el DNI corresponde a un empleado activo, previo a enviar el OTP.
+     * No devuelve datos personales (nombre/apellido): la app no los usa en este paso
+     * y exponerlos permitiría enumerar empleados solo con el DNI.
+     */
+    @GetMapping(DispositivoApiRoutes.POR_DNI)
     public ResponseEntity<Map<String, Object>> getEmpleadoPorDni(@PathVariable String numeroDi) {
         Optional<EmpleadoModel> opt = empleadoRepository.findByNumeroDi(numeroDi);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
-        EmpleadoModel e = opt.get();
-        if (!"ACTIVO".equals(e.getEstado())) return ResponseEntity.badRequest().build();
-        return ResponseEntity.ok(Map.of(
-                "idEmpleado", e.getIdEmpleado(),
-                "nombres",    e.getNombres(),
-                "apellidos",  e.getApellidos()
-        ));
-    }
-
-    /** La app consulta datos del empleado para mostrar su nombre en la pantalla */
-    @GetMapping("/empleado/{idEmpleado}")
-    public ResponseEntity<Map<String, Object>> getEmpleado(@PathVariable Long idEmpleado) {
-        Optional<EmpleadoModel> opt = empleadoRepository.findById(java.util.Objects.requireNonNull(idEmpleado));
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
-        EmpleadoModel e = opt.get();
-        return ResponseEntity.ok(Map.of(
-                "idEmpleado", e.getIdEmpleado(),
-                "nombres",    e.getNombres(),
-                "apellidos",  e.getApellidos(),
-                "estado",     e.getEstado() != null ? e.getEstado() : "ACTIVO"
-        ));
+        if (!"ACTIVO".equals(opt.get().getEstado())) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(Map.of("existe", true));
     }
 }

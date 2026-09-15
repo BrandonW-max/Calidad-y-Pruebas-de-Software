@@ -164,7 +164,7 @@ public class AsistenciaService {
                 registro.setHoraSalida(request.getFechaHora().toLocalTime());
                 registro.setTipoUltimoRegistro("SALIDA");
                 if (registro.getHoraEntrada() != null) {
-                    long mins = Duration.between(registro.getHoraEntrada(), registro.getHoraSalida()).toMinutes();
+                    long mins = com.rrhh.Shared.util.TurnoUtils.minutosTrabajados(registro.getHoraEntrada(), registro.getHoraSalida());
                     registro.setHorasTrabajadas(BigDecimal.valueOf(mins)
                             .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
                 }
@@ -402,18 +402,14 @@ public class AsistenciaService {
     }
 
     private BigDecimal calcularHorasTrabajadas(LocalTime horaEntrada, LocalTime horaSalida) {
-        long minutos = Duration.between(horaEntrada, horaSalida).toMinutes();
-
-        if (minutos < 0) {
-            minutos = 0;
-        }
+        long minutos = com.rrhh.Shared.util.TurnoUtils.minutosTrabajados(horaEntrada, horaSalida);
 
         return BigDecimal.valueOf(minutos)
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
     private int calcularMinutosExtra(LocalTime horaEntrada, LocalTime horaSalida, int jornadaMinutos) {
-        long minutosTrabajados = Duration.between(horaEntrada, horaSalida).toMinutes();
+        long minutosTrabajados = com.rrhh.Shared.util.TurnoUtils.minutosTrabajados(horaEntrada, horaSalida);
 
         if (minutosTrabajados > jornadaMinutos) {
             return (int) (minutosTrabajados - jornadaMinutos);

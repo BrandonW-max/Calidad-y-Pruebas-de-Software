@@ -3,9 +3,12 @@ package com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.controllers;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.AsistenciaService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.EvidenciaStorageService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.JustificacionService;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.JustificacionResponseDTO;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaManualRequestDTO;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaRequestDTO;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.MarcarAsistenciaResponseDTO;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.RegistroAsistenciaResponseDTO;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.routes.AsistenciaApiRoutes;
 import com.rrhh.Shared.persistence.JustificacionTardanzaModel;
 import com.rrhh.config.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/v1/asistencia")
+@RequestMapping(AsistenciaApiRoutes.BASE)
 public class AsistenciaController {
 
     private final AsistenciaService asistenciaService;
@@ -50,7 +53,7 @@ public class AsistenciaController {
         this.storageService         = storageService;
     }
 
-    @PostMapping(value = "/upload-evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = AsistenciaApiRoutes.UPLOAD_EVIDENCIA, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<Map<String, String>> uploadEvidencia(
             @RequestParam("file") MultipartFile file) throws IOException {
@@ -58,7 +61,7 @@ public class AsistenciaController {
         return ResponseEntity.ok(Map.of("url", url));
     }
 
-    @PostMapping("/marcar")
+    @PostMapping(AsistenciaApiRoutes.MARCAR)
     public ResponseEntity<MarcarAsistenciaResponseDTO> marcarAsistencia(
             @RequestBody MarcarAsistenciaRequestDTO request,
             HttpServletRequest httpRequest) {
@@ -70,7 +73,7 @@ public class AsistenciaController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/justificar")
+    @PostMapping(AsistenciaApiRoutes.JUSTIFICAR)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH')")
     public ResponseEntity<?> justificarTardanza(
             @RequestBody Map<String, Object> body,
@@ -81,10 +84,10 @@ public class AsistenciaController {
         Long idEmpleado = Long.valueOf(Objects.requireNonNull(body.get("idEmpleado"), "idEmpleado es requerido").toString());
         validarEmpleadoPropio(user, idEmpleado);
         JustificacionTardanzaModel j = justificacionService.registrar(idRegistro.intValue(), idEmpleado, motivo, evidencia);
-        return ResponseEntity.ok(j);
+        return ResponseEntity.ok(JustificacionResponseDTO.from(j));
     }
 
-    @PutMapping("/justificar/{id}/revisar")
+    @PutMapping(AsistenciaApiRoutes.JUSTIFICAR_REVISAR)
     @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<?> revisarJustificacion(
             @PathVariable Long id,
@@ -93,19 +96,21 @@ public class AsistenciaController {
         String decision = Objects.requireNonNull(body.get("decision"), "decision es requerido").toString();
         String comentario = Objects.toString(body.get("comentario"), "");
         JustificacionTardanzaModel j = justificacionService.revisar(id, decision, user.getIdUsuario(), comentario);
-        return ResponseEntity.ok(j);
+        return ResponseEntity.ok(JustificacionResponseDTO.from(j));
     }
 
-    @GetMapping("/empleado/{idEmpleado}")
+    @GetMapping(AsistenciaApiRoutes.POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<List<RegistroAsistenciaModel>> listarPorEmpleado(
+    public ResponseEntity<List<RegistroAsistenciaResponseDTO>> listarPorEmpleado(
             @PathVariable Integer idEmpleado,
             @AuthenticationPrincipal AuthenticatedUser user) {
         validarEmpleadoPropio(user, idEmpleado.longValue());
-        return ResponseEntity.ok(asistenciaService.listarPorEmpleado(idEmpleado));
+        List<RegistroAsistenciaResponseDTO> registros = asistenciaService.listarPorEmpleado(idEmpleado)
+                .stream().map(RegistroAsistenciaResponseDTO::from).toList();
+        return ResponseEntity.ok(registros);
     }
 
-    @GetMapping("/horario/{idEmpleado}")
+    @GetMapping(AsistenciaApiRoutes.HORARIO_EMPLEADO)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<Map<String, Object>> getHorarioEmpleado(@PathVariable Integer idEmpleado) {
         Optional<HorarioModel> horarioOpt = asistenciaService.getHorarioEmpleado(idEmpleado);
@@ -126,22 +131,22 @@ public class AsistenciaController {
         ));
     }
 
-    @GetMapping("/hoy/{idEmpleado}")
+    @GetMapping(AsistenciaApiRoutes.HOY)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<RegistroAsistenciaModel> buscarHoy(
+    public ResponseEntity<RegistroAsistenciaResponseDTO> buscarHoy(
             @PathVariable Integer idEmpleado,
             @AuthenticationPrincipal AuthenticatedUser user) {
         validarEmpleadoPropio(user, idEmpleado.longValue());
         Optional<RegistroAsistenciaModel> registro = asistenciaService.buscarHoy(idEmpleado);
-        return registro.map(ResponseEntity::ok)
+        return registro.map(r -> ResponseEntity.ok(RegistroAsistenciaResponseDTO.from(r)))
                        .orElse(ResponseEntity.noContent().build());
     }
 
     /** Estado de asistencia de hoy para la app móvil (sin cookie de sesión) */
-    @GetMapping("/biometrico/estado/{idEmpleado}")
+    @GetMapping(AsistenciaApiRoutes.BIOMETRICO_ESTADO)
     public ResponseEntity<Map<String, Object>> estadoBiometrico(
             @PathVariable Long idEmpleado,
-            @RequestParam String deviceToken) {
+            @RequestHeader("X-Device-Token") String deviceToken) {
         boolean valido = dispositivoRepository.existsByEmpleadoIdEmpleadoAndDeviceToken(idEmpleado, deviceToken);
         if (!valido) return ResponseEntity.status(403).build();
 
@@ -158,7 +163,7 @@ public class AsistenciaController {
         return ResponseEntity.ok(estado);
     }
 
-    @PostMapping("/biometrico")
+    @PostMapping(AsistenciaApiRoutes.BIOMETRICO)
     public ResponseEntity<MarcarAsistenciaResponseDTO> marcarBiometrico(
             @RequestBody Map<String, Object> body,
             HttpServletRequest httpRequest) {
@@ -185,7 +190,7 @@ public class AsistenciaController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
-    @PostMapping("/manual")
+    @PostMapping(AsistenciaApiRoutes.MANUAL)
     @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<MarcarAsistenciaResponseDTO> registrarManual(
             @RequestBody MarcarAsistenciaManualRequestDTO request,
@@ -199,19 +204,23 @@ public class AsistenciaController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/justificaciones/pendientes")
+    @GetMapping(AsistenciaApiRoutes.JUSTIFICACIONES_PENDIENTES)
     @PreAuthorize("hasRole('RRHH')")
-    public ResponseEntity<List<JustificacionTardanzaModel>> listarPendientes() {
-        return ResponseEntity.ok(justificacionService.listarPendientes());
+    public ResponseEntity<List<JustificacionResponseDTO>> listarPendientes() {
+        List<JustificacionResponseDTO> justificaciones = justificacionService.listarPendientes()
+                .stream().map(JustificacionResponseDTO::from).toList();
+        return ResponseEntity.ok(justificaciones);
     }
 
-    @GetMapping("/justificaciones/empleado/{idEmpleado}")
+    @GetMapping(AsistenciaApiRoutes.JUSTIFICACIONES_POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH')")
-    public ResponseEntity<List<JustificacionTardanzaModel>> listarPorEmpleado(
+    public ResponseEntity<List<JustificacionResponseDTO>> listarPorEmpleado(
             @PathVariable Long idEmpleado,
             @AuthenticationPrincipal AuthenticatedUser user) {
         validarEmpleadoPropio(user, idEmpleado);
-        return ResponseEntity.ok(justificacionService.listarPorEmpleado(idEmpleado));
+        List<JustificacionResponseDTO> justificaciones = justificacionService.listarPorEmpleado(idEmpleado)
+                .stream().map(JustificacionResponseDTO::from).toList();
+        return ResponseEntity.ok(justificaciones);
     }
 
     private void validarEmpleadoPropio(AuthenticatedUser user, Long idEmpleado) {

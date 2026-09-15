@@ -35,7 +35,7 @@ public class HorarioService {
         HorarioModel model;
         if (horario.getIdHorario() != null) {
             model = em.find(HorarioModel.class, horario.getIdHorario());
-            if (model == null) throw new RuntimeException("Horario no encontrado");
+            if (model == null) throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Horario no encontrado");
         } else {
             model = new HorarioModel();
         }
@@ -71,8 +71,8 @@ public class HorarioService {
         EmpleadoModel empleadoModel = em.find(EmpleadoModel.class, idEmpleado);
         HorarioModel horarioModel   = em.find(HorarioModel.class, idHorario);
 
-        if (empleadoModel == null) throw new RuntimeException("Empleado no encontrado");
-        if (horarioModel  == null) throw new RuntimeException("Horario no encontrado");
+        if (empleadoModel == null) throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+        if (horarioModel  == null) throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Horario no encontrado");
 
         AsignacionHorarioModel asignacion = new AsignacionHorarioModel();
         asignacion.setEmpleado(empleadoModel);

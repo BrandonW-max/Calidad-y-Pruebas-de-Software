@@ -1,11 +1,16 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public class RegistrarAscensoRequestDTO {
 
+    @NotBlank(message = "El nuevo cargo es obligatorio")
     private String nuevoCargo;
+    @NotNull(message = "El departamento es obligatorio")
     private Integer nuevoIdDpto;
+    @NotNull(message = "La fecha de ascenso es obligatoria")
     private LocalDate fechaAscenso;
     private String motivo;
 

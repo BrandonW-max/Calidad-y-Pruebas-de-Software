@@ -90,7 +90,7 @@ public class RegistrarEmpleadoUseCase {
                 departamentoRepository.findById(dto.getIdDpto());
 
         if (departamento == null) {
-            throw new RuntimeException("Departamento no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento no encontrado");
         }
 
         Empleado empleado = new Empleado();
@@ -141,7 +141,7 @@ public class RegistrarEmpleadoUseCase {
                 rolRepository.findByNombreRol(nombreRol);
 
         if (rol == null) {
-            throw new RuntimeException("Rol no encontrado: " + nombreRol);
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Rol no encontrado: " + nombreRol);
         }
 
         String nombreUsuarioGenerado =

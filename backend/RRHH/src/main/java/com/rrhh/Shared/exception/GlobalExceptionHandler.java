@@ -28,38 +28,49 @@ public class GlobalExceptionHandler {
         );
 
         response.put("success", false);
+        response.put("error", "VALIDACION");
         response.put("message", "Error de validacion. Revise los campos obligatorios.");
         response.put("errors", errors);
 
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(RecursoNoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> handleRecursoNoEncontrado(RecursoNoEncontradoException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "RECURSO_NO_ENCONTRADO");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
-        return badRequest(ex.getMessage());
+        return badRequest("SOLICITUD_INVALIDA", ex.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
-        return badRequest(ex.getMessage());
+        return badRequest("ESTADO_INVALIDO", ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
+        response.put("error", "ACCESO_DENEGADO");
         response.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler({NullPointerException.class, NumberFormatException.class})
     public ResponseEntity<Map<String, Object>> handleBadInput(Exception ex) {
-        return badRequest("Datos de entrada invalidos o faltantes.");
+        return badRequest("DATOS_INVALIDOS", "Datos de entrada invalidos o faltantes.");
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException ex) {
-        return badRequest(ex.getMessage());
+        return badRequest("ERROR_DE_NEGOCIO", ex.getMessage());
     }
 
     @ExceptionHandler(SQLException.class)
@@ -67,6 +78,7 @@ public class GlobalExceptionHandler {
         log.error("Error de conexion con la base de datos", ex);
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
+        response.put("error", "ERROR_BASE_DE_DATOS");
         response.put("message", "Error de conexion con la base de datos. Intente mas tarde.");
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -76,13 +88,15 @@ public class GlobalExceptionHandler {
         log.error("Error interno del servidor", ex);
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
+        response.put("error", "ERROR_INTERNO");
         response.put("message", "Error interno del servidor");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
-    private ResponseEntity<Map<String, Object>> badRequest(String message) {
+    private ResponseEntity<Map<String, Object>> badRequest(String error, String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
+        response.put("error", error);
         response.put("message", message);
         return ResponseEntity.badRequest().body(response);
     }

@@ -24,7 +24,7 @@ public class JustificacionService {
                                                  String motivo, String evidenciaUrl) {
         RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, idRegistroAsistencia);
         if (r == null) {
-            throw new RuntimeException("Registro de asistencia no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Registro de asistencia no encontrado");
         }
 
         if (r.getEmpleado() == null || !idEmpleado.equals(r.getEmpleado().getIdEmpleado())) {
@@ -70,7 +70,7 @@ public class JustificacionService {
     public JustificacionTardanzaModel revisar(Long idJustificacion, String decision,
                                                 Long idRevisor, String comentario) {
         JustificacionTardanzaModel j = em.find(JustificacionTardanzaModel.class, idJustificacion);
-        if (j == null) throw new RuntimeException("Justificacion no encontrada");
+        if (j == null) throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Justificacion no encontrada");
 
         if (!"PENDIENTE".equals(j.getEstado())) {
             throw new RuntimeException("La justificacion ya fue revisada");

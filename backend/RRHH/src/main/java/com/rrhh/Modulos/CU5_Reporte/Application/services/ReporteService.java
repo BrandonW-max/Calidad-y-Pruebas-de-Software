@@ -246,18 +246,17 @@ public class ReporteService implements IReporteService {
 
         int size = datos.size();
 
-        String tabla = switch (tipoReporte) {
-            case "EMPLEADOS" -> "empleado";
-            case "ASISTENCIA" -> "registro_asistencia";
-            case "NOMINA" -> "nomina";
-            case "SOLICITUDES" -> "solicitud";
+        String query = switch (tipoReporte) {
+            case "EMPLEADOS" -> "SELECT COUNT(*) FROM empleado";
+            case "ASISTENCIA" -> "SELECT COUNT(*) FROM registro_asistencia";
+            case "NOMINA" -> "SELECT COUNT(*) FROM nomina";
+            case "SOLICITUDES" -> "SELECT COUNT(*) FROM solicitud";
             default -> null;
         };
 
-        if (tabla != null) {
+        if (query != null) {
             try {
-                Number dbCount = (Number) em.createNativeQuery(
-                        "SELECT COUNT(*) FROM " + tabla).getSingleResult();
+                Number dbCount = (Number) em.createNativeQuery(query).getSingleResult();
                 if (size > dbCount.intValue()) {
                     throw new IllegalStateException("Error de consistencia en reporte " + tipoReporte +
                             ": " + size + " registros reportados superan los " + dbCount.intValue() +

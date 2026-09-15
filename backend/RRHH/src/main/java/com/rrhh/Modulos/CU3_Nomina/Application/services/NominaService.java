@@ -315,9 +315,9 @@ public class NominaService implements INominaService {
     @Override
     public NominaResponseDTO buscarNominaPorId(Integer idNomina) {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
-            .orElseThrow(() -> new IllegalArgumentException("Nomina no encontrada con id: " + idNomina));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(nomina.getIdEmpleado()))
-            .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado."));
         return mapearAResponse(nomina, empleado);
     }
 
@@ -397,7 +397,7 @@ public class NominaService implements INominaService {
     @Transactional
     public NominaResponseDTO ajustarNomina(Integer idNomina, AjustarNominaRequestDTO request, Long idUsuarioRrhh) {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
-            .orElseThrow(() -> new IllegalArgumentException("Nomina no encontrada con id: " + idNomina));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
 
         BigDecimal sueldoBase = normalizar(request.getSueldoBase());
         if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
@@ -579,7 +579,7 @@ public class NominaService implements INominaService {
     private BigDecimal calcularTotalHorasTrabajadas(List<RegistroAsistenciaModel> registros) {
         return registros.stream()
             .map(r -> {
-                long minutos = java.time.Duration.between(r.getHoraEntrada(), r.getHoraSalida()).toMinutes();
+                long minutos = com.rrhh.Shared.util.TurnoUtils.minutosTrabajados(r.getHoraEntrada(), r.getHoraSalida());
                 return BigDecimal.valueOf(minutos)
                     .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP);
             })
@@ -600,7 +600,7 @@ public class NominaService implements INominaService {
             BigDecimal valorMinuto) {
 
         return registros.stream().map(r -> {
-            long minutosTrabajados = java.time.Duration.between(r.getHoraEntrada(), r.getHoraSalida()).toMinutes();
+            long minutosTrabajados = com.rrhh.Shared.util.TurnoUtils.minutosTrabajados(r.getHoraEntrada(), r.getHoraSalida());
             BigDecimal horasTrabajadas = BigDecimal.valueOf(minutosTrabajados)
                 .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP);
 
@@ -686,10 +686,12 @@ public class NominaService implements INominaService {
 
     private List<RegistroAsistenciaModel> filtrarRegistrosValidos(List<RegistroAsistenciaModel> registros) {
         Map<LocalDate, List<RegistroAsistenciaModel>> porFecha = registros.stream()
-                // Solo registros completos: ambas horas presentes y salida posterior a entrada
+                // Solo registros completos: ambas horas presentes.
+                // No se exige salida > entrada: los turnos nocturnos cruzan la
+                // medianoche (ej. 22:00 -> 06:00), donde eso seria falso.
                 .filter(r -> r.getHoraEntrada() != null
                         && r.getHoraSalida() != null
-                        && r.getHoraSalida().isAfter(r.getHoraEntrada()))
+                        && !r.getHoraSalida().equals(r.getHoraEntrada()))
                 .collect(Collectors.groupingBy(RegistroAsistenciaModel::getFecha));
         return porFecha.values().stream().flatMap(lista -> {
             boolean tieneCorreccion = lista.stream()

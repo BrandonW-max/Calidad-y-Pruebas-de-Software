@@ -1,7 +1,10 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class ReactivarEmpleadoRequestDTO {
 
+    @NotBlank(message = "El motivo es obligatorio")
     private String motivo;
 
     public ReactivarEmpleadoRequestDTO() {

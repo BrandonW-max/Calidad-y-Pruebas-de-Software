@@ -4,7 +4,7 @@ public class NominaApiRoutes {
 
     private NominaApiRoutes() {}
 
-    public static final String BASE = "/api/nomina";
+    public static final String BASE = "/api/v1/nomina";
 
     public static final String CALCULAR   = BASE + "/calcular";
     public static final String BUSCAR_ID  = BASE + "/{id}";

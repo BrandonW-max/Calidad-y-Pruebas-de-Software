@@ -49,7 +49,7 @@ public Usuario save(Usuario usuario) {
     if (usuario.getId() != null) {
 
         UsuarioModel model = jpaRepository.findById(Objects.requireNonNull(usuario.getId()))
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado"));
 
         model.setIntentosFallidos(usuario.getIntentosFallidos());
         model.setCuentaBloqueada(usuario.isCuentaBloqueada());

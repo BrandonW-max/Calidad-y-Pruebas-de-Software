@@ -48,7 +48,7 @@ public class CambioSalarialUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new RuntimeException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirCambioSalarial()) {

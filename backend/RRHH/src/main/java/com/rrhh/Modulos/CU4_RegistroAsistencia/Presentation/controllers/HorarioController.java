@@ -2,6 +2,7 @@ package com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.controllers;
 
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.HorarioService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Domain.entities.Horario;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.routes.HorarioApiRoutes;
 import com.rrhh.Shared.persistence.HorarioModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/horarios")
+@RequestMapping(HorarioApiRoutes.BASE)
 @PreAuthorize("hasRole('RRHH')")
 public class HorarioController {
 
@@ -27,7 +28,7 @@ public class HorarioController {
         return ResponseEntity.ok(horarioService.listar());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(HorarioApiRoutes.BUSCAR_ID)
     public ResponseEntity<HorarioModel> buscar(@PathVariable Integer id) {
         HorarioModel h = horarioService.buscarPorId(id);
         return h != null ? ResponseEntity.ok(h) : ResponseEntity.notFound().build();
@@ -38,20 +39,20 @@ public class HorarioController {
         return ResponseEntity.ok(horarioService.guardar(horario));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(HorarioApiRoutes.BUSCAR_ID)
     public ResponseEntity<HorarioModel> actualizar(@PathVariable Integer id, @RequestBody Horario horario) {
         horario.setIdHorario(id);
         return ResponseEntity.ok(horarioService.guardar(horario));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(HorarioApiRoutes.BUSCAR_ID)
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         horarioService.eliminar(id);
         return ResponseEntity.ok().build();
     }
 
     /** Asigna (o reasigna) un horario a un empleado. Desactiva la asignación anterior. */
-    @PostMapping("/asignar")
+    @PostMapping(HorarioApiRoutes.ASIGNAR)
     public ResponseEntity<?> asignarHorario(@RequestBody Map<String, Object> body) {
         Long      idEmpleado = ((Number) body.get("idEmpleado")).longValue();
         Integer   idHorario  = ((Number) body.get("idHorario")).intValue();
@@ -67,20 +68,20 @@ public class HorarioController {
     }
 
     /** Historial de asignaciones de horario de un empleado. */
-    @GetMapping("/asignaciones/empleado/{idEmpleado}")
+    @GetMapping(HorarioApiRoutes.ASIGNACIONES_POR_EMPLEADO)
     public ResponseEntity<List<Map<String, Object>>> asignacionesPorEmpleado(
             @PathVariable Long idEmpleado) {
         return ResponseEntity.ok(horarioService.listarAsignacionesPorEmpleado(idEmpleado));
     }
 
     /** Empleados asignados actualmente a un horario concreto. */
-    @GetMapping("/{id}/empleados")
+    @GetMapping(HorarioApiRoutes.EMPLEADOS_POR_HORARIO)
     public ResponseEntity<List<Map<String, Object>>> empleadosPorHorario(@PathVariable Integer id) {
         return ResponseEntity.ok(horarioService.getEmpleadosPorHorario(id));
     }
 
     /** Resumen de asignaciones activas (una por empleado) para poblar la tabla. */
-    @GetMapping("/asignaciones/activas")
+    @GetMapping(HorarioApiRoutes.ASIGNACIONES_ACTIVAS)
     public ResponseEntity<List<Map<String, Object>>> asignacionesActivas() {
         return ResponseEntity.ok(horarioService.getAsignacionesActivasResumen());
     }

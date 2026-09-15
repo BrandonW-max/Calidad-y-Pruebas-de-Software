@@ -1,11 +1,16 @@
 package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class CambioSalarialRequestDTO {
 
+    @NotNull(message = "El nuevo sueldo es obligatorio")
+    @DecimalMin(value = "0.0", inclusive = false, message = "El sueldo debe ser mayor a 0")
     private BigDecimal nuevoSueldo;
+    @NotNull(message = "La fecha de cambio es obligatoria")
     private LocalDate fechaCambio;
     private String motivo;
 

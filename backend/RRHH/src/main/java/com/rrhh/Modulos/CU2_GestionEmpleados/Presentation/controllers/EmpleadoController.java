@@ -103,7 +103,7 @@ public class EmpleadoController {
     @PreAuthorize("hasRole('RRHH')")
     public EmpleadoResponseDTO desactivarEmpleado(
             @PathVariable Long idEmpleado,
-            @RequestBody DesactivarEmpleadoRequestDTO dto
+            @Valid @RequestBody DesactivarEmpleadoRequestDTO dto
     ) {
         return empleadoService.desactivarEmpleado(idEmpleado, dto);
     }
@@ -121,7 +121,7 @@ public class EmpleadoController {
     @PreAuthorize("hasRole('RRHH')")
     public EmpleadoResponseDTO reactivarEmpleado(
             @PathVariable Long idEmpleado,
-            @RequestBody ReactivarEmpleadoRequestDTO dto
+            @Valid @RequestBody ReactivarEmpleadoRequestDTO dto
     ) {
         return empleadoService.reactivarEmpleado(idEmpleado, dto);
     }
@@ -130,7 +130,7 @@ public class EmpleadoController {
     @PreAuthorize("hasRole('RRHH')")
     public EmpleadoResponseDTO registrarAscenso(
             @PathVariable Long idEmpleado,
-            @RequestBody RegistrarAscensoRequestDTO dto
+            @Valid @RequestBody RegistrarAscensoRequestDTO dto
     ) {
         return empleadoService.registrarAscenso(idEmpleado, dto);
     }
@@ -139,16 +139,16 @@ public class EmpleadoController {
     @PreAuthorize("hasRole('RRHH')")
     public EmpleadoResponseDTO registrarCambioSalarial(
             @PathVariable Long idEmpleado,
-            @RequestBody CambioSalarialRequestDTO dto
+            @Valid @RequestBody CambioSalarialRequestDTO dto
     ) {
         return empleadoService.registrarCambioSalarial(idEmpleado, dto);
     }
 
-    @PostMapping("/{idEmpleado}/enviar-app")
+    @PostMapping(EmpleadoApiRoutes.ENVIAR_APP)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> enviarLinkApp(@PathVariable Long idEmpleado) {
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(java.util.Objects.requireNonNull(idEmpleado))
-                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
+                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado"));
         if (empleado.getCorreo() == null || empleado.getCorreo().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "El empleado no tiene correo registrado."));

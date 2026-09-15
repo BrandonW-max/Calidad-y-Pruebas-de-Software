@@ -57,7 +57,7 @@ public class RegistrarAscensoUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new RuntimeException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirAscenso()) {
@@ -107,7 +107,7 @@ public class RegistrarAscensoUseCase {
                     departamentoRepository.findById(dto.getNuevoIdDpto());
 
             if (departamentoNuevo == null) {
-                throw new RuntimeException("Departamento nuevo no encontrado");
+                throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento nuevo no encontrado");
             }
 
             contrato.cambiarDepartamento(
@@ -147,7 +147,7 @@ public class RegistrarAscensoUseCase {
                     rolRepository.findByNombreRol(nombreRolCalculado);
 
             if (rol == null) {
-                throw new RuntimeException("Rol no encontrado: " + nombreRolCalculado);
+                throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Rol no encontrado: " + nombreRolCalculado);
             }
 
             usuario.setIdRol(rol.getIdRol());

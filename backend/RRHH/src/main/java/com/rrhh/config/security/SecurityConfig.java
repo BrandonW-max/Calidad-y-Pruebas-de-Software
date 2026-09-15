@@ -31,6 +31,9 @@ public class SecurityConfig {
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:4200,http://localhost:80,http://localhost}")
+    private String corsAllowedOrigins;
+
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -62,7 +65,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password",
                                 "/uploads/**",
                                 // App móvil: autenticación propia por device_token
-                                "/api/dispositivos/**",
+                                "/api/v1/dispositivos/**",
                                 "/api/v1/asistencia/biometrico",
                                 "/api/v1/asistencia/biometrico/estado/**"
                         ).permitAll()
@@ -85,14 +88,17 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origenesPermitidos = new java.util.ArrayList<>();
+        origenesPermitidos.add(frontendUrl);
+        if (corsAllowedOrigins != null && !corsAllowedOrigins.isBlank()) {
+            Arrays.stream(corsAllowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(o -> !o.isBlank())
+                    .forEach(origenesPermitidos::add);
+        }
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                frontendUrl,
-                "http://localhost:5173",
-                "http://localhost:4200",
-                "http://localhost:80",
-                "http://localhost"
-        ));
+        configuration.setAllowedOrigins(origenesPermitidos);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

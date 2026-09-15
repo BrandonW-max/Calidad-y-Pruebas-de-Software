@@ -4,7 +4,7 @@ public class SolicitudApiRoutes {
 
     private SolicitudApiRoutes() {}
 
-    public static final String BASE             = "/api/solicitud";
+    public static final String BASE             = "/api/v1/solicitud";
     public static final String REGISTRAR        = BASE + "/registrar";
     public static final String REVISAR_RRHH     = BASE + "/revisar";
     public static final String DECIDIR_GERENCIA = BASE + "/decidir";

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rrhh.Shared.security.HashService;
 
@@ -43,6 +44,7 @@ public class AuthService implements IAuthService {
     }
 
     @Override
+    @Transactional
     public AuthResponseDTO login(LoginRequestDTO dto, String ip) {
 
         Usuario user =
@@ -319,7 +321,7 @@ public class AuthService implements IAuthService {
                 );
 
         if (user == null) {
-            throw new RuntimeException("Usuario no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado");
         }
 
         // =========================

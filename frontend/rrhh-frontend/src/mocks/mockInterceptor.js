@@ -255,7 +255,7 @@ window.fetch = async (url, opts = {}) => {
   }
 
   // ── NÓMINA ────────────────────────────────────────────────────
-  if (path === '/api/nomina/calcular' && method === 'POST')
+  if (path === '/api/v1/nomina/calcular' && method === 'POST')
     return jsonOk(NOMINAS_PERIODO);
 
   if (/^\/api\/nomina\/periodo\//.test(path))
@@ -277,9 +277,9 @@ window.fetch = async (url, opts = {}) => {
   }
 
   // ── SOLICITUDES ───────────────────────────────────────────────
-  if (path === '/api/solicitud/registrar')  return ok();
-  if (path === '/api/solicitud/revisar')    return ok();
-  if (path === '/api/solicitud/decidir')    return ok();
+  if (path === '/api/v1/solicitud/registrar')  return ok();
+  if (path === '/api/v1/solicitud/revisar')    return ok();
+  if (path === '/api/v1/solicitud/decidir')    return ok();
 
   if (/^\/api\/solicitud\/estado\/(.+)/.test(path)) {
     const estado = path.match(/\/estado\/(.+)/)[1];

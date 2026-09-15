@@ -62,7 +62,7 @@ public class SolicitudService implements ISolicitudService {
         int diasSolicitados = calcularDiasLaborables(request.getFechaInicio(), request.getFechaFin());
 
         UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
-            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
         EmpleadoModel empleado = usuario.getEmpleado();
         if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
         Long idEmpleado = empleado.getIdEmpleado();
@@ -100,7 +100,7 @@ public class SolicitudService implements ISolicitudService {
     public SolicitudResponseDTO revisarSolicitudRrhh(RevisionRrhhRequestDTO request, Long idUsuarioRrhh) {
 
         Solicitud solicitud = solicitudRepository.buscarPorId(request.getIdSolicitud())
-            .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
 
         if (!"PENDIENTE".equals(solicitud.getEstado()) && !"OBSERVADO".equals(solicitud.getEstado())) {
             throw new IllegalStateException("La solicitud no esta en estado valido para revision.");
@@ -140,7 +140,7 @@ public class SolicitudService implements ISolicitudService {
     public SolicitudResponseDTO decidirSolicitudGerencia(DecisionGerenciaRequestDTO request, Long idUsuarioGerencia) {
 
         Solicitud solicitud = solicitudRepository.buscarPorId(request.getIdSolicitud())
-            .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
 
         if (!"PROCESADO".equals(solicitud.getEstado())) {
             throw new IllegalStateException("La solicitud no esta en estado PROCESADO para decision de Gerencia.");
@@ -215,7 +215,7 @@ public class SolicitudService implements ISolicitudService {
     @Override
     public SolicitudResponseDTO buscarPorId(Integer idSolicitud) {
         Solicitud solicitud = solicitudRepository.buscarPorId(idSolicitud)
-            .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).orElse(null);
         return mapearAResponse(solicitud, empleado);
     }
@@ -224,10 +224,10 @@ public class SolicitudService implements ISolicitudService {
     @Transactional
     public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idUsuario) {
         Solicitud original = solicitudRepository.buscarPorId(idSolicitud)
-            .orElseThrow(() -> new IllegalArgumentException("Solicitud no encontrada."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
 
         UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
-            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
         EmpleadoModel empleado = usuario.getEmpleado();
         if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
         Long idEmpleado = empleado.getIdEmpleado();

@@ -456,8 +456,8 @@ function App() {
       <Route path="/gerencia/asistencia" element={<ProtectedRoute requiredRole="GERENCIA"><ControlAsistencia /></ProtectedRoute>} />
       <Route path="/gerencia/justificaciones" element={<ProtectedRoute requiredRole="GERENCIA"><GerenciaJustificaciones /></ProtectedRoute>} />
 
-      {/* DEV — ELIMINAR ANTES DE PRODUCCIÓN */}
-      <Route path="/dev" element={<DevLogin />} />
+      {/* DEV — excluido del build de producción por Vite (import.meta.env.DEV) */}
+      {import.meta.env.DEV && <Route path="/dev" element={<DevLogin />} />}
 
       {/* Catch-all: URL inexistente → autocorrector */}
       <Route path="*" element={<AutoRedirect />} />

@@ -17,4 +17,5 @@ public class EmpleadoApiRoutes {
     public static final String CAMBIO_SALARIAL = "/{idEmpleado}/cambio-salarial";
     public static final String BUSCAR_AVANZADO = "/buscar-avanzado";
     public static final String HISTORIAL = "/{idEmpleado}/historial";
+    public static final String ENVIAR_APP = "/{idEmpleado}/enviar-app";
 }
