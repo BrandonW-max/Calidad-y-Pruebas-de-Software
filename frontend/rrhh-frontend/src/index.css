@@ -1,14 +1,98 @@
-/* Base reset — pages import their own module CSS */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════
+   Design tokens — Sistema RRHH Hospital
+   Paleta clínica moderna: tinta profunda + teal señal + acentos
+   por rol. Base para el rediseño "glass bento" del panel.
+   ══════════════════════════════════════════════════════════ */
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* Neutrales */
+  --color-ink-950: #070c14;
+  --color-ink-900: #0b1220;
+  --color-ink-800: #131c2e;
+  --color-ink-700: #1e293b;
+  --color-ink-600: #334155;
+  --color-ink-500: #64748b;
+  --color-ink-400: #94a3b8;
+  --color-ink-300: #cbd5e1;
+  --color-ink-200: #e2e8f0;
+  --color-ink-100: #eef2f9;
+  --color-ink-50: #f6f8fc;
+
+  /* Marca / rol RRHH — indigo eléctrico */
+  --color-rrhh-950: #0e1a6b;
+  --color-rrhh-900: #14229c;
+  --color-rrhh-600: #2c43e8;
+  --color-rrhh-500: #4457ff;
+  --color-rrhh-400: #7c8bff;
+  --color-rrhh-100: #e7ebff;
+  --color-rrhh-50: #f2f4ff;
+
+  /* Rol Empleado — cian clínico */
+  --color-empleado-900: #0a3d4a;
+  --color-empleado-600: #0891b2;
+  --color-empleado-500: #06b6d4;
+  --color-empleado-100: #d9f7fc;
+
+  /* Rol Gerencia — violeta */
+  --color-gerencia-900: #3a1361;
+  --color-gerencia-600: #7c3aed;
+  --color-gerencia-500: #9155f5;
+  --color-gerencia-100: #f1e8ff;
+
+  /* Acento secundario — teal señal (para métricas/CTA) */
+  --color-signal-600: #0d9c8a;
+  --color-signal-500: #10b3a0;
+  --color-signal-100: #d8f7f1;
+
+  /* Semánticos */
+  --color-success-600: #16a34a;
+  --color-success-100: #dcfce7;
+  --color-warning-600: #d97706;
+  --color-warning-100: #fef3c7;
+  --color-danger-600: #e11d48;
+  --color-danger-100: #ffe4e9;
+
+  --shadow-glass-sm: 0 1px 2px rgba(11,17,32,0.04), 0 1px 1px rgba(11,17,32,0.03);
+  --shadow-glass-md: 0 8px 24px rgba(11,17,32,0.06), 0 2px 8px rgba(11,17,32,0.04);
+  --shadow-glass-lg: 0 20px 50px rgba(11,17,32,0.10), 0 8px 20px rgba(11,17,32,0.05);
+  --shadow-glow-rrhh: 0 10px 30px rgba(44,67,232,0.22);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
+
+/* ══════════════════════════════════════════════════════════
+   Esquinas rectas en toda la app — anula cualquier radio
+   (utilidades Tailwind rounded-*, CSS legado con border-radius,
+   o estilos inline) para un lenguaje visual geométrico y limpio.
+   ══════════════════════════════════════════════════════════ */
+*, *::before, *::after { border-radius: 0 !important; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-ink-100);
+  color: var(--color-ink-800);
 }
 
 #root {
   min-height: 100vh;
   width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
