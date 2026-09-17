@@ -3,7 +3,6 @@ package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -24,15 +23,21 @@ public class RegistrarEmpleadoRequestDTO {
     @Size(min = 8, max = 12, message = "El numero de documento debe tener entre 8 y 12 digitos")
     @Pattern(regexp = "\\d+", message = "El numero de documento debe ser numerico")
     private String numeroDi;
+
+    @NotNull(message = "La fecha de nacimiento es obligatoria")
     private LocalDate fechaNac;
+
+    @NotBlank(message = "El sexo es obligatorio")
     private String sexo;
+
     private String estadoCivil;
+
+    @NotBlank(message = "La direccion es obligatoria")
     private String direccion;
 
-    @Email(message = "El correo electronico no tiene un formato valido")
     private String correo;
-    private String telefono;
 
+    private String telefono;
 
     // DATOS LABORALES / CONTRATO
 
@@ -126,7 +131,7 @@ public class RegistrarEmpleadoRequestDTO {
     }
 
     public void setCorreo(String correo) {
-        this.correo = correo;
+        this.correo = (correo != null && correo.isBlank()) ? null : correo;
     }
 
     public String getTelefono() {

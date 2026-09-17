@@ -55,7 +55,7 @@ export default function QuickAccessCard({ to, icon: Icon, title, desc, tone = "b
     <Link
       to={to}
       className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white bg-white/85 p-6 shadow-glass-sm ring-1 ring-transparent backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-glass-lg ${t.ring} ${
-        large ? "lg:col-span-6 lg:min-h-[210px] lg:p-7" : "lg:col-span-4 lg:min-h-[210px]"
+        large ? "min-h-[240px] lg:p-7" : "min-h-[240px]"
       }`}
     >
       <div

@@ -16,8 +16,11 @@ const json = (r) => {
   }
   if (!r.ok) return r.text().then(text => {
     let msg = text;
-    try { const parsed = JSON.parse(text); msg = parsed?.message || parsed?.error || text; } catch {}
-    throw new Error(msg || `HTTP ${r.status}`);
+    let errObj = null;
+    try { errObj = JSON.parse(text); msg = errObj?.message || errObj?.error || text; } catch {}
+    const err = new Error(msg || `HTTP ${r.status}`);
+    if (errObj) { err.errors = errObj.errors; err.errorCode = errObj.error; }
+    throw err;
   });
   return r.json();
 };

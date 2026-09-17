@@ -197,6 +197,8 @@ body { background: var(--bg); color: var(--text); }
   padding: 24px 28px;
   flex: 1;
   min-height: 100vh;
+  width: calc(100vw - var(--sidebar-w));
+  overflow-x: hidden;
 }
 
 /* ══ PAGE HEADER ══ */

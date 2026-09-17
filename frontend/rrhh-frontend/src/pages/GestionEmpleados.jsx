@@ -197,9 +197,12 @@ export default function GestionEmpleados() {
       setForm(FORM_VACIO);
       setModalNuevo(false);
       cargarEmpleados();
-    } catch {
+    } catch (err) {
       setMensajeOk(false);
-      setMensaje("Error al registrar empleado. Verifique los datos.");
+      const msg = err?.errors
+        ? Object.entries(err.errors).map(([k, v]) => `${k}: ${v}`).join(" | ")
+        : err?.message || "Error al registrar empleado. Verifique los datos.";
+      setMensaje(msg);
     }
   };
 
