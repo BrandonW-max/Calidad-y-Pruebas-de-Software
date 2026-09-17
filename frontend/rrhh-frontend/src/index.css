@@ -66,11 +66,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 /* ══════════════════════════════════════════════════════════
-   Esquinas rectas en toda la app — anula cualquier radio
-   (utilidades Tailwind rounded-*, CSS legado con border-radius,
-   o estilos inline) para un lenguaje visual geométrico y limpio.
+   Esquinas redondeadas habilitadas para diseño glass bento.
    ══════════════════════════════════════════════════════════ */
-*, *::before, *::after { border-radius: 0 !important; }
 
 html { -webkit-text-size-adjust: 100%; }
 
