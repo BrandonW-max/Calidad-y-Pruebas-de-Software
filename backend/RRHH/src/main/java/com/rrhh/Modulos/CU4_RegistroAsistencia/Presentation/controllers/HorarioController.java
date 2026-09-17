@@ -1,14 +1,16 @@
 package com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.controllers;
 
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.AsignarHorarioRequestDTO;
+import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.dto.HorarioRequestDTO;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Application.services.HorarioService;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Domain.entities.Horario;
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.routes.HorarioApiRoutes;
 import com.rrhh.Shared.persistence.HorarioModel;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -35,14 +37,23 @@ public class HorarioController {
     }
 
     @PostMapping
-    public ResponseEntity<HorarioModel> guardar(@RequestBody Horario horario) {
-        return ResponseEntity.ok(horarioService.guardar(horario));
+    public ResponseEntity<HorarioModel> guardar(@Valid @RequestBody HorarioRequestDTO dto) {
+        return ResponseEntity.ok(horarioService.guardar(aHorario(null, dto)));
     }
 
     @PutMapping(HorarioApiRoutes.BUSCAR_ID)
-    public ResponseEntity<HorarioModel> actualizar(@PathVariable Integer id, @RequestBody Horario horario) {
+    public ResponseEntity<HorarioModel> actualizar(@PathVariable Integer id, @Valid @RequestBody HorarioRequestDTO dto) {
+        return ResponseEntity.ok(horarioService.guardar(aHorario(id, dto)));
+    }
+
+    private Horario aHorario(Integer id, HorarioRequestDTO dto) {
+        Horario horario = new Horario();
         horario.setIdHorario(id);
-        return ResponseEntity.ok(horarioService.guardar(horario));
+        horario.setNombreTurno(dto.getNombreTurno());
+        horario.setHoraEntrada(dto.getHoraEntrada());
+        horario.setHoraSalida(dto.getHoraSalida());
+        horario.setTolerancia(dto.getTolerancia());
+        return horario;
     }
 
     @DeleteMapping(HorarioApiRoutes.BUSCAR_ID)
@@ -53,18 +64,10 @@ public class HorarioController {
 
     /** Asigna (o reasigna) un horario a un empleado. Desactiva la asignación anterior. */
     @PostMapping(HorarioApiRoutes.ASIGNAR)
-    public ResponseEntity<?> asignarHorario(@RequestBody Map<String, Object> body) {
-        Long      idEmpleado = ((Number) body.get("idEmpleado")).longValue();
-        Integer   idHorario  = ((Number) body.get("idHorario")).intValue();
-        LocalDate fechaDesde = body.get("fechaDesde") != null
-                ? LocalDate.parse((String) body.get("fechaDesde")) : LocalDate.now();
-        LocalDate fechaHasta = body.get("fechaHasta") != null
-                ? LocalDate.parse((String) body.get("fechaHasta")) : null;
-        Boolean esTemporal   = body.get("esTemporal") instanceof Boolean
-                ? (Boolean) body.get("esTemporal") : false;
-
-        return ResponseEntity.ok(
-                horarioService.asignarHorario(idEmpleado, idHorario, fechaDesde, fechaHasta, esTemporal));
+    public ResponseEntity<Map<String, Object>> asignarHorario(@Valid @RequestBody AsignarHorarioRequestDTO dto) {
+        java.time.LocalDate fechaDesde = dto.getFechaDesde() != null ? dto.getFechaDesde() : java.time.LocalDate.now();
+        return ResponseEntity.ok(horarioService.asignarHorario(
+                dto.getIdEmpleado(), dto.getIdHorario(), fechaDesde, dto.getFechaHasta(), dto.getEsTemporal()));
     }
 
     /** Historial de asignaciones de horario de un empleado. */

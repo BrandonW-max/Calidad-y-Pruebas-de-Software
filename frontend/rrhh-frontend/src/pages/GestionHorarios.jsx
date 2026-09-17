@@ -195,8 +195,8 @@ export default function GestionHorarios() {
         </header>
 
         {mensaje && (
-          <div className={`alert ${mensajeOk ? "alert-success" : "alert-warning"}`}
-            style={{ cursor: "pointer" }} onClick={() => setMensaje("")}>
+          <div className={`alert alert-floating ${mensajeOk ? "alert-success" : "alert-warning"}`}
+            onClick={() => setMensaje("")}>
             {mensajeOk ? "✅" : "⚠️"} {mensaje}
           </div>
         )}

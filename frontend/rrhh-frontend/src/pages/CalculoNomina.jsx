@@ -317,8 +317,8 @@ export default function CalculoNomina() {
               );
             })()}
 
-            {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-            {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+            {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
+            {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
             <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)", display: "flex", alignItems: "center", gap: 12 }}>

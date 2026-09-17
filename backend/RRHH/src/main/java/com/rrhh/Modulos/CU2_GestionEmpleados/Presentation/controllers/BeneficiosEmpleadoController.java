@@ -4,6 +4,7 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.FamiliarRequestDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.PerfilNominaRequestDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.services.BeneficiosEmpleadoService;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Presentation.routes.BeneficiosApiRoutes;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -27,17 +28,17 @@ public class BeneficiosEmpleadoController {
     }
 
     @PutMapping
-    public Map<String, Object> guardarPerfil(@PathVariable Long idEmpleado, @RequestBody PerfilNominaRequestDTO dto) {
+    public Map<String, Object> guardarPerfil(@PathVariable Long idEmpleado, @Valid @RequestBody PerfilNominaRequestDTO dto) {
         return beneficiosEmpleadoService.guardarPerfil(idEmpleado, dto);
     }
 
     @PostMapping(BeneficiosApiRoutes.FAMILIARES)
-    public Map<String, Object> agregarFamiliar(@PathVariable Long idEmpleado, @RequestBody FamiliarRequestDTO dto) {
+    public Map<String, Object> agregarFamiliar(@PathVariable Long idEmpleado, @Valid @RequestBody FamiliarRequestDTO dto) {
         return beneficiosEmpleadoService.agregarFamiliar(idEmpleado, dto);
     }
 
     @PutMapping(BeneficiosApiRoutes.FAMILIAR_POR_ID)
-    public Map<String, Object> actualizarFamiliar(@PathVariable Long idEmpleado, @PathVariable Integer idFamiliar, @RequestBody FamiliarRequestDTO dto) {
+    public Map<String, Object> actualizarFamiliar(@PathVariable Long idEmpleado, @PathVariable Integer idFamiliar, @Valid @RequestBody FamiliarRequestDTO dto) {
         return beneficiosEmpleadoService.actualizarFamiliar(idEmpleado, idFamiliar, dto);
     }
 

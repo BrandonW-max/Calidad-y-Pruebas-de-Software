@@ -1,0 +1,74 @@
+- generic [ref=f2e4]:
+  - generic [ref=f2e5]:
+    - generic [ref=f2e6]: ⚠️
+    - generic [ref=f2e7]:
+      - strong [ref=f2e8]: ARCHIVO DE PRUEBA — ELIMINAR ANTES DE PRODUCCIÓN
+      - paragraph [ref=f2e9]:
+        - text: Esta página simula una sesión con tokens placeholder. No hay autenticación real. Elimina
+        - code [ref=f2e10]: DevLogin.jsx
+        - text: y su ruta
+        - code [ref=f2e11]: /dev
+        - text: en
+        - code [ref=f2e12]: App.jsx
+        - text: antes de desplegar.
+  - heading "Usuarios de Prueba" [level=1] [ref=f2e13]
+  - paragraph [ref=f2e14]: Selecciona un rol para ingresar directamente al panel correspondiente (sin 2FA ni backend).
+  - generic [ref=f2e15]:
+    - generic [ref=f2e16]:
+      - generic [ref=f2e17]: 👔
+      - generic [ref=f2e18]:
+        - generic [ref=f2e19]: RRHH
+        - generic [ref=f2e20]:
+          - text: "Usuario:"
+          - code [ref=f2e21]: rrhh_test
+        - generic [ref=f2e22]:
+          - text: "ID Empleado:"
+          - code [ref=f2e23]: "null"
+      - paragraph [ref=f2e24]: "Acceso completo: empleados, asistencia, nómina, solicitudes, reportes."
+      - button "Acceder como RRHH" [ref=f2e25] [cursor=pointer]
+    - generic [ref=f2e26]:
+      - generic [ref=f2e27]: 👤
+      - generic [ref=f2e28]:
+        - generic [ref=f2e29]: EMPLEADO
+        - generic [ref=f2e30]:
+          - text: "Usuario:"
+          - code [ref=f2e31]: empleado_test
+        - generic [ref=f2e32]:
+          - text: "ID Empleado:"
+          - code [ref=f2e33]: "1"
+      - paragraph [ref=f2e34]: "Acceso: mi asistencia, mis solicitudes, mi nómina."
+      - button "Acceder como Empleado" [ref=f2e35] [cursor=pointer]
+    - generic [ref=f2e36]:
+      - generic [ref=f2e37]: 🏛️
+      - generic [ref=f2e38]:
+        - generic [ref=f2e39]: GERENCIA
+        - generic [ref=f2e40]:
+          - text: "Usuario:"
+          - code [ref=f2e41]: gerencia_test
+        - generic [ref=f2e42]:
+          - text: "ID Empleado:"
+          - code [ref=f2e43]: "null"
+      - paragraph [ref=f2e44]: "Acceso: aprobación final de solicitudes de permisos."
+      - button "Acceder como Gerencia" [ref=f2e45] [cursor=pointer]
+  - generic [ref=f2e46]:
+    - generic [ref=f2e47]:
+      - strong [ref=f2e48]: ✅ Datos de prueba ACTIVOS
+      - paragraph [ref=f2e49]: El interceptor mockea todas las llamadas al backend con datos falsos.
+    - button "Desactivar mock" [ref=f2e50] [cursor=pointer]
+  - generic [ref=f2e51]:
+    - strong [ref=f2e52]: "Tokens placeholder usados:"
+    - list [ref=f2e53]:
+      - listitem [ref=f2e54]:
+        - text: RRHH →
+        - code [ref=f2e55]: placeholder-token-rrhh
+      - listitem [ref=f2e56]:
+        - text: EMPLEADO →
+        - code [ref=f2e57]: placeholder-token-empleado
+        - text: "(idEmpleado: 1)"
+      - listitem [ref=f2e58]:
+        - text: GERENCIA →
+        - code [ref=f2e59]: placeholder-token-gerencia
+  - paragraph [ref=f2e60]:
+    - text: "Para volver aquí:"
+    - code [ref=f2e61]: /dev
+    - text: "· Para cerrar sesión: usa el botón dentro del panel."

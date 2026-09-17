@@ -564,6 +564,21 @@ table tr:hover td { background: #f8fafc; }
 .alert-warning { background: var(--color-warning-100); color: #7c4a03; border-left-color: var(--warning); }
 .alert-danger  { background: var(--color-danger-100); color: #881337; border-left-color: var(--danger); }
 
+/* Aviso flotante: se ve por encima de cualquier modal abierto (z-index mayor al de .modal-overlay).
+   !important porque varias páginas tienen reglas "<page> > *" que fuerzan position/z-index
+   en todos los hijos directos con la misma especificidad. */
+.alert-floating {
+  position: fixed !important;
+  top: 24px !important;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000 !important;
+  width: calc(100% - 48px);
+  max-width: 520px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  cursor: pointer;
+}
+
 /* ══ DIVIDER ══ */
 .divider { border: none; border-top: 2px solid #f1f5f9; margin: 20px 0; }
 

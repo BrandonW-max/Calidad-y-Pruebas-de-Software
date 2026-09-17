@@ -1,0 +1,52 @@
+- generic [ref=f5e62]:
+  - complementary [ref=f5e63]:
+    - generic [ref=f5e64]:
+      - img "Logo Hospital" [ref=f5e66]
+      - generic [ref=f5e67]:
+        - heading "Mi Portal" [level=2] [ref=f5e68]
+        - paragraph [ref=f5e69]: Portal del Empleado
+    - navigation [ref=f5e70]:
+      - link "Inicio" [ref=f5e71] [cursor=pointer]:
+        - /url: /empleado
+      - link "Mi Asistencia" [ref=f5e77] [cursor=pointer]:
+        - /url: /empleado/asistencia
+      - link "Mis Solicitudes" [ref=f5e82] [cursor=pointer]:
+        - /url: /empleado/solicitudes
+      - link "Mi Nómina" [ref=f5e86] [cursor=pointer]:
+        - /url: /empleado/nomina
+      - button "Cerrar Sesión" [ref=f5e92] [cursor=pointer]
+  - main [ref=f5e97]:
+    - generic [ref=f5e98]:
+      - generic [ref=f5e99]:
+        - paragraph [ref=f5e100]: Mi Portal
+        - heading "Bienvenido, empleado_test" [level=1] [ref=f5e102]
+      - generic [ref=f5e103]: Empleado
+    - region "Resumen de asistencia y solicitudes" [ref=f5e109]:
+      - article [ref=f5e110]:
+        - heading "Mi Asistencia Hoy" [level=3] [ref=f5e116]
+        - generic [ref=f5e117]:
+          - generic [ref=f5e118]:
+            - paragraph [ref=f5e119]: Entrada
+            - paragraph [ref=f5e120]: 01:10 p. m.
+            - generic [ref=f5e121]: A tiempo
+          - generic [ref=f5e125]:
+            - paragraph [ref=f5e126]: Salida
+            - paragraph [ref=f5e127]: —:—
+            - paragraph [ref=f5e128]: Jornada en curso
+      - article [ref=f5e129]:
+        - heading "Solicitudes Pendientes" [level=3] [ref=f5e135]
+        - generic [ref=f5e136]: ··· pendientes
+      - article [ref=f5e142]:
+        - heading "Vacaciones Disponibles" [level=3] [ref=f5e150]
+        - generic [ref=f5e151]: Días disponibles
+    - region "Accesos directos" [ref=f5e159]:
+      - heading "Accesos Directos" [level=2] [ref=f5e160]
+      - generic [ref=f5e161]:
+        - link "Registrar Asistencia" [ref=f5e162] [cursor=pointer]:
+          - /url: /empleado/asistencia
+        - link "Solicitar Permiso" [ref=f5e168] [cursor=pointer]:
+          - /url: /empleado/solicitudes
+        - link "Mi Nómina" [ref=f5e174] [cursor=pointer]:
+          - /url: /empleado/nomina
+        - link "Ver Notificaciones" [ref=f5e180] [cursor=pointer]:
+          - /url: /empleado/solicitudes

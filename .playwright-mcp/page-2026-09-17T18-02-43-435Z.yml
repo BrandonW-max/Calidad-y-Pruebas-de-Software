@@ -1,0 +1,78 @@
+- generic [ref=f1e62]:
+  - complementary [ref=f1e63]:
+    - generic [ref=f1e64]:
+      - img "Logo Hospital" [ref=f1e66]
+      - generic [ref=f1e67]:
+        - heading "Panel RRHH" [level=2] [ref=f1e68]
+        - paragraph [ref=f1e69]: Recursos Humanos
+    - navigation [ref=f1e70]:
+      - link "Inicio" [ref=f1e71] [cursor=pointer]:
+        - /url: /rrhh
+      - button "Gestión de Empleados" [ref=f1e78] [cursor=pointer]
+      - link "Control de Asistencia" [ref=f1e87] [cursor=pointer]:
+        - /url: /rrhh/asistencia
+      - link "Cálculo de Nómina" [ref=f1e92] [cursor=pointer]:
+        - /url: /rrhh/nomina
+      - link "Solicitudes" [ref=f1e97] [cursor=pointer]:
+        - /url: /rrhh/solicitudes
+      - link "Reportes" [ref=f1e101] [cursor=pointer]:
+        - /url: /rrhh/reportes
+      - button "Cerrar Sesión" [ref=f1e106] [cursor=pointer]
+  - main [ref=f1e111]:
+    - generic [ref=f1e112]:
+      - generic [ref=f1e113]:
+        - paragraph [ref=f1e114]: Panel Principal
+        - heading "Bienvenido, RRHH" [level=1] [ref=f1e116]
+      - generic [ref=f1e117]: Recursos Humanos
+    - region "Resumen de Recursos Humanos" [ref=f1e118]:
+      - article [ref=f1e119]:
+        - generic [ref=f1e126]:
+          - strong [ref=f1e127]: "-"
+          - generic [ref=f1e128]: Empleados Activos
+      - article [ref=f1e129]:
+        - generic [ref=f1e135]:
+          - strong [ref=f1e136]: "-"
+          - generic [ref=f1e137]: Solicitudes Pendientes
+      - article [ref=f1e138]:
+        - generic [ref=f1e147]:
+          - strong [ref=f1e148]: "-"
+          - generic [ref=f1e149]: Tardanzas / Justif. Pendientes
+      - article [ref=f1e150]:
+        - generic [ref=f1e154]:
+          - strong [ref=f1e155]: "-"
+          - generic [ref=f1e156]: En Revisión (Gerencia)
+    - region "Accesos rápidos de Recursos Humanos" [ref=f1e157]:
+      - link [ref=f1e158] [cursor=pointer]:
+        - /url: /rrhh/empleados
+        - generic [ref=f1e159]:
+          - heading "Gestión de Empleados" [level=3] [ref=f1e165]
+          - paragraph [ref=f1e166]: Registrar, editar y administrar la información completa del personal hospitalario.
+        - generic [ref=f1e167]: Acceder al módulo
+      - link [ref=f1e171] [cursor=pointer]:
+        - /url: /rrhh/asistencia
+        - generic [ref=f1e172]:
+          - heading "Control de Asistencia" [level=3] [ref=f1e177]
+          - paragraph [ref=f1e178]: Supervisar registros biométricos, correcciones de turno y justificaciones de asistencia.
+        - generic [ref=f1e179]: Acceder al módulo
+      - link [ref=f1e183] [cursor=pointer]:
+        - /url: /rrhh/nomina
+        - generic [ref=f1e184]:
+          - heading "Cálculo de Nómina" [level=3] [ref=f1e189]
+          - paragraph [ref=f1e190]: Procesar y detallar pagos del personal.
+        - generic [ref=f1e191]: Acceder al módulo
+      - link [ref=f1e195] [cursor=pointer]:
+        - /url: /rrhh/solicitudes
+        - generic [ref=f1e196]:
+          - heading "Solicitudes" [level=3] [ref=f1e200]
+          - paragraph [ref=f1e201]: Validar permisos y vacaciones.
+        - generic [ref=f1e202]: Acceder al módulo
+      - link [ref=f1e206] [cursor=pointer]:
+        - /url: /rrhh/reportes
+        - generic [ref=f1e207]:
+          - heading "Reportes" [level=3] [ref=f1e211]
+          - paragraph [ref=f1e212]: Generar y exportar reportes del sistema.
+        - generic [ref=f1e213]: Acceder al módulo
+    - complementary [ref=f1e217]:
+      - paragraph [ref=f1e229]:
+        - strong [ref=f1e230]: "Recuerde:"
+        - text: el registro de asistencia biométrica se realiza directamente desde el dispositivo lector de huella dactilar.

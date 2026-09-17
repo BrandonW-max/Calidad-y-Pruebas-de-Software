@@ -1,0 +1,96 @@
+- generic [ref=f1e231]:
+  - complementary [ref=f1e232]:
+    - generic [ref=f1e233]:
+      - img "Logo Hospital" [ref=f1e235]
+      - generic [ref=f1e236]:
+        - heading "Panel RRHH" [level=2] [ref=f1e237]
+        - paragraph [ref=f1e238]: Recursos Humanos
+    - navigation [ref=f1e239]:
+      - link "Inicio" [ref=f1e240] [cursor=pointer]:
+        - /url: /rrhh
+      - button "Gestión de Empleados" [ref=f1e246] [cursor=pointer]
+      - link "Control de Asistencia" [ref=f1e255] [cursor=pointer]:
+        - /url: /rrhh/asistencia
+      - link "Cálculo de Nómina" [ref=f1e260] [cursor=pointer]:
+        - /url: /rrhh/nomina
+      - link "Solicitudes" [ref=f1e266] [cursor=pointer]:
+        - /url: /rrhh/solicitudes
+      - link "Reportes" [ref=f1e270] [cursor=pointer]:
+        - /url: /rrhh/reportes
+      - button "Cerrar Sesión" [ref=f1e275] [cursor=pointer]
+  - main [ref=f1e280]:
+    - generic [ref=f1e282]:
+      - generic [ref=f1e283]: RRHH / Cálculo de Nómina
+      - heading "Cálculo de Nómina" [level=1] [ref=f1e284]
+      - paragraph [ref=f1e285]: Gestiona los pagos mensuales y descuentos de los empleados.
+    - generic [ref=f1e286]:
+      - generic [ref=f1e287]:
+        - generic [ref=f1e340] [cursor=pointer]: ⚠️ Error al calcular la nómina. Verifique el período.
+        - generic [ref=f1e288]:
+          - generic [ref=f1e289]:
+            - generic [ref=f1e290]: 📅
+            - generic [ref=f1e291]:
+              - heading "Configuración del Período" [level=2] [ref=f1e292]
+              - paragraph [ref=f1e293]: Seleccione el mes y año para calcular la nómina
+          - generic [ref=f1e294]:
+            - generic [ref=f1e295]:
+              - generic [ref=f1e296]:
+                - generic [ref=f1e297]: Mes
+                - combobox [ref=f1e298]:
+                  - option "Enero"
+                  - option "Febrero"
+                  - option "Marzo"
+                  - option "Abril"
+                  - option "Mayo"
+                  - option "Junio"
+                  - option "Julio"
+                  - option "Agosto"
+                  - option "Septiembre" [selected]
+                  - option "Octubre" [disabled]
+                  - option "Noviembre" [disabled]
+                  - option "Diciembre" [disabled]
+              - generic [ref=f1e299]:
+                - generic [ref=f1e300]: Año
+                - combobox [ref=f1e301]:
+                  - option "2025"
+                  - option "2026" [selected]
+                  - option "2027" [disabled]
+            - generic [ref=f1e302]:
+              - generic [ref=f1e303]: 📆
+              - generic [ref=f1e304]:
+                - generic [ref=f1e305]: Período seleccionado
+                - generic [ref=f1e306]: Septiembre 2026
+          - generic [ref=f1e307]:
+            - generic [ref=f1e308]: 📊
+            - generic [ref=f1e309]: Mes en curso — puede calcular nómina provisional sin límite.
+          - generic [ref=f1e310]:
+            - button "⚙️ Calcular Nómina" [ref=f1e311] [cursor=pointer]
+            - button "📋 Sin datos aún" [disabled] [ref=f1e312]
+        - generic [ref=f1e314]:
+          - generic [ref=f1e315]: 📊
+          - paragraph [ref=f1e316]: Seleccione un período y calcule o cargue la nómina para ver los resultados.
+      - generic [ref=f1e317]:
+        - generic [ref=f1e318]:
+          - heading "Estado del Período" [level=2] [ref=f1e319]
+          - generic [ref=f1e320]:
+            - generic [ref=f1e321]: "Período actual:"
+            - strong [ref=f1e322]: Septiembre 2026
+          - generic [ref=f1e323]:
+            - generic [ref=f1e324]: "Total empleados:"
+            - strong [ref=f1e325]: —
+          - generic [ref=f1e326]:
+            - generic [ref=f1e327]: "Total neto a pagar:"
+            - strong [ref=f1e328]: —
+          - generic [ref=f1e329]:
+            - generic [ref=f1e330]: "Estado:"
+            - generic [ref=f1e331]: Pendiente
+        - generic [ref=f1e332]:
+          - heading "Guía Rápida" [level=2] [ref=f1e333]
+          - list [ref=f1e334]:
+            - listitem [ref=f1e335]: Seleccione mes y año del período.
+            - listitem [ref=f1e336]:
+              - text: Presione
+              - strong [ref=f1e337]: Calcular Nómina
+              - text: para procesar.
+            - listitem [ref=f1e338]: Revise los resultados en la tabla.
+            - listitem [ref=f1e339]: Descargue o envíe comprobantes individualmente.

@@ -362,11 +362,12 @@ export default function GestionEmpleados() {
         </header>
 
         {mensaje && (
-          <div className={`alert ${mensajeOk ? "alert-success" : "alert-warning"}`}>
+          <div className={`alert alert-floating ${mensajeOk ? "alert-success" : "alert-warning"}`}
+            onClick={() => setMensaje("")}>
             {mensajeOk ? "✅" : "⚠️"} {mensaje}
           </div>
         )}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
         {/* ── FILTER ROW ── */}
         <div className="filter-row empleados-filters">

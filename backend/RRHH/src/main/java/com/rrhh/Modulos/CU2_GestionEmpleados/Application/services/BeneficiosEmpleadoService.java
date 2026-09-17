@@ -63,9 +63,6 @@ public class BeneficiosEmpleadoService {
     public Map<String, Object> agregarFamiliar(Long idEmpleado, FamiliarRequestDTO dto) {
         EmpleadoModel empleado = empleados.findById(Objects.requireNonNull(idEmpleado))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Empleado no encontrado"));
-        if (dto.nombres == null || dto.nombres.isBlank() || dto.fechaNacimiento == null) {
-            throw new IllegalArgumentException("Nombres y fecha de nacimiento son requeridos");
-        }
         FamiliaInfoModel f = new FamiliaInfoModel();
         aplicarFamiliar(f, dto);
         f.setEmpleado(empleado);
