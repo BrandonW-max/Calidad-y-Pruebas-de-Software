@@ -1,19 +1,9 @@
 {
   "properties": [
     {
-      "name": "azure.storage.connection-string",
-      "type": "java.lang.String",
-      "description": "Connection string de Azure Blob Storage. Vacío en local → usa disco. En producción poner la cadena real de Azure."
-    },
-    {
-      "name": "azure.storage.container-name",
-      "type": "java.lang.String",
-      "description": "Nombre del contenedor en Azure Blob Storage donde se guardan las evidencias."
-    },
-    {
       "name": "app.frontend-url",
       "type": "java.lang.String",
-      "description": "URL del frontend (usado en CORS). En prod: URL de Azure Static Web Apps."
+      "description": "URL del frontend (usado en CORS)."
     },
     {
       "name": "app.upload-dir",
@@ -28,7 +18,7 @@
     {
       "name": "cookie.same-site",
       "type": "java.lang.String",
-      "description": "Política SameSite de la cookie JWT. Usar 'None' en prod (cross-site Azure), 'Lax' en local."
+      "description": "Política SameSite de la cookie JWT. Usar 'None' en prod (cross-site), 'Lax' en local."
     },
     {
       "name": "sistema.nombre-empresa",
