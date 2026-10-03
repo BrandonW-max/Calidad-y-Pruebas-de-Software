@@ -201,6 +201,12 @@ body { background: var(--bg); color: var(--text); }
   overflow-x: hidden;
 }
 
+@media (min-width: 1024px) {
+  .lg-ml-sidebar {
+    margin-left: var(--sidebar-w) !important;
+  }
+}
+
 /* ══ PAGE HEADER ══ */
 .main-header {
   display: flex;
