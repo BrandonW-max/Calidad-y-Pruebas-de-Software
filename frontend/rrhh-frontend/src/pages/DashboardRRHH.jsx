@@ -76,7 +76,7 @@ export default function DashboardRRHH() {
     <DashboardLayout rol="RRHH">
       <DashboardHero nombre="RRHH" rol="Panel Principal" badge="Recursos Humanos" theme="rrhh" />
 
-      <section aria-label="Resumen de Recursos Humanos" className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label="Resumen de Recursos Humanos" className="mb-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {metricas.map(item => (
           <MetricCard key={item.key} value={item.value} label={item.label} icon={item.icon} tone={item.tone} />
         ))}

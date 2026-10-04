@@ -36,16 +36,16 @@ export default function DashboardHero({ nombre, rol, badge, theme = "rrhh" }) {
         style={{ clipPath: "polygon(28% 0, 100% 0, 100% 100%, 0 100%)" }}
         aria-hidden="true"
       />
-      <div className="relative z-10">
+      <div className="relative z-10 min-w-0 flex-1">
         <p className={`mb-2 inline-flex items-center gap-2 text-[12px] font-extrabold tracking-[0.16em] uppercase ${t.text}`}>
           <span className={`h-[3px] w-8 rounded-full ${t.line}`} />
           {rol}
         </p>
-        <h1 className="font-[var(--font-display)] text-4xl font-extrabold leading-[1.05] text-ink-900 sm:text-[44px]">
+        <h1 className="break-words font-[var(--font-display)] text-4xl font-extrabold leading-[1.05] text-ink-900 sm:text-[44px]">
           Bienvenido, {nombre}
         </h1>
       </div>
-      <div className="relative z-10 flex items-center gap-3">
+      <div className="relative z-10 flex shrink-0 items-center gap-3">
         <span className={`inline-flex h-9 items-center rounded-full border ${t.badgeBorder} ${t.badgeBg} px-5 text-[12px] font-extrabold uppercase tracking-wide ${t.badgeText}`}>
           {badge}
         </span>

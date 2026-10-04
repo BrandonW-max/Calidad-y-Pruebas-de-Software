@@ -1,12 +1,11 @@
 import Sidebar from "./Sidebar";
+import "../styles/Dashboard.css";
 
 export default function DashboardLayout({ rol, children }) {
   return (
-    <div className="min-h-screen bg-ink-100">
+    <div className="dashboard">
       <Sidebar rol={rol} />
-      <main className="min-h-screen px-5 pb-7 pt-20 sm:px-6 lg-ml-sidebar lg:px-9 lg:py-9 lg:pt-9 overflow-x-hidden">
-        {children}
-      </main>
+      <main className="main-content">{children}</main>
     </div>
   );
 }
