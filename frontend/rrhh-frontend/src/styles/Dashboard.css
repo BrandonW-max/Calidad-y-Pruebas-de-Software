@@ -192,17 +192,31 @@ body { background: var(--bg); color: var(--text); }
 
 /* ══ MAIN CONTENT ══ */
 .main-content {
-  margin-left: var(--sidebar-w);
-  padding: 24px 28px;
+  margin-left: 0;
+  padding: 76px 16px 24px;
   flex: 1;
   min-height: 100vh;
-  width: calc(100vw - var(--sidebar-w));
+  width: 100%;
   overflow-x: hidden;
 }
 
 @media (min-width: 1024px) {
+  .main-content {
+    margin-left: var(--sidebar-w);
+    padding: 24px 28px;
+    width: calc(100vw - var(--sidebar-w));
+  }
+
   .lg-ml-sidebar {
     margin-left: var(--sidebar-w) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .main-content.empleados-home,
+  .main-content.horarios-home,
+  .main-content.rrhh-home {
+    padding: 76px 16px 24px;
   }
 }
 
