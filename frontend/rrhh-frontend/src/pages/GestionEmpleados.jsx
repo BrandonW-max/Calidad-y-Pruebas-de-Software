@@ -435,10 +435,10 @@ export default function GestionEmpleados() {
               <table className="table-empleados">
                 <thead>
                   <tr>
-                    <th>Nombre Completo</th>
+                    <th style={{ textAlign: "center" }}>Nombre Completo</th>
                     <th style={{ textAlign: "center" }}>Tipo Doc / DNI</th>
-                    <th>Departamento</th>
-                    <th>Cargo</th>
+                    <th style={{ textAlign: "center" }}>Departamento</th>
+                    <th style={{ textAlign: "center" }}>Cargo</th>
                     <th style={{ textAlign: "center" }}>Turno</th>
                     <th style={{ textAlign: "center" }}>Estado</th>
                     <th style={{ textAlign: "center" }}>Acciones</th>
@@ -459,12 +459,12 @@ export default function GestionEmpleados() {
                     );
                     return visibles.map(emp => (
                     <tr key={emp.idEmpleado}>
-                      <td data-label="Nombre Completo">{emp.nombres} {emp.apellidos}</td>
-                      <td data-label="Tipo Doc / DNI" style={{ color: "var(--text-2)" }}>
+                      <td data-label="Nombre Completo" style={{ textAlign: "center" }}>{emp.nombres} {emp.apellidos}</td>
+                      <td data-label="Tipo Doc / DNI" style={{ textAlign: "center", color: "var(--text-2)" }}>
                         {emp.docIdentidad ?? "DNI"} · {emp.numeroDi}
                       </td>
-                      <td>{emp.departamento ?? "—"}</td>
-                      <td>{emp.cargo ?? "—"}</td>
+                      <td style={{ textAlign: "center" }}>{emp.departamento ?? "—"}</td>
+                      <td style={{ textAlign: "center" }}>{emp.cargo ?? "—"}</td>
                       <td data-label="Turno" style={{ textAlign: "center" }}>
                         {turnosMap[emp.idEmpleado] ? (
                           <span style={{
@@ -482,12 +482,12 @@ export default function GestionEmpleados() {
                           <span style={{ color: "var(--text-3)", fontSize: 12 }}>—</span>
                         )}
                       </td>
-                      <td data-label="Estado">
+                      <td data-label="Estado" style={{ textAlign: "center" }}>
                         <span className={`emp-status-dot ${emp.estado === "ACTIVO" ? "emp-status-active" : "emp-status-inactive"}`}>
                           {emp.estado === "ACTIVO" ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td data-label="Acciones">
+                      <td data-label="Acciones" style={{ textAlign: "center" }}>
                         <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                           <button className="btn btn-secondary btn-sm"
                             onClick={() => setModalEditar({ ...emp })}>
@@ -1028,10 +1028,10 @@ export default function GestionEmpleados() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Turno</th>
-                        <th>Horario</th>
-                        <th>Desde</th>
-                        <th>Hasta</th>
+                        <th style={{ textAlign: "center" }}>Turno</th>
+                        <th style={{ textAlign: "center" }}>Horario</th>
+                        <th style={{ textAlign: "center" }}>Desde</th>
+                        <th style={{ textAlign: "center" }}>Hasta</th>
                         <th style={{ textAlign: "center" }}>Temporal</th>
                         <th style={{ textAlign: "center" }}>Estado</th>
                       </tr>
@@ -1039,12 +1039,12 @@ export default function GestionEmpleados() {
                     <tbody>
                       {modalHorario.asignaciones.map(a => (
                         <tr key={a.idAsignacion}>
-                          <td style={{ fontWeight: 600 }}>{a.nombreTurno}</td>
-                          <td style={{ fontSize: 12, color: "var(--text-2)" }}>
+                          <td style={{ textAlign: "center", fontWeight: 600 }}>{a.nombreTurno}</td>
+                          <td style={{ textAlign: "center", fontSize: 12, color: "var(--text-2)" }}>
                             {a.horaEntrada?.slice(0,5)} – {a.horaSalida?.slice(0,5)}
                           </td>
-                          <td style={{ fontSize: 12 }}>{a.fechaDesde ?? "—"}</td>
-                          <td style={{ fontSize: 12 }}>{a.fechaHasta ?? "Indefinido"}</td>
+                          <td style={{ textAlign: "center", fontSize: 12 }}>{a.fechaDesde ?? "—"}</td>
+                          <td style={{ textAlign: "center", fontSize: 12 }}>{a.fechaHasta ?? "Indefinido"}</td>
                           <td style={{ textAlign: "center", fontSize: 12 }}>{a.esTemporal ? "Sí" : "No"}</td>
                           <td style={{ textAlign: "center" }}>
                             <span className={`emp-status-dot ${a.activo ? "emp-status-active" : "emp-status-inactive"}`}>
@@ -1097,21 +1097,21 @@ export default function GestionEmpleados() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Fecha</th>
-                        <th>Acción</th>
-                        <th>Valor Anterior</th>
-                        <th>Valor Nuevo</th>
+                        <th style={{ textAlign: "center" }}>Fecha</th>
+                        <th style={{ textAlign: "center" }}>Acción</th>
+                        <th style={{ textAlign: "center" }}>Valor Anterior</th>
+                        <th style={{ textAlign: "center" }}>Valor Nuevo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {historialData.map((h, i) => (
                         <tr key={h.idAuditoria ?? i}>
-                          <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--text-3)" }}>
+                          <td style={{ textAlign: "center", whiteSpace: "nowrap", fontSize: 12, color: "var(--text-3)" }}>
                             {h.fechaDeCambio
                               ? new Date(h.fechaDeCambio).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })
                               : "—"}
                           </td>
-                          <td>
+                          <td style={{ textAlign: "center" }}>
                             <span className={`badge ${
                               h.accion?.includes("CREAR") ? "badge-success" :
                               h.accion?.includes("DESACTIVAR") ? "badge-danger" :
