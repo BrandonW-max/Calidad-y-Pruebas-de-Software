@@ -293,7 +293,7 @@ public class NominaService implements INominaService {
                 detalles.forEach(d -> d.setIdNomina(nominaGuardada.getIdNomina()));
                 detalleNominaRepository.guardarTodos(detalles);
 
-                resultados.add(mapearAResponse(nominaGuardada, empleado));
+                resultados.add(mapearAResponse(nominaGuardada, empleado, contrato.getSueldo()));
             }
 
             Historial log = new Historial(idUsuarioRrhh, "CALCULO_NOMINA", "127.0.0.1");
@@ -351,18 +351,30 @@ public class NominaService implements INominaService {
             .stream()
             .collect(Collectors.toMap(EmpleadoModel::getIdEmpleado, e -> e));
 
+        // Pre-cargar contratos activos en una sola query para evitar N+1
+        Map<Long, BigDecimal> sueldoContratoPorEmpleado = ids.isEmpty() ? Map.of() :
+            jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(ids, "ACTIVO")
+            .stream()
+            .collect(Collectors.toMap(
+                c -> c.getEmpleado().getIdEmpleado(),
+                ContratoModel::getSueldo,
+                (c1, c2) -> c1
+            ));
+
         return deduplicadas.stream()
-            .map(n -> mapearAResponse(n, empleadosPorId.get(n.getIdEmpleado())))
+            .map(n -> mapearAResponse(n, empleadosPorId.get(n.getIdEmpleado()),
+                sueldoContratoPorEmpleado.get(n.getIdEmpleado())))
             .collect(Collectors.toList());
     }
 
     @Override
     public List<NominaResponseDTO> buscarPorEmpleado(Long idEmpleado) {
+        EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
+        BigDecimal sueldoContrato = jpaContratoRepository
+            .findFirstByEmpleadoIdEmpleadoAndEstado(idEmpleado, "ACTIVO")
+            .map(ContratoModel::getSueldo).orElse(null);
         return nominaRepository.buscarPorEmpleadoYPeriodo(idEmpleado, null).stream()
-            .map(n -> {
-                EmpleadoModel emp = jpaEmpleadoRepository.findById(Objects.requireNonNull(idEmpleado)).orElse(null);
-                return mapearAResponse(n, emp);
-            })
+            .map(n -> mapearAResponse(n, emp, sueldoContrato))
             .collect(Collectors.toList());
     }
 
@@ -382,13 +394,23 @@ public class NominaService implements INominaService {
 
         if (idsEmpleados.isEmpty()) return List.of();
 
+        // Pre-cargar contratos activos en bulk
+        Map<Long, BigDecimal> sueldoContratoPorEmpleado =
+            jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(idsEmpleados, "ACTIVO")
+            .stream()
+            .collect(Collectors.toMap(
+                c -> c.getEmpleado().getIdEmpleado(),
+                ContratoModel::getSueldo,
+                (c1, c2) -> c1
+            ));
+
         return nominaRepository.buscarPorNombreEmpleado(nombre).stream()
             .filter(n -> idsEmpleados.contains(n.getIdEmpleado()))
             .map(n -> {
                 EmpleadoModel emp = empleadosCoincidentes.stream()
                     .filter(e -> e.getIdEmpleado().equals(n.getIdEmpleado()))
                     .findFirst().orElse(null);
-                return mapearAResponse(n, emp);
+                return mapearAResponse(n, emp, sueldoContratoPorEmpleado.get(n.getIdEmpleado()));
             })
             .collect(Collectors.toList());
     }
@@ -498,7 +520,7 @@ public class NominaService implements INominaService {
 
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(guardada.getIdEmpleado()))
             .orElse(null);
-        return mapearAResponse(guardada, empleado);
+        return mapearAResponse(guardada, empleado, sueldoBase);
     }
 
     public byte[] generarComprobantePDF(Integer idNomina) {
@@ -630,6 +652,14 @@ public class NominaService implements INominaService {
     }
 
     private NominaResponseDTO mapearAResponse(Nomina nomina, EmpleadoModel empleado) {
+        BigDecimal sueldoContrato = jpaContratoRepository
+            .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
+            .map(ContratoModel::getSueldo)
+            .orElse(null);
+        return mapearAResponse(nomina, empleado, sueldoContrato);
+    }
+
+    private NominaResponseDTO mapearAResponse(Nomina nomina, EmpleadoModel empleado, BigDecimal sueldoContrato) {
         NominaResponseDTO dto = new NominaResponseDTO();
         dto.setIdNomina(nomina.getIdNomina());
         dto.setPeriodo(nomina.getPeriodo());
@@ -641,6 +671,7 @@ public class NominaService implements INominaService {
             dto.setNombreEmpleado(empleado.getNombres() + " " + empleado.getApellidos());
         }
         dto.setSueldoBase(nomina.getSueldoBase());
+        dto.setSueldoContrato(sueldoContrato);
         dto.setTotalHorasTrabajadas(nomina.getTotalHorasTrabajadas());
         dto.setTotalHorasExtra(nomina.getTotalHorasExtra());
         dto.setTotalMinutosTardanza(nomina.getTotalMinutosTardanza());

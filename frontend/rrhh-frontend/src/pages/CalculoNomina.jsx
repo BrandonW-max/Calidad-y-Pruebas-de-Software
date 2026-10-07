@@ -44,7 +44,6 @@ export default function CalculoNomina() {
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const [previewNomina, setPreviewNomina] = useState(null);
   const [modalEstructura, setModalEstructura] = useState(null);
-  const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [datosBase, setDatosBase] = useState({
     sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0,
     horasNocturnas: 0, minutosLate: 0, tieneHijos: false,
@@ -99,7 +98,6 @@ export default function CalculoNomina() {
     setPeriodoCalculado(false);
     setMensaje("");
     setError("");
-    setSelectedEmpleado(null);
   };
 
   const verificarPeriodo = useCallback(async (m, a) => {
@@ -219,7 +217,6 @@ export default function CalculoNomina() {
       return Array.isArray(prev) ? nuevaLista : nuevaLista[0];
     });
     setModalEstructura(actualizada);
-    setSelectedEmpleado(actualizada);
   };
 
   const handleGuardarAjuste = async (calculos) => {
@@ -268,7 +265,7 @@ export default function CalculoNomina() {
     : [];
 
   const totalNeto  = resultList.reduce((sum, n) => sum + Number(n.sueldoNeto ?? 0), 0);
-  const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoBruto ?? n.sueldoBase ?? 0), 0);
+  const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoContrato ?? n.sueldoBruto ?? n.sueldoBase ?? 0), 0);
 
   return (
     <div className="dashboard">
@@ -290,32 +287,6 @@ export default function CalculoNomina() {
           {/* ── COLUMNA IZQUIERDA ── */}
           <div className="nomina-left">
 
-            {selectedEmpleado && (() => {
-              const se = selectedEmpleado;
-              return (
-                <div className="section-card" style={{ padding: 0, overflow: "hidden", marginBottom: 12, cursor: "pointer", border: "2px solid #2563eb" }}
-                  onClick={() => abrirEstructura(se)}>
-                  <div style={{ padding: "14px 18px", background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", color: "#fff", display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                      ✏️
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{se.nombreEmpleado ?? se.empleadoNombre ?? `Empleado #${se.idEmpleado}`}</div>
-                      <div style={{ fontSize: 11, opacity: 0.72, marginTop: 1 }}>Nómina #{se.idNomina} · Haz clic para modificar</div>
-                    </div>
-                    <button onClick={e => { e.stopPropagation(); setSelectedEmpleado(null); }}
-                      style={{ background: "rgba(255,255,255,0.18)", border: "none", color: "#fff", width: 26, height: 26, borderRadius: 6, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      ×
-                    </button>
-                  </div>
-                  <div style={{ padding: "12px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, background: "#f8fafc" }}>
-                    <div><span style={{ color: "var(--text-3)" }}>Sueldo base</span><br /><strong>{fmtS(se.sueldoBase)}</strong></div>
-                    <div><span style={{ color: "var(--text-3)" }}>Sueldo bruto</span><br /><strong style={{ color: "#16a34a" }}>{fmtS(se.sueldoBruto)}</strong></div>
-                    <div><span style={{ color: "var(--text-3)" }}>Sueldo neto</span><br /><strong style={{ color: "#2563eb" }}>{fmtS(se.sueldoNeto)}</strong></div>
-                  </div>
-                </div>
-              );
-            })()}
 
             {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
             {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
@@ -411,7 +382,7 @@ export default function CalculoNomina() {
             </div>
 
             {resultList.length > 0 && (
-              <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
+              <div className="section-card" style={{ padding: 0, overflow: "auto" }}>
                 <div style={{ padding: "20px 20px 10px" }}>
                   <h2 style={{ margin: 0 }}>
                     Resultados — {MESES.find(m => m.v === mes)?.l} {anio}
@@ -420,33 +391,32 @@ export default function CalculoNomina() {
                     </span>
                   </h2>
                 </div>
-                <div className="table-wrapper" style={{ marginBottom: 0 }}>
-                  <table>
+                <div className="table-wrapper" style={{ marginBottom: 0, overflowX: "auto" }}>
+                  <table style={{ minWidth: 700 }}>
                     <thead>
                       <tr>
-                        <th>Empleado</th>
-                        <th>Sueldo Base</th>
-                        <th>Bonificaciones</th>
-                        <th>Descuentos</th>
-                        <th>Sueldo Neto</th>
-                        <th>Acciones</th>
+                        <th style={{ textAlign: "center" }}>Empleado</th>
+                        <th style={{ textAlign: "center" }}>Sueldo Base</th>
+                        <th style={{ textAlign: "center" }}>Bonificaciones</th>
+                        <th style={{ textAlign: "center" }}>Descuentos</th>
+                        <th style={{ textAlign: "center" }}>Sueldo Neto</th>
+                        <th style={{ textAlign: "center" }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {resultList.map((n, i) => (
                         <tr key={n.idNomina ?? i}
-                          onClick={() => setSelectedEmpleado(n)}
-                          style={{ cursor: "pointer" }}
-                          className={selectedEmpleado?.idNomina === n.idNomina ? "tr-selected" : ""}>
-                          <td>
+                          onClick={() => abrirEstructura(n)}
+                          style={{ cursor: "pointer" }}>
+                          <td style={{ textAlign: "center" }}>
                             <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
                           </td>
-                          <td>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
-                          <td style={{ color: "var(--success)" }}>{fmtS(getBonif(n))}</td>
-                          <td style={{ color: "#ef4444" }}>{fmtS(getDesc(n))}</td>
-                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
-                          <td>
-                            <div style={{ display: "flex", gap: "4px" }}>
+                          <td style={{ textAlign: "center" }}>{fmtS(n.sueldoContrato ?? n.sueldoBase ?? n.sueldo)}</td>
+                          <td style={{ textAlign: "center", color: "var(--success)" }}>{fmtS(getBonif(n))}</td>
+                          <td style={{ textAlign: "center", color: "#ef4444" }}>{fmtS(getDesc(n))}</td>
+                          <td style={{ textAlign: "center", fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
+                          <td style={{ textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                               <button className="btn btn-secondary btn-sm"
                                 title="Estructura salarial"
                                 onClick={() => abrirEstructura(n)}>
@@ -476,10 +446,10 @@ export default function CalculoNomina() {
                         <td colSpan={1} style={{ padding: "10px 12px", fontSize: "13px" }}>
                           TOTALES ({resultList.length} empleados)
                         </td>
-                        <td style={{ padding: "10px 12px" }}>{fmtS(totalBruto)}</td>
+                        <td style={{ textAlign: "center", padding: "10px 12px" }}>{fmtS(totalBruto)}</td>
                         <td></td>
                         <td></td>
-                        <td style={{ padding: "10px 12px", color: "var(--primary)" }}>{fmtS(totalNeto)}</td>
+                        <td style={{ textAlign: "center", padding: "10px 12px", color: "var(--primary)" }}>{fmtS(totalNeto)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -551,7 +521,7 @@ export default function CalculoNomina() {
       {/* ── MODAL VISTA PREVIA NÓMINA ── */}
       {previewNomina && (() => {
         const n = previewNomina;
-        const base  = Number(n.sueldoBase ?? n.sueldo ?? 0);
+        const base  = Number(n.sueldoContrato ?? n.sueldoBase ?? n.sueldo ?? 0);
         const bonifs = [
           { label: "Bonif. Familiar",       val: n.bonifFamiliar },
           { label: "Bonif. Turno Nocturno", val: n.bonifTurnoNocturno },

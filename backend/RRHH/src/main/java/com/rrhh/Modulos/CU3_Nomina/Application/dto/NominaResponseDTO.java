@@ -15,6 +15,7 @@ public class NominaResponseDTO {
     private Long idEmpleado;
 
     private BigDecimal sueldoBase;
+    private BigDecimal sueldoContrato;
     private BigDecimal totalHorasTrabajadas;
     private BigDecimal totalHorasExtra;
     private Integer totalMinutosTardanza;
@@ -66,6 +67,9 @@ public class NominaResponseDTO {
 
     public BigDecimal getSueldoBase() { return sueldoBase; }
     public void setSueldoBase(BigDecimal sueldoBase) { this.sueldoBase = sueldoBase; }
+
+    public BigDecimal getSueldoContrato() { return sueldoContrato; }
+    public void setSueldoContrato(BigDecimal sueldoContrato) { this.sueldoContrato = sueldoContrato; }
 
     public BigDecimal getTotalHorasTrabajadas() { return totalHorasTrabajadas; }
     public void setTotalHorasTrabajadas(BigDecimal totalHorasTrabajadas) { this.totalHorasTrabajadas = totalHorasTrabajadas; }

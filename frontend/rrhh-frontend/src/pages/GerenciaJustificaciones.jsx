@@ -91,13 +91,13 @@ export default function GerenciaJustificaciones() {
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Empleado</th>
-                    <th>Fecha Tardanza</th>
-                    <th>Motivo</th>
-                    <th>Estado</th>
-                    <th>Fecha Registro</th>
-                    <th>Comentario RRHH</th>
+                    <th style={{ textAlign: "center" }}>#</th>
+                    <th style={{ textAlign: "center" }}>Empleado</th>
+                    <th style={{ textAlign: "center" }}>Fecha Tardanza</th>
+                    <th style={{ textAlign: "center" }}>Motivo</th>
+                    <th style={{ textAlign: "center" }}>Estado</th>
+                    <th style={{ textAlign: "center" }}>Fecha Registro</th>
+                    <th style={{ textAlign: "center" }}>Comentario RRHH</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,25 +112,25 @@ export default function GerenciaJustificaciones() {
                     </tr>
                   ) : justificaciones.map((j, i) => (
                     <tr key={j.idJustificacion ?? j.id ?? i}>
-                      <td style={{ color: "var(--text-3)", fontSize: 13 }}>
+                      <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13 }}>
                         {j.idJustificacion ?? j.id ?? i + 1}
                       </td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         <strong>{j.nombreEmpleado ?? j.empleado ?? `Emp. #${j.idEmpleado}`}</strong>
                       </td>
-                      <td>{j.fechaIncidencia ?? j.fecha ?? "—"}</td>
-                      <td style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ textAlign: "center" }}>{j.fechaIncidencia ?? j.fecha ?? "—"}</td>
+                      <td style={{ textAlign: "center", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {j.motivo ?? "—"}
                       </td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         <span className={`badge ${estadoBadge(j.estado ?? "PENDIENTE")}`}>
                           {j.estado ?? "PENDIENTE"}
                         </span>
                       </td>
-                      <td style={{ color: "var(--text-3)", fontSize: 12 }}>
+                      <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 12 }}>
                         {j.fechaRegistro ?? j.createdAt ?? "—"}
                       </td>
-                      <td style={{ fontSize: 12, color: "var(--text-2)" }}>
+                      <td style={{ textAlign: "center", fontSize: 12, color: "var(--text-2)" }}>
                         {j.comentarioRrhh ?? j.comentario ?? <span style={{ color: "var(--text-3)" }}>—</span>}
                       </td>
                     </tr>

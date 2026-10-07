@@ -100,13 +100,13 @@ export default function NominaEmpleado() {
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Período</th>
-                    <th>Sueldo Base</th>
-                    <th>Bonificaciones</th>
-                    <th>Descuentos</th>
-                    <th>Sueldo Neto</th>
-                    <th>Comprobante</th>
+                    <th style={{ textAlign: "center" }}>#</th>
+                    <th style={{ textAlign: "center" }}>Período</th>
+                    <th style={{ textAlign: "center" }}>Sueldo Base</th>
+                    <th style={{ textAlign: "center" }}>Bonificaciones</th>
+                    <th style={{ textAlign: "center" }}>Descuentos</th>
+                    <th style={{ textAlign: "center" }}>Sueldo Neto</th>
+                    <th style={{ textAlign: "center" }}>Comprobante</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -121,23 +121,23 @@ export default function NominaEmpleado() {
                     </tr>
                   ) : nominas.map((n, i) => (
                     <tr key={n.idNomina ?? i}>
-                      <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{n.idNomina ?? i + 1}</td>
-                      <td style={{ fontWeight: 600 }}>
+                      <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{n.idNomina ?? i + 1}</td>
+                      <td style={{ textAlign: "center", fontWeight: 600 }}>
                         {n.mes && n.anio
                           ? fmtPeriodo(n.mes, n.anio)
                           : n.periodo ?? "—"}
                       </td>
-                      <td>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
-                      <td style={{ color: "var(--success)" }}>
+                      <td style={{ textAlign: "center" }}>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
+                      <td style={{ textAlign: "center", color: "var(--success)" }}>
                         {fmtS(getBonif(n))}
                       </td>
-                      <td style={{ color: "#ef4444" }}>
+                      <td style={{ textAlign: "center", color: "#ef4444" }}>
                         {fmtS(getDesc(n))}
                       </td>
-                      <td style={{ fontWeight: 700, color: "#0f172a" }}>
+                      <td style={{ textAlign: "center", fontWeight: 700, color: "#0f172a" }}>
                         {fmtS(n.sueldoNeto)}
                       </td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleDescargar(n.idNomina, n.periodo)}
