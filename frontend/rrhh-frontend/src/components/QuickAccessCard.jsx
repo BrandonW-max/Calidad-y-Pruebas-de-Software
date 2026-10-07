@@ -54,8 +54,8 @@ export default function QuickAccessCard({ to, icon: Icon, title, desc, tone = "b
   return (
     <Link
       to={to}
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white bg-white/85 p-6 shadow-glass-sm ring-1 ring-transparent backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-glass-lg ${t.ring} ${
-        large ? "min-h-[240px] lg:p-7" : "min-h-[240px]"
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-white bg-white/85 p-8 shadow-glass-sm ring-1 ring-transparent backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-glass-lg ${t.ring} ${
+        large ? "min-h-[220px] lg:p-9" : "min-h-[200px]"
       }`}
     >
       <div
@@ -71,15 +71,15 @@ export default function QuickAccessCard({ to, icon: Icon, title, desc, tone = "b
           <Icon size={large ? 26 : 22} strokeWidth={2.1} />
         </div>
         <h3
-          className={`font-[var(--font-display)] font-bold leading-snug text-ink-900 ${
-            large ? "text-[22px]" : "text-[17px]"
+          className={`break-words font-[var(--font-display)] font-bold leading-snug text-ink-900 ${
+            large ? "text-[23px]" : "text-[18px]"
           }`}
         >
           {title}
         </h3>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">{desc}</p>
+        <p className="mt-2 break-words text-[15px] leading-relaxed text-ink-600">{desc}</p>
       </div>
-      <span className="relative z-10 mt-6 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-800">
+      <span className="relative z-10 mt-6 inline-flex items-center gap-1.5 text-[14px] font-bold text-ink-800">
         Acceder al módulo
         <ArrowUpRight
           size={15}

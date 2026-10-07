@@ -111,8 +111,8 @@ export default function Sidebar({ rol }) {
   };
 
   const linkBase =
-    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium " +
-    "text-white/65 transition-all duration-200 hover:bg-white/8 hover:text-white outline-none " +
+    "group relative flex w-full items-center gap-3.5 rounded-2xl pl-6 pr-4 py-4 text-[17px] font-medium " +
+    "text-white/85 transition-all duration-200 hover:bg-white/10 hover:text-white outline-none " +
     "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900 " + tone.ring;
 
   return (
@@ -136,7 +136,7 @@ export default function Sidebar({ rol }) {
 
     <aside
       className={
-        "fixed inset-y-0 left-0 z-50 flex h-screen w-[272px] flex-col overflow-hidden " +
+        "fixed inset-y-0 left-0 z-50 flex h-screen w-[300px] flex-col overflow-hidden " +
         "bg-gradient-to-b " + tone.rail + " shadow-[4px_0_28px_rgba(0,0,0,0.28)] " +
         "transition-transform duration-300 ease-out lg:translate-x-0 " +
         (mobileOpen ? "translate-x-0" : "-translate-x-full")
@@ -154,17 +154,17 @@ export default function Sidebar({ rol }) {
       <div className={"pointer-events-none absolute -top-24 -right-20 h-56 w-56 rounded-full blur-3xl " + tone.glow} aria-hidden="true" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)]" aria-hidden="true" />
 
-      <div className="relative z-10 flex items-center gap-3 border-b border-white/10 px-5 py-5">
+      <div className="relative z-10 flex items-center gap-3 border-b border-white/10 px-5 pb-7 pt-6">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-          <img src={logo} alt="Logo Hospital" className="h-7 w-7 object-contain" />
+          <img src={logo} alt="Logo Hospital" className="h-9 w-9 object-contain" />
         </div>
         <div className="min-w-0">
-          <h2 className="truncate text-[14px] font-bold leading-tight text-white">{config.title}</h2>
-          <p className="truncate text-[11px] font-medium text-white/55">{config.subtitle}</p>
+          <h2 className="truncate text-[18px] font-bold leading-tight text-white">{config.title}</h2>
+          <p className="truncate text-[14px] font-medium text-white/70">{config.subtitle}</p>
         </div>
       </div>
 
-      <nav className="relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="relative z-10 flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 pt-8 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {config.links.map((link) => {
           if (link.group) {
             const isExpanded = openGroup === link.label;
@@ -176,16 +176,17 @@ export default function Sidebar({ rol }) {
                   type="button"
                   onClick={() => toggleGroup(link.label)}
                   className={
-                    linkBase + " w-full cursor-pointer border border-transparent " +
-                    (isGroupActive ? tone.activeBg + " " + tone.activeBorder + " " + tone.activeText : "")
+                    linkBase + " cursor-pointer border border-transparent " +
+                    (isGroupActive ? tone.activeBg + " " + tone.activeBorder + " " + tone.activeText + " font-semibold" : "")
                   }
                 >
-                  <GroupIcon size={18} className={"shrink-0 " + (isGroupActive ? tone.iconActive : "text-white/55 group-hover:text-white/80")} strokeWidth={2} />
+                  {isGroupActive && <span className={"absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-full " + tone.badge} aria-hidden="true" />}
+                  <GroupIcon size={24} className={"shrink-0 " + (isGroupActive ? tone.iconActive : "text-white/55 group-hover:text-white/80")} strokeWidth={2} />
                   <span className="flex-1 text-left">{link.label}</span>
-                  <ChevronRight size={16} className={"shrink-0 text-white/40 transition-transform duration-200 " + (isExpanded ? "rotate-90" : "")} />
+                  <ChevronRight size={20} className={"shrink-0 text-white/40 transition-transform duration-200 " + (isExpanded ? "rotate-90" : "")} />
                 </button>
                 {isExpanded && (
-                  <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-white/12 pl-3">
+                  <div className="mt-2 ml-4 flex flex-col gap-1.5 border-l border-white/12 pl-3">
                     {link.children.map((child) => {
                       const ChildIcon = child.icon;
                       const active = isActive(child.to);
@@ -195,13 +196,13 @@ export default function Sidebar({ rol }) {
                           to={child.to}
                           onClick={closeMobile}
                           className={
-                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150 " +
+                            "flex items-center gap-3 rounded-xl px-4 py-3 text-[16px] font-medium transition-all duration-150 " +
                             (active
                               ? "bg-white/12 text-white"
-                              : "text-white/55 hover:bg-white/8 hover:text-white")
+                              : "text-white/60 hover:bg-white/8 hover:text-white")
                           }
                         >
-                          <ChildIcon size={16} className={active ? tone.iconActive : "text-white/45"} strokeWidth={2} />
+                          <ChildIcon size={22} className={"shrink-0 " + (active ? tone.iconActive : "text-white/45")} strokeWidth={2} />
                           <span>{child.label}</span>
                         </Link>
                       );
@@ -219,29 +220,30 @@ export default function Sidebar({ rol }) {
               key={link.to}
               to={link.to}
               onClick={closeMobile}
+              aria-current={active ? "page" : undefined}
               className={
                 linkBase + " border " +
-                (active ? tone.activeBg + " " + tone.activeBorder + " " + tone.activeText + " shadow-inner" : "border-transparent")
+                (active ? tone.activeBg + " " + tone.activeBorder + " " + tone.activeText + " font-semibold" : "border-transparent")
               }
             >
-              <Icon size={18} className={active ? tone.iconActive : "text-white/55 group-hover:text-white/80"} strokeWidth={2} />
-              <span>{link.label}</span>
-              {active && <span className={"ml-auto h-1.5 w-1.5 rounded-full " + tone.badge} aria-hidden="true" />}
+              {active && <span className={"absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-full " + tone.badge} aria-hidden="true" />}
+              <Icon size={24} className={"shrink-0 " + (active ? tone.iconActive : "text-white/55 group-hover:text-white/80")} strokeWidth={2} />
+              <span className="flex-1">{link.label}</span>
             </Link>
           );
         })}
-
-        <div className="mt-auto border-t border-white/10 pt-3">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-[13.5px] font-medium text-white/60 transition-all duration-200 hover:border-danger-600/30 hover:bg-danger-600/15 hover:text-red-200 outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-          >
-            <LogOut size={18} strokeWidth={2} />
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
       </nav>
+
+      <div className="relative z-10 border-t border-white/10 px-3 py-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full cursor-pointer items-center gap-3.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-[17px] font-medium text-white/65 transition-all duration-200 hover:border-danger-600/40 hover:bg-danger-600/20 hover:text-red-200 outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+        >
+          <LogOut size={22} strokeWidth={2} className="shrink-0" />
+          <span>Cerrar Sesión</span>
+        </button>
+      </div>
     </aside>
     </>
   );

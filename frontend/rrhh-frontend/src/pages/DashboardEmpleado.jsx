@@ -74,7 +74,7 @@ export default function DashboardEmpleado() {
     <DashboardLayout rol="EMPLEADO">
       <DashboardHero nombre={displayName} rol="Mi Portal" badge="Empleado" theme="empleado" />
 
-      <section aria-label="Resumen de asistencia y solicitudes" className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section aria-label="Resumen de asistencia y solicitudes" className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {metricas.map(item => (
           <MetricCard key={item.key} value={item.value} label={item.label} icon={item.icon} tone={item.tone} />
         ))}

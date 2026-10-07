@@ -18,7 +18,7 @@ export default function DashboardGerencia() {
     <DashboardLayout rol="GERENCIA">
       <DashboardHero nombre="Gerencia" rol="Panel Ejecutivo" badge="Gestión Ejecutiva" theme="gerencia" />
 
-      <section aria-label="Resumen ejecutivo" className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="Resumen ejecutivo" className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricas.map(item => (
           <MetricCard key={item.key} value={item.value} label={item.label} icon={item.icon} tone={item.tone} />
         ))}
