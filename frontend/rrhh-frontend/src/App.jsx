@@ -335,7 +335,27 @@ function App() {
   const logoutTimerRef       = useRef(null);
   const countdownIntervalRef = useRef(null);
   const resetAfkRef          = useRef(null);
-  const showAfkModalRef      = useRef(false); // ref para leer en el event handler sin closure stale
+  const showAfkModalRef      = useRef(false);
+
+  // Restaurar sesión si la página fue recargada (el backup sobrevive en sessionStorage,
+  // pero no sobrevive al cierre del navegador — así se limpia la sesión al cerrar)
+  useEffect(() => {
+    const backup = sessionStorage.getItem('_userBackup');
+    if (backup && !localStorage.getItem('user')) {
+      localStorage.setItem('user', backup);
+      sessionStorage.removeItem('_userBackup');
+    }
+
+    const handleBeforeUnload = () => {
+      const user = localStorage.getItem('user');
+      if (user) {
+        sessionStorage.setItem('_userBackup', user);
+        localStorage.removeItem('user');
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   useEffect(() => {
     // Si hay un primer acceso pendiente y NO estamos en reset-password, volver al login

@@ -245,7 +245,7 @@ export default function GestionHorarios() {
               <table>
                 <thead>
                   <tr>
-                    <th>Nombre del turno</th>
+                    <th style={{ textAlign: "center" }}>Nombre del turno</th>
                     <th style={{ textAlign: "center" }}>Hora entrada</th>
                     <th style={{ textAlign: "center" }}>Hora salida</th>
                     <th style={{ textAlign: "center" }}>Duración</th>
@@ -258,7 +258,7 @@ export default function GestionHorarios() {
                     const dur = duracionHoras(h.horaEntrada?.slice(0,5), h.horaSalida?.slice(0,5));
                     return (
                       <tr key={h.idHorario}>
-                        <td style={{ fontWeight: 600 }}>{h.nombreTurno}</td>
+                        <td style={{ textAlign: "center", fontWeight: 600 }}>{h.nombreTurno}</td>
                         <td style={{ textAlign: "center" }}>
                           <span style={{
                             background: "#eff6ff", color: "#2563eb",

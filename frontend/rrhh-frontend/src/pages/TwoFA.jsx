@@ -121,10 +121,6 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
           ))}
         </div>
 
-        <p className="twofa-timer">
-          El código expira en <strong>{fmt(time)}</strong>
-        </p>
-
         {intentos < 5 && (
           <p className="twofa-attempts">Intentos restantes: <span>{intentos}</span></p>
         )}
