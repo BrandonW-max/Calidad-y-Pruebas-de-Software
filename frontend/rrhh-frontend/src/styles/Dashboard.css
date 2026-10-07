@@ -812,6 +812,10 @@ table tr:hover td { background: #f8fafc; }
   to   { transform: translateY(0) scale(1);         opacity: 1; }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

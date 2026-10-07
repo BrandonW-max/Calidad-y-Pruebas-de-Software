@@ -186,7 +186,7 @@ function VistaEmpleado() {
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
                   <thead>
-                    <tr><th>#</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Estado</th><th>Respuesta</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Desde</th><th style={{ textAlign: "center" }}>Hasta</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Respuesta</th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.length === 0 ? (
@@ -204,13 +204,13 @@ function VistaEmpleado() {
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
-                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
-                          <td>{s.fechaInicio ?? "—"}</td>
-                          <td>{s.fechaFin ?? "—"}</td>
-                          <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo ?? "—"}</td>
-                          <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                          <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{respuestaVisible ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
+                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
+                          <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.motivo ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                          <td style={{ textAlign: "center" }}>{respuestaVisible ?? <span style={{ color: "var(--text-3)" }}>—</span>}</td>
                         </tr>
                       );
                     })}
@@ -414,7 +414,7 @@ function VistaRRHH() {
             {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
               <table>
                 <thead>
-                  <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Estado</th>{filtroEstado !== "PROCESADO" && <th>Acciones</th>}</tr>
+                  <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th>{filtroEstado !== "PROCESADO" && <th style={{ textAlign: "center" }}>Acciones</th>}</tr>
                 </thead>
                 <tbody>
                   {solicitudes.length === 0 ? (
@@ -426,15 +426,15 @@ function VistaRRHH() {
                       <tr key={id}
                         onClick={() => setSolicitudActiva(isSelected ? null : s)}
                         style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                        <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
-                        <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                        <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
-                        <td>{s.fechaInicio ?? "—"}</td>
-                        <td>{s.fechaFin ?? "—"}</td>
-                        <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
-                        <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                        <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
+                        <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                        <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                        <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
+                        <td style={{ textAlign: "center", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
+                        <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
                         {filtroEstado !== "PROCESADO" && (
-                          <td>
+                          <td style={{ textAlign: "center" }}>
                             {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
                               <button className="btn btn-primary btn-sm"
                                 onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
@@ -454,43 +454,99 @@ function VistaRRHH() {
       </main>
 
       {modalRevision.open && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-header">
-              <div>
-                <h3>📋 Revisar Solicitud #{modalRevision.solicitud?.idSolicitud ?? modalRevision.solicitud?.id}</h3>
-                <p>{TIPO_LABELS[modalRevision.solicitud?.tipoSolicitud] ?? modalRevision.solicitud?.tipoSolicitud} — {modalRevision.solicitud?.nombreEmpleado ?? modalRevision.solicitud?.idEmpleado}</p>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalRevision({ ...modalRevision, open: false })}>
+          <div className="modal-box" style={{ maxWidth: 480, width: "95%", borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", padding: 0 }}>
+
+            {/* Header */}
+            <div className="modal-header" style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", background: "var(--bg)" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                  📋
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-1)", lineHeight: 1.3 }}>
+                    Revisar Solicitud #{modalRevision.solicitud?.idSolicitud ?? modalRevision.solicitud?.id}
+                  </h3>
+                  <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>
+                    {TIPO_LABELS[modalRevision.solicitud?.tipoSolicitud] ?? modalRevision.solicitud?.tipoSolicitud}
+                    <span style={{ margin: "0 6px", opacity: 0.4 }}>·</span>
+                    {modalRevision.solicitud?.nombreEmpleado ?? modalRevision.solicitud?.idEmpleado}
+                  </p>
+                </div>
               </div>
-              <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}>×</button>
+              <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}
+                style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--bg-2)", color: "var(--text-2)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}
+                onMouseOver={e => e.currentTarget.style.background = "var(--border)"}
+                onMouseOut={e => e.currentTarget.style.background = "var(--bg-2)"}>
+                ×
+              </button>
             </div>
-            <div className="modal-body">
+
+            {/* Body */}
+            <div className="modal-body" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Motivo — solo lectura */}
               <div className="form-group">
                 <label>Motivo del empleado</label>
-                <div style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, color: "var(--text-2)", whiteSpace: "pre-wrap" }}>
+                <div style={{ padding: "10px 13px", background: "var(--bg-2,#f8fafc)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm,8px)", fontSize: 13.5, color: "var(--text)", lineHeight: 1.6, whiteSpace: "pre-wrap", minHeight: 44 }}>
                   {modalRevision.solicitud?.motivo ?? "—"}
                 </div>
               </div>
+
+              {/* Decisión */}
               <div className="form-group">
-                <label>Decisión *</label>
+                <label>Decisión <span style={{ color: "#ef4444" }}>*</span></label>
                 <select value={modalRevision.decision}
                   onChange={e => setModalRevision({ ...modalRevision, decision: e.target.value })}>
-                  <option value="">Seleccione</option>
+                  <option value="">Seleccione una opción...</option>
                   <option value="APROBAR">✅ Aprobar y pasar a Gerencia</option>
                   <option value="DEVOLVER">↩ Devolver al empleado</option>
                 </select>
+                {modalRevision.decision === "APROBAR" && (
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>
+                    ✓ La solicitud pasará a revisión de Gerencia
+                  </p>
+                )}
+                {modalRevision.decision === "DEVOLVER" && (
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#d97706" }}>
+                    ↩ El empleado podrá corregir y reenviar la solicitud
+                  </p>
+                )}
               </div>
+
+              {/* Comentario */}
               <div className="form-group">
-                <label>Comentario *</label>
+                <label>Comentario <span style={{ color: "#ef4444" }}>*</span></label>
                 <textarea rows={3} value={modalRevision.comentario}
                   onChange={e => setModalRevision({ ...modalRevision, comentario: e.target.value })}
                   placeholder="Ingrese su observación o motivo de decisión..." />
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-2)", textAlign: "right" }}>
+                  {modalRevision.comentario.trim().length} caracteres
+                </p>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalRevision({ ...modalRevision, open: false })}>Cancelar</button>
+
+            {/* Footer */}
+            <div className="modal-footer" style={{ padding: "16px 24px", borderTop: "1px solid var(--border)", background: "var(--bg-2)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button className="btn btn-secondary"
+                onClick={() => setModalRevision({ ...modalRevision, open: false })}
+                style={{ padding: "9px 18px", borderRadius: 10, fontSize: 14, fontWeight: 600 }}>
+                Cancelar
+              </button>
               <button className="btn btn-primary" onClick={handleRevisar}
-                disabled={!modalRevision.decision || !modalRevision.comentario.trim() || procesando}>
-                {procesando ? "Procesando..." : "Confirmar Revisión"}
+                disabled={!modalRevision.decision || !modalRevision.comentario.trim() || procesando}
+                style={{
+                  padding: "9px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600,
+                  opacity: (!modalRevision.decision || !modalRevision.comentario.trim() || procesando) ? 0.5 : 1,
+                  cursor: (!modalRevision.decision || !modalRevision.comentario.trim() || procesando) ? "not-allowed" : "pointer",
+                  transition: "opacity 0.2s"
+                }}>
+                {procesando ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                    Procesando...
+                  </span>
+                ) : "Confirmar Revisión"}
               </button>
             </div>
           </div>
@@ -580,7 +636,7 @@ function VistaGerencia() {
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
                   <thead>
-                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Motivo</th><th>Rev. RRHH</th><th>Estado</th><th>Decisión</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Rev. RRHH</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Decisión</th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.length === 0 ? (
@@ -592,16 +648,16 @@ function VistaGerencia() {
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
-                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
-                          <td>{s.fechaInicio ?? "—"}</td>
-                          <td>{s.fechaFin ?? "—"}</td>
-                          <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
-                          <td style={{ fontSize: "12px", color: "var(--text-2)" }}>{s.observacionRrhh ?? "—"}</td>
-                          <td><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                          <td>
-                            <div style={{ display: "flex", gap: "4px" }}>
+                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
+                          <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
+                          <td style={{ textAlign: "center", fontSize: "12px", color: "var(--text-2)" }}>{s.observacionRrhh ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
+                          <td style={{ textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                               <button className="btn btn-success btn-sm"
                                 onClick={e => { e.stopPropagation(); setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" }); }}>
                                 ✅ Aprobar
@@ -640,7 +696,7 @@ function VistaGerencia() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Respuesta Gerencia</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Respuesta Gerencia</th></tr>
                   </thead>
                   <tbody>
                     {solAprobadas.map((s, idx) => {
@@ -650,13 +706,13 @@ function VistaGerencia() {
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
-                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
-                          <td>{s.fechaInicio ?? "—"}</td>
-                          <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
+                          <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
-                          <td style={{ fontSize: 12, color: "#16a34a" }}>{s.respuesta ?? "—"}</td>
+                          <td style={{ textAlign: "center", fontSize: 12, color: "#16a34a" }}>{s.respuesta ?? "—"}</td>
                         </tr>
                       );
                     })}
@@ -685,7 +741,7 @@ function VistaGerencia() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th>#</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Motivo del Rechazo</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Motivo del Rechazo</th></tr>
                   </thead>
                   <tbody>
                     {solRechazadas.map((s, idx) => {
@@ -695,13 +751,13 @@ function VistaGerencia() {
                         <tr key={id}
                           onClick={() => setSolicitudActiva(isSelected ? null : s)}
                           style={{ cursor: "pointer", background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
-                          <td style={{ color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
-                          <td>{s.nombreEmpleado ?? s.idEmpleado}</td>
-                          <td>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
-                          <td>{s.fechaInicio ?? "—"}</td>
-                          <td>{s.fechaFin ?? "—"}</td>
+                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
+                          <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.diasSolicitados ?? "—"}</td>
-                          <td style={{ fontSize: 12, color: "#dc2626" }}>{s.respuesta ?? "—"}</td>
+                          <td style={{ textAlign: "center", fontSize: 12, color: "#dc2626" }}>{s.respuesta ?? "—"}</td>
                         </tr>
                       );
                     })}

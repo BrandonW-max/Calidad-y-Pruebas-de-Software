@@ -1,10 +1,10 @@
 const BASE = import.meta.env.VITE_API_URL || '';
 
-export const getUser       = () => JSON.parse(sessionStorage.getItem('user') || '{}');
+export const getUser       = () => JSON.parse(localStorage.getItem('user') || '{}');
 export const getIdEmpleado = () => getUser()?.idEmpleado ?? null;
 export const saveSession   = (token, rol, username, idEmpleado = null, requiereCambioPassword = false) =>
-  sessionStorage.setItem('user', JSON.stringify({ rol, username, idEmpleado, requiereCambioPassword }));
-export const clearSession  = () => sessionStorage.removeItem('user');
+  localStorage.setItem('user', JSON.stringify({ rol, username, idEmpleado, requiereCambioPassword }));
+export const clearSession  = () => localStorage.removeItem('user');
 
 const CRED = 'include';
 

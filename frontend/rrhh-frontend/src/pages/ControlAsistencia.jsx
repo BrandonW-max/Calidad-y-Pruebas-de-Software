@@ -324,13 +324,13 @@ function VistaEmpleado() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Fecha</th>
-                      <th>Tipo</th>
-                      <th>Motivo</th>
-                      <th>Evidencia</th>
-                      <th>Estado</th>
-                      <th>Observación</th>
-                      <th>Acciones</th>
+                      <th style={{ textAlign: "center" }}>Fecha</th>
+                      <th style={{ textAlign: "center" }}>Tipo</th>
+                      <th style={{ textAlign: "center" }}>Motivo</th>
+                      <th style={{ textAlign: "center" }}>Evidencia</th>
+                      <th style={{ textAlign: "center" }}>Estado</th>
+                      <th style={{ textAlign: "center" }}>Observación</th>
+                      <th style={{ textAlign: "center" }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -345,21 +345,21 @@ function VistaEmpleado() {
                       </tr>
                     ) : justificaciones.map((j) => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
-                        <td>Tardanza</td>
-                        <td>{j.motivo}</td>
-                        <td>
+                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>Tardanza</td>
+                        <td style={{ textAlign: "center" }}>{j.motivo}</td>
+                        <td style={{ textAlign: "center" }}>
                           {j.evidenciaUrl
                             ? <span>📎 1 archivo</span>
                             : <span style={{ color: "var(--text-3)" }}>-</span>}
                         </td>
-                        <td>
+                        <td style={{ textAlign: "center" }}>
                           <span className={`badge ${estadoBadge(j.estado)}`}>
                             {j.estado ?? "Pendiente"}
                           </span>
                         </td>
-                        <td>{j.comentarioRevision ?? <span style={{ color: "var(--text-3)" }}>-</span>}</td>
-                        <td>
+                        <td style={{ textAlign: "center" }}>{j.comentarioRevision ?? <span style={{ color: "var(--text-3)" }}>-</span>}</td>
+                        <td style={{ textAlign: "center" }}>
                           {(!j.estado || j.estado === "PENDIENTE") ? (
                             <button className="btn btn-warning btn-sm"
                               onClick={() => {
@@ -475,13 +475,13 @@ function VistaEmpleado() {
               <table>
                 <thead>
                   <tr>
-                    <th>Fecha</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Horas</th>
-                    <th>Tardanza</th>
-                    <th>Estado</th>
-                    <th>Tipo registro</th>
+                    <th style={{ textAlign: "center" }}>Fecha</th>
+                    <th style={{ textAlign: "center" }}>Entrada</th>
+                    <th style={{ textAlign: "center" }}>Salida</th>
+                    <th style={{ textAlign: "center" }}>Horas</th>
+                    <th style={{ textAlign: "center" }}>Tardanza</th>
+                    <th style={{ textAlign: "center" }}>Estado</th>
+                    <th style={{ textAlign: "center" }}>Tipo registro</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -494,17 +494,17 @@ function VistaEmpleado() {
                     </td></tr>
                   ) : historial.map(r => (
                     <tr key={r.idRegistro}>
-                      <td>{r.fecha}</td>
-                      <td>{r.horaEntrada ? r.horaEntrada.substring(0, 5) : "—"}</td>
-                      <td>{r.horaSalida  ? r.horaSalida.substring(0, 5)  : "—"}</td>
-                      <td>{r.horasTrabajadas != null ? `${r.horasTrabajadas} h` : "—"}</td>
-                      <td>{r.minutosTardanza > 0 ? `${r.minutosTardanza} min` : "—"}</td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>{r.fecha}</td>
+                      <td style={{ textAlign: "center" }}>{r.horaEntrada ? r.horaEntrada.substring(0, 5) : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.horaSalida  ? r.horaSalida.substring(0, 5)  : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.horasTrabajadas != null ? `${r.horasTrabajadas} h` : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.minutosTardanza > 0 ? `${r.minutosTardanza} min` : "—"}</td>
+                      <td style={{ textAlign: "center" }}>
                         <span className={`badge ${r.estado === "PUNTUAL" ? "badge-success" : r.estado === "JUSTIFICADA" ? "badge-justificada" : r.estado === "TARDANZA" ? "badge-warning" : "badge-gray"}`}>
                           {r.estado ?? "—"}
                         </span>
                       </td>
-                      <td style={{ fontSize: "12px", color: "var(--text-3)" }}>
+                      <td style={{ textAlign: "center", fontSize: "12px", color: "var(--text-3)" }}>
                         {r.tipoUltimoRegistro ?? "—"}
                       </td>
                     </tr>
@@ -868,13 +868,13 @@ function VistaRRHH() {
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Empleado</th>
-                      <th>Fecha</th>
-                      <th>Debía llegar</th>
-                      <th>Llegó a</th>
-                      <th>Tardanza</th>
-                      <th>Estado</th>
+                      <th style={{ textAlign: "center" }}>#</th>
+                      <th style={{ textAlign: "center" }}>Empleado</th>
+                      <th style={{ textAlign: "center" }}>Fecha</th>
+                      <th style={{ textAlign: "center" }}>Debía llegar</th>
+                      <th style={{ textAlign: "center" }}>Llegó a</th>
+                      <th style={{ textAlign: "center" }}>Tardanza</th>
+                      <th style={{ textAlign: "center" }}>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -896,16 +896,16 @@ function VistaRRHH() {
                             : undefined,
                         }}
                       >
-                        <td>{j.id ?? j.idJustificacion}</td>
-                        <td>{getNombreEmpleado(j.idEmpleado)}</td>
-                        <td>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
-                        <td style={{ fontWeight: 600, color: "var(--text-2)" }}>
+                        <td style={{ textAlign: "center" }}>{j.id ?? j.idJustificacion}</td>
+                        <td style={{ textAlign: "center" }}>{getNombreEmpleado(j.idEmpleado)}</td>
+                        <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
+                        <td style={{ textAlign: "center", fontWeight: 600, color: "var(--text-2)" }}>
                           {j.horaEntradaEsperada ?? "—"}
                         </td>
-                        <td style={{ fontWeight: 600, color: j.horaEntrada ? "#dc2626" : "var(--text-3)" }}>
+                        <td style={{ textAlign: "center", fontWeight: 600, color: j.horaEntrada ? "#dc2626" : "var(--text-3)" }}>
                           {j.horaEntrada ?? "—"}
                         </td>
-                        <td>
+                        <td style={{ textAlign: "center" }}>
                           {j.minutosTardanza != null && j.minutosTardanza > 0 ? (
                             <span className="badge badge-warning" style={{ fontSize: 11 }}>
                               {Math.floor(j.minutosTardanza / 60) > 0
@@ -914,7 +914,7 @@ function VistaRRHH() {
                             </span>
                           ) : "—"}
                         </td>
-                        <td><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
+                        <td style={{ textAlign: "center" }}><span className="badge badge-warning">{j.estado ?? "Pendiente"}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1383,20 +1383,28 @@ function VistaGerencia() {
               {loading ? <div className="loading-text">Cargando justificaciones...</div> : (
                 <table>
                   <thead>
-                    <tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Evidencia</th><th>Estado</th><th>Observación</th><th>Acciones</th></tr>
+                    <tr>
+                      <th style={{ textAlign: "center" }}>Fecha</th>
+                      <th style={{ textAlign: "center" }}>Tipo</th>
+                      <th style={{ textAlign: "center" }}>Motivo</th>
+                      <th style={{ textAlign: "center" }}>Evidencia</th>
+                      <th style={{ textAlign: "center" }}>Estado</th>
+                      <th style={{ textAlign: "center" }}>Observación</th>
+                      <th style={{ textAlign: "center" }}>Acciones</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
                       <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No tienes justificaciones pendientes</p></div></td></tr>
                     ) : justificaciones.map(j => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
-                        <td>Tardanza</td>
-                        <td>{j.motivo}</td>
-                        <td>{j.evidenciaUrl ? <span>📎 1 archivo</span> : <span style={{ color: "var(--text-3)" }}>-</span>}</td>
-                        <td><span className={`badge ${estadoBadge(j.estado)}`}>{j.estado ?? "Pendiente"}</span></td>
-                        <td>{j.comentarioRevision ?? <span style={{ color: "var(--text-3)" }}>-</span>}</td>
-                        <td>
+                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>Tardanza</td>
+                        <td style={{ textAlign: "center" }}>{j.motivo}</td>
+                        <td style={{ textAlign: "center" }}>{j.evidenciaUrl ? <span>📎 1 archivo</span> : <span style={{ color: "var(--text-3)" }}>-</span>}</td>
+                        <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(j.estado)}`}>{j.estado ?? "Pendiente"}</span></td>
+                        <td style={{ textAlign: "center" }}>{j.comentarioRevision ?? <span style={{ color: "var(--text-3)" }}>-</span>}</td>
+                        <td style={{ textAlign: "center" }}>
                           {(!j.estado || j.estado === "PENDIENTE") ? (
                             <button className="btn btn-warning btn-sm"
                               onClick={() => { setModalJustificar({ open: true, justificacion: j }); setJustifMotivo(j.motivo ?? ""); }}>
@@ -1482,24 +1490,32 @@ function VistaGerencia() {
             {loading ? <div className="loading-text">Cargando historial...</div> : (
               <table>
                 <thead>
-                  <tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Tardanza</th><th>Estado</th><th>Tipo registro</th></tr>
+                  <tr>
+                    <th style={{ textAlign: "center" }}>Fecha</th>
+                    <th style={{ textAlign: "center" }}>Entrada</th>
+                    <th style={{ textAlign: "center" }}>Salida</th>
+                    <th style={{ textAlign: "center" }}>Horas</th>
+                    <th style={{ textAlign: "center" }}>Tardanza</th>
+                    <th style={{ textAlign: "center" }}>Estado</th>
+                    <th style={{ textAlign: "center" }}>Tipo registro</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {historial.length === 0 ? (
                     <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No hay registros de asistencia aún</p></div></td></tr>
                   ) : historial.map(r => (
                     <tr key={r.idRegistro}>
-                      <td>{r.fecha}</td>
-                      <td>{r.horaEntrada ? r.horaEntrada.substring(0, 5) : "—"}</td>
-                      <td>{r.horaSalida  ? r.horaSalida.substring(0, 5)  : "—"}</td>
-                      <td>{r.horasTrabajadas != null ? `${r.horasTrabajadas} h` : "—"}</td>
-                      <td>{r.minutosTardanza > 0 ? `${r.minutosTardanza} min` : "—"}</td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>{r.fecha}</td>
+                      <td style={{ textAlign: "center" }}>{r.horaEntrada ? r.horaEntrada.substring(0, 5) : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.horaSalida  ? r.horaSalida.substring(0, 5)  : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.horasTrabajadas != null ? `${r.horasTrabajadas} h` : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{r.minutosTardanza > 0 ? `${r.minutosTardanza} min` : "—"}</td>
+                      <td style={{ textAlign: "center" }}>
                         <span className={`badge ${r.estado === "PUNTUAL" ? "badge-success" : r.estado === "JUSTIFICADA" ? "badge-justificada" : r.estado === "TARDANZA" ? "badge-warning" : "badge-gray"}`}>
                           {r.estado ?? "—"}
                         </span>
                       </td>
-                      <td style={{ fontSize: "12px", color: "var(--text-3)" }}>{r.tipoUltimoRegistro ?? "—"}</td>
+                      <td style={{ textAlign: "center", fontSize: "12px", color: "var(--text-3)" }}>{r.tipoUltimoRegistro ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
