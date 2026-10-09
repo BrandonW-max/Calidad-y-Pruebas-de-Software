@@ -100,11 +100,38 @@ class ReporteServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 53 — RF38: tipo sin factory registrada → excepción
+    // Test 53 — RF37: filtros vacíos → reporte generado correctamente
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 53 — Tipo INVENTARIO sin factory registrada → IllegalArgumentException")
+    @DisplayName("Test 53 — Filtros de asistencia vacíos → reporte generado con 0 registros")
+    void generarReporte_FiltrosVacios_ReporteGenerado() throws Exception {
+        FiltroAsistenciaDTO filtro = new FiltroAsistenciaDTO();
+
+        com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado reporte =
+                new com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado();
+        reporte.setIdReporte(1);
+        reporte.setTipoReporte("ASISTENCIA");
+        reporte.setTotalRegistros(0);
+
+        when(jpaAsistenciaRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of());
+        when(reporteFactory.crearReporteBase()).thenReturn(reporte);
+        when(reporteGeneradoRepository.guardar(any())).thenReturn(reporte);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.ReporteResponseDTO resultado =
+                reporteService.generarReporteAsistencia(filtro, ID_USUARIO);
+
+        assertNotNull(resultado);
+        assertEquals(0, resultado.getTotalRegistros());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 54 — RF38: tipo sin factory registrada → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 55 — Tipo INVENTARIO sin factory registrada → IllegalArgumentException")
     void exportar_TipoSinFactory_LanzaExcepcion() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> reporteService.exportarReporte("INVENTARIO", "PDF", List.of()));

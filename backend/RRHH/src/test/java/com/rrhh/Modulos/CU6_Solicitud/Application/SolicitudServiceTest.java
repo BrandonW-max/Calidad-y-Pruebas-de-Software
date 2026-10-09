@@ -91,11 +91,34 @@ class SolicitudServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 44 — RF25: empleado inactivo → excepción
+    // Test 44 — RF25: fechas incluyen fin de semana → excepción
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 44 — Empleado inactivo → IllegalStateException")
+    @DisplayName("Test 44 — Fechas incluyen sábado → IllegalArgumentException")
+    void registrar_FechasConFinDeSemana_LanzaExcepcion() {
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+
+        // 2026-03-14 es sábado
+        RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
+        req.setTipoSolicitud("PERMISO");
+        req.setFechaInicio(LocalDate.of(2026, 3, 12));
+        req.setFechaFin(LocalDate.of(2026, 3, 14));
+        req.setMotivo("Motivo");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> solicitudService.registrarSolicitud(req, ID_USUARIO));
+
+        assertEquals("Las fechas seleccionadas incluyen fines de semana o feriados.", ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 45 — RF25: empleado inactivo → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 45 — Empleado inactivo → IllegalStateException")
     void registrar_EmpleadoInactivo_LanzaExcepcion() {
         when(jpaUsuarioRepository.findById(ID_USUARIO))
                 .thenReturn(Optional.of(usuarioConEmpleado("INACTIVO")));
@@ -117,7 +140,7 @@ class SolicitudServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 45 — Vacaciones sin saldo disponible → IllegalStateException")
+    @DisplayName("Test 46 — Vacaciones sin saldo disponible → IllegalStateException")
     void registrar_VacacionesSinSaldo_LanzaExcepcion() {
         EmpleadoModel empleado = empleadoActivo();
         empleado.setSaldoVacaciones(0);
@@ -142,7 +165,7 @@ class SolicitudServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 46 — Solicitud de permiso válida → estado=PENDIENTE")
+    @DisplayName("Test 47 — Solicitud de permiso válida → estado=PENDIENTE")
     void registrar_Valido_EstadoPendiente() {
         when(jpaUsuarioRepository.findById(ID_USUARIO))
                 .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
@@ -170,7 +193,7 @@ class SolicitudServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 47 — Revisión RRHH de solicitud no pendiente → IllegalStateException")
+    @DisplayName("Test 48 — Revisión RRHH de solicitud no pendiente → IllegalStateException")
     void revisar_EstadoInvalido_LanzaExcepcion() {
         when(solicitudRepository.buscarPorId(ID_SOLICITUD))
                 .thenReturn(Optional.of(solicitudConEstado("APROBADA")));
@@ -190,7 +213,7 @@ class SolicitudServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 48 — Rechazo RRHH sin observación → IllegalArgumentException")
+    @DisplayName("Test 49 — Rechazo RRHH sin observación → IllegalArgumentException")
     void revisar_RechazoSinObservacion_LanzaExcepcion() {
         when(solicitudRepository.buscarPorId(ID_SOLICITUD))
                 .thenReturn(Optional.of(solicitudConEstado("PENDIENTE")));
@@ -207,11 +230,33 @@ class SolicitudServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 49 — RF28: decisión gerencia con estado no PROCESADO → excepción
+    // Test 50 — RF28: gerencia rechaza sin motivo → excepción
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 49 — Decisión gerencia con solicitud no PROCESADA → IllegalStateException")
+    @DisplayName("Test 50 — Gerencia rechaza sin motivo → IllegalArgumentException")
+    void gerencia_RechazoSinMotivo_LanzaExcepcion() {
+        Solicitud solicitud = solicitudConEstado("PROCESADO");
+        solicitud.setIdEmpleado(1L);
+        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(solicitud));
+
+        DecisionGerenciaRequestDTO req = new DecisionGerenciaRequestDTO();
+        req.setIdSolicitud(ID_SOLICITUD);
+        req.setAprobado(false);
+        req.setRespuesta(null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> solicitudService.decidirSolicitudGerencia(req, ID_GERENCIA));
+
+        assertEquals("Ingrese el motivo del rechazo.", ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 51 — RF28: decisión gerencia con estado no PROCESADO → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 51 — Decisión gerencia con solicitud no PROCESADA → IllegalStateException")
     void gerencia_NoEnProcesado_LanzaExcepcion() {
         when(solicitudRepository.buscarPorId(ID_SOLICITUD))
                 .thenReturn(Optional.of(solicitudConEstado("PENDIENTE")));
@@ -231,7 +276,7 @@ class SolicitudServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 50 — Aprobación gerencia válida → estado=APROBADA")
+    @DisplayName("Test 52 — Aprobación gerencia válida → estado=APROBADA")
     void gerencia_Aprobada_EstadoAPROBADA() {
         Solicitud solicitud = solicitudConEstado("PROCESADO");
         solicitud.setIdEmpleado(1L);
