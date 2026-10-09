@@ -1,0 +1,240 @@
+package com.rrhh.Modulos.CU3_Nomina.Application;
+
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialRepository;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaContratoRepository;
+import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmpleadoRepository;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.factory.INominaFactory;
+import com.rrhh.Modulos.CU3_Nomina.Application.services.NominaService;
+import com.rrhh.Modulos.CU3_Nomina.Domain.entities.Nomina;
+import com.rrhh.Modulos.CU3_Nomina.Domain.repository.IDetalleNominaRepository;
+import com.rrhh.Modulos.CU3_Nomina.Domain.repository.INominaRepository;
+import com.rrhh.Modulos.CU3_Nomina.Infrastructure.export.NominaComprobantePDFGenerator;
+import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepository;
+import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository;
+import com.rrhh.Shared.config.RRHHProperties;
+import com.rrhh.Shared.exception.RecursoNoEncontradoException;
+import com.rrhh.Shared.persistence.ContratoModel;
+import com.rrhh.Shared.persistence.EmpleadoModel;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+@DisplayName("NominaService - Cálculo y ajuste de nómina (RF17, RF20)")
+class NominaServiceTest {
+
+    @Mock private RRHHProperties rrhhProperties;
+    @Mock private INominaRepository nominaRepository;
+    @Mock private IDetalleNominaRepository detalleNominaRepository;
+    @Mock private IHistorialRepository historialRepository;
+    @Mock private INominaFactory nominaFactory;
+    @Mock private NominaComprobantePDFGenerator comprobantePDFGenerator;
+    @Mock private JpaEmpleadoRepository jpaEmpleadoRepository;
+    @Mock private JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository;
+    @Mock private JpaContratoRepository jpaContratoRepository;
+    @Mock private JpaFamiliaInfoRepository jpaFamiliaInfoRepository;
+
+    @InjectMocks
+    private NominaService nominaService;
+
+    private static final Long   ID_USUARIO_RRHH = 1L;
+    private static final Integer ID_NOMINA      = 10;
+
+    private static final BigDecimal SUELDO_MINIMO = new BigDecimal("1025.00");
+    private static final BigDecimal SUELDO_VALIDO = new BigDecimal("2500.00");
+
+    private static final String MSG_FECHA_INVALIDA   = "La fecha de inicio no puede ser mayor a la fecha fin.";
+    private static final String MSG_MES_FUTURO       = "No se puede calcular la nómina de meses futuros.";
+    private static final String MSG_SIN_EMPLEADOS    =
+            "No se encontraron empleados activos para el periodo seleccionado. " +
+            "No es posible realizar el calculo de nomina.";
+    private static final String MSG_SUELDO_CERO      = "El sueldo base debe ser mayor a cero.";
+    private static final String MSG_SUELDO_MINIMO    = "El sueldo base debe ser mayor o igual al salario minimo legal";
+
+    @BeforeEach
+    void setUp() {
+        when(rrhhProperties.getSalarioMinimo()).thenReturn(SUELDO_MINIMO);
+        when(rrhhProperties.getTasaDescuentoLey()).thenReturn(new BigDecimal("0.13"));
+        when(rrhhProperties.getTasaDescuentoAfp()).thenReturn(new BigDecimal("0.10"));
+        when(rrhhProperties.getBonifFamiliar()).thenReturn(new BigDecimal("0.10"));
+        when(rrhhProperties.getBonifNocturno()).thenReturn(new BigDecimal("0.35"));
+        when(rrhhProperties.getBonifGuardia()).thenReturn(new BigDecimal("15.00"));
+        when(rrhhProperties.getBonifRiesgo()).thenReturn(new BigDecimal("0.05"));
+        when(rrhhProperties.getRmv()).thenReturn(new BigDecimal("1025.00"));
+        when(rrhhProperties.getTasaHoraExtra1_5()).thenReturn(new BigDecimal("1.5"));
+        when(rrhhProperties.getTasaHoraExtra2_0()).thenReturn(new BigDecimal("2.0"));
+        when(rrhhProperties.getUmbralHorasDobles()).thenReturn(2);
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 36 — RF20: fechaInicio > fechaFin → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 36 — fechaInicio posterior a fechaFin → IllegalArgumentException")
+    void fechaInicioMayorFechaFin_LanzaExcepcion() {
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 2, 1),
+                null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+
+        assertEquals(MSG_FECHA_INVALIDA, ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 37 — RF20: mes futuro → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 37 — Período en mes futuro → IllegalArgumentException")
+    void mesFuturo_LanzaExcepcion() {
+        LocalDate futuro = LocalDate.now().plusMonths(1).withDayOfMonth(1);
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(
+                futuro, futuro.plusDays(27), null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+
+        assertEquals(MSG_MES_FUTURO, ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 38 — RF20: sin empleados activos → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 38 — Sin empleados activos en el período → IllegalStateException")
+    void sinEmpleadosActivos_LanzaExcepcion() {
+        LocalDate inicio = LocalDate.now().withDayOfMonth(1);
+        LocalDate fin    = inicio.plusDays(27);
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
+
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+
+        assertTrue(ex.getMessage().contains("No se encontraron empleados activos"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 39 — RF17: nómina no encontrada → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 39 — Nómina no encontrada al ajustar → RecursoNoEncontradoException")
+    void ajuste_NominaNoExiste_LanzaExcepcion() {
+        when(nominaRepository.buscarPorId(999)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNoEncontradoException.class,
+                () -> nominaService.ajustarNomina(999, new AjustarNominaRequestDTO(), ID_USUARIO_RRHH));
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 40 — RF17: sueldo = 0 → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 40 — Sueldo base igual a cero → IllegalArgumentException")
+    void ajuste_SueldoMenorOIgualCero_LanzaExcepcion() {
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nominaConId(ID_NOMINA)));
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setSueldoBase(BigDecimal.ZERO);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH));
+
+        assertEquals(MSG_SUELDO_CERO, ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 41 — RF17: sueldo < mínimo → excepción
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 41 — Sueldo base menor al mínimo legal → IllegalArgumentException")
+    void ajuste_SueldoMenorAlMinimo_LanzaExcepcion() {
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nominaConId(ID_NOMINA)));
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setSueldoBase(new BigDecimal("500.00"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH));
+
+        assertTrue(ex.getMessage().contains(MSG_SUELDO_MINIMO));
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 42 — RF17: ajuste válido → estadoPago = AJUSTADA
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Test 42 — Ajuste válido → nómina con estadoPago=AJUSTADA")
+    void ajuste_Valido_EstadoAJUSTADA() {
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setIdEmpleado(1L);
+        nomina.setVersion(1);
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+
+        ContratoModel contrato = new ContratoModel();
+        contrato.setSueldo(new BigDecimal("2000.00"));
+        contrato.setTipoPension("ONP");
+        when(jpaContratoRepository.findFirstByEmpleadoIdEmpleadoAndEstado(eq(1L), eq("ACTIVO")))
+                .thenReturn(Optional.of(contrato));
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(1L);
+        empleado.setNombres("Juan");
+        empleado.setApellidos("Perez");
+        when(jpaEmpleadoRepository.findById(1L)).thenReturn(Optional.of(empleado));
+
+        Nomina nominaGuardada = nominaConId(ID_NOMINA);
+        nominaGuardada.setIdEmpleado(1L);
+        nominaGuardada.setEstadoPago("AJUSTADA");
+        nominaGuardada.setVersion(2);
+        when(nominaRepository.guardar(any())).thenReturn(nominaGuardada);
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setSueldoBase(SUELDO_VALIDO);
+        req.setTipoPensionAplicada("ONP");
+
+        NominaResponseDTO resultado = nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH);
+
+        assertEquals("AJUSTADA", resultado.getEstadoPago());
+    }
+
+    // -----------------------------------------------------------------------
+    // Helper
+    // -----------------------------------------------------------------------
+
+    private Nomina nominaConId(Integer id) {
+        Nomina n = new Nomina();
+        n.setIdNomina(id);
+        return n;
+    }
+}
