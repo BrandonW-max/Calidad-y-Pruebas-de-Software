@@ -51,6 +51,12 @@ public class SolicitudService implements ISolicitudService {
     @Transactional
     public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
+        boolean tipoValido = "VACACIONES".equalsIgnoreCase(request.getTipoSolicitud())
+                || "PERMISO".equalsIgnoreCase(request.getTipoSolicitud());
+        if (!tipoValido) {
+            throw new IllegalArgumentException("Error: tipo de solicitud invalido");
+        }
+
         if (request.getFechaInicio().isAfter(request.getFechaFin())) {
             throw new IllegalArgumentException(
                 "La fecha de inicio no puede ser mayor que la fecha fin."
@@ -92,7 +98,9 @@ public class SolicitudService implements ISolicitudService {
         solicitud.setActualizadoEl(LocalDateTime.now());
 
         Solicitud guardada = solicitudRepository.guardar(solicitud);
-        return mapearAResponse(guardada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(guardada, empleado);
+        response.setMensaje("Solicitud registrada correctamente. Estado: PENDIENTE.");
+        return response;
     }
 
     @Override
@@ -132,7 +140,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", observacion=" + (request.getObservacionRrhh() != null ? request.getObservacionRrhh() : ""));
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por RRHH. Estado: PROCESADO."
+                : "Solicitud devuelta. Estado: OBSERVADO.");
+        return response;
     }
 
     @Override
@@ -148,11 +160,7 @@ public class SolicitudService implements ISolicitudService {
 
         if (request.isAprobado()) {
             solicitud.setEstado("APROBADA");
-            solicitud.setRespuesta(
-                (request.getRespuesta() != null && !request.getRespuesta().isBlank())
-                    ? request.getRespuesta()
-                    : "Su solicitud de vacaciones o permisos ha sido aprobada por Gerencia."
-            );
+            solicitud.setRespuesta("Solicitud aprobada por Gerencia. Estado: APROBADA.");
 
             // RNF86: Descontar saldo de vacaciones
             if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
@@ -168,9 +176,7 @@ public class SolicitudService implements ISolicitudService {
                 throw new IllegalArgumentException("Ingrese el motivo del rechazo.");
             }
             solicitud.setEstado("RECHAZADA");
-            solicitud.setRespuesta(
-                "Su solicitud de vacaciones o permisos ha sido rechazada por Gerencia. Motivo: " + request.getRespuesta()
-            );
+            solicitud.setRespuesta("Solicitud rechazada. Estado: RECHAZADA.");
         }
 
         solicitud.setAprobadoPor(idUsuarioGerencia);
@@ -189,7 +195,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", respuesta=" + actualizada.getRespuesta());
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por Gerencia. Estado: APROBADA."
+                : "Solicitud rechazada. Estado: RECHAZADA.");
+        return response;
     }
 
     @Override
