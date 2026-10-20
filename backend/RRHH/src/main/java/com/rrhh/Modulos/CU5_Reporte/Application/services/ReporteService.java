@@ -313,8 +313,10 @@ public class ReporteService implements IReporteService {
     @Override
     public byte[] exportarReporte(String tipo, String formato,
                                    List<Map<String, Object>> datos) {
-        String factoryBeanName = FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory");
-        ExportAbstractFactory factory = exportFactories.get(factoryBeanName);
+        String factoryBeanName = tipo != null
+                ? FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory")
+                : null;
+        ExportAbstractFactory factory = factoryBeanName != null ? exportFactories.get(factoryBeanName) : null;
         if (factory == null) {
             throw new IllegalArgumentException("No existe fabrica de exportacion para: " + tipo);
         }
