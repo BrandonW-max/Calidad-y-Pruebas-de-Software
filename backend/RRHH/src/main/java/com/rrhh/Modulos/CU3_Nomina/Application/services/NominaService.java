@@ -422,14 +422,8 @@ public class NominaService implements INominaService {
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
 
         BigDecimal sueldoBase = normalizar(request.getSueldoBase());
-        if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
-        }
-        if (sueldoBase.compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
-            throw new IllegalArgumentException(
-                "El sueldo base debe ser mayor o igual al salario minimo legal (S/ " +
-                    rrhhProperties.getSalarioMinimo() + ")."
-            );
+        if (sueldoBase.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Error: el valor debe ser mayor o igual a 0");
         }
 
         BigDecimal totalHorasTrabajadas = normalizar(request.getTotalHorasTrabajadas());
