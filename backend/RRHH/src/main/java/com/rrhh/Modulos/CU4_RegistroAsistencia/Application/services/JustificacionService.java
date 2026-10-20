@@ -22,6 +22,9 @@ public class JustificacionService {
     @Transactional
     public JustificacionTardanzaModel registrar(Integer idRegistroAsistencia, Long idEmpleado,
                                                  String motivo, String evidenciaUrl) {
+        if (idRegistroAsistencia == null) {
+            throw new IllegalArgumentException("Error: debe enviar el ID del registro de asistencia");
+        }
         RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, idRegistroAsistencia);
         if (r == null) {
             throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Registro de asistencia no encontrado");
@@ -43,7 +46,7 @@ public class JustificacionService {
                 .setParameter("idRegistro", idRegistroAsistencia)
                 .getSingleResult();
         if (existentes > 0) {
-            throw new RuntimeException("Ya existe una justificación pendiente para este registro.");
+            throw new RuntimeException("Ya existe una justificacion pendiente para este registro.");
         }
 
         LocalDate fechaRegistro = r.getFecha();

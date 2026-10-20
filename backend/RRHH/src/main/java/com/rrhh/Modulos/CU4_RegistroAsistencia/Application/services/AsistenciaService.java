@@ -142,7 +142,21 @@ public class AsistenciaService {
         }
 
         boolean esEntrada = "ENTRADA".equalsIgnoreCase(request.getTipo());
-        boolean esCorreccion = "CORRECCION".equalsIgnoreCase(request.getTipoRegistro());
+        boolean esSalida = "SALIDA".equalsIgnoreCase(request.getTipo());
+        if (!esEntrada && !esSalida) {
+            return new MarcarAsistenciaResponseDTO(false, "Error: tipo de registro invalido");
+        }
+
+        String tipoRegistroRaw = request.getTipoRegistro();
+        if (tipoRegistroRaw != null) {
+            boolean tipoRegistroValido = "ORIGINAL".equalsIgnoreCase(tipoRegistroRaw)
+                    || "CORRECCION".equalsIgnoreCase(tipoRegistroRaw)
+                    || tipoRegistroRaw.matches("[0-9]+");
+            if (!tipoRegistroValido) {
+                return new MarcarAsistenciaResponseDTO(false, "Error: tipo de registro invalido");
+            }
+        }
+        boolean esCorreccion = "CORRECCION".equalsIgnoreCase(tipoRegistroRaw);
 
         if (esCorreccion) {
             Optional<RegistroAsistenciaModel> existente = registroAsistenciaRepository
@@ -202,7 +216,7 @@ public class AsistenciaService {
             registro = registroOptional.get();
             if (registro.getHoraEntrada() != null && registro.getHoraSalida() != null) {
                 return new MarcarAsistenciaResponseDTO(false,
-                        "El empleado ya tiene entrada y salida registradas para este dia.");
+                        "Registro duplicado. El empleado ya tiene entrada y salida registradas hoy.");
             }
         }
 
@@ -251,9 +265,12 @@ public class AsistenciaService {
                 + " | Fecha: " + fecha);
         historialRepository.save(log);
 
+        String mensajeExito = esEntrada
+                ? "Entrada registrada correctamente."
+                : "Salida registrada correctamente. El registro de asistencia ha sido almacenado correctamente en el sistema.";
         return new MarcarAsistenciaResponseDTO(
                 true,
-                "Registro manual de asistencia almacenado correctamente.",
+                mensajeExito,
                 esEntrada ? "ENTRADA" : "SALIDA",
                 guardado.getFecha(),
                 guardado.getHoraEntrada(),
