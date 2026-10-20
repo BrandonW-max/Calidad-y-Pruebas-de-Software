@@ -51,8 +51,10 @@ public class SolicitudService implements ISolicitudService {
     @Transactional
     public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
-        boolean tipoValido = "VACACIONES".equalsIgnoreCase(request.getTipoSolicitud())
-                || "PERMISO".equalsIgnoreCase(request.getTipoSolicitud());
+        java.util.List<String> tiposValidos = java.util.List.of(
+                "VACACIONES", "PERMISO", "PERMISO_PERSONAL", "PERMISO_MEDICO", "OTROS");
+        boolean tipoValido = tiposValidos.stream()
+                .anyMatch(t -> t.equalsIgnoreCase(request.getTipoSolicitud()));
         if (!tipoValido) {
             throw new IllegalArgumentException("Error: tipo de solicitud invalido");
         }

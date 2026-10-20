@@ -147,8 +147,8 @@ export default function CalculoNomina() {
       } else {
         throw new Error(data?.message || "Respuesta inválida");
       }
-    } catch {
-      setError("Error al calcular la nómina. Verifique el período.");
+    } catch (err) {
+      setError(err.message || "Error al calcular la nómina. Verifique el período.");
     } finally {
       setCalculando(false);
     }
@@ -174,8 +174,8 @@ export default function CalculoNomina() {
       } else {
         setError(`No hay nóminas registradas para ${periodo}. Calcule primero.`);
       }
-    } catch {
-      setError("Error al cargar el período");
+    } catch (err) {
+      setError(err.message || "Error al cargar el período");
     } finally {
       setLoading(false);
     }
@@ -188,8 +188,8 @@ export default function CalculoNomina() {
     try {
       await enviarComprobante(idNomina);
       setMensaje(`Comprobante enviado correctamente (Nómina #${idNomina})`);
-    } catch {
-      setError("Error al enviar el comprobante");
+    } catch (err) {
+      setError(err.message || "Error al enviar el comprobante");
     } finally {
       setEnviando(v => ({ ...v, [idNomina]: false }));
     }
@@ -250,8 +250,8 @@ export default function CalculoNomina() {
         tipoPension: actualizada.tipoPensionAplicada ?? p.tipoPension,
       }));
       setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(calculos.neto)}`);
-    } catch {
-      setError("Error al guardar el ajuste de nómina.");
+    } catch (err) {
+      setError(err.message || "Error al guardar el ajuste de nómina.");
     } finally {
       setGuardandoAjuste(false);
     }

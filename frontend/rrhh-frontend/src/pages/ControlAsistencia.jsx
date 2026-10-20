@@ -123,8 +123,8 @@ function VistaEmpleado() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
       cerrarModalJustif();
     } finally {
       setJustifSaving(false);
@@ -151,8 +151,8 @@ function VistaEmpleado() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setError(err.message || "Error al registrar la asistencia. Intente de nuevo.");
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally {
       setSaving(false);
@@ -412,8 +412,8 @@ function VistaEmpleado() {
                 e.target.reset();
                 setTabActiva("justificaciones");
                 cargarJustificaciones();
-              } catch {
-                setError("Error al enviar la justificación. Intente de nuevo.");
+              } catch (err) {
+                setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
               } finally { setJustifSaving(false); }
             }}>
               <div className="form-grid">
@@ -711,8 +711,8 @@ function VistaRRHH() {
       setMensaje("Registro manual guardado correctamente");
       setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" });
       resetCorreccion();
-    } catch {
-      setMensaje("Error al guardar el registro manual");
+    } catch (err) {
+      setError(err.message || "Error al guardar el registro manual");
     }
   };
 
@@ -724,8 +724,8 @@ function VistaRRHH() {
       setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
       handleCorregirTardanza(j);
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al aprobar la justificación");
+    } catch (err) {
+      setError(err.message || "Error al aprobar la justificación");
     }
   };
 
@@ -742,8 +742,8 @@ function VistaRRHH() {
       setMensaje("Justificación rechazada correctamente");
       setModalRechazar({ open: false, id: null, comentario: "" });
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al rechazar la justificación");
+    } catch (err) {
+      setError(err.message || "Error al rechazar la justificación");
       setModalRechazar({ open: false, id: null, comentario: "" });
     }
   };
@@ -1238,8 +1238,8 @@ function VistaGerencia() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
       cerrarModalJustif();
     } finally { setJustifSaving(false); }
   };
@@ -1255,8 +1255,8 @@ function VistaGerencia() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setError(err.message || "Error al registrar la asistencia. Intente de nuevo.");
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally { setSaving(false); }
   };
@@ -1445,7 +1445,7 @@ function VistaGerencia() {
                   e.target.reset();
                   setTabActiva("justificaciones");
                   cargarJustificaciones();
-                } catch { setError("Error al enviar la justificación. Intente de nuevo."); }
+                } catch (err) { setError(err.message || "Error al enviar la justificación. Intente de nuevo."); }
                 finally  { setJustifSaving(false); }
               }}>
                 <div className="form-grid">

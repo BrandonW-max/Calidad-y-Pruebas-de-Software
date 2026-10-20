@@ -341,8 +341,8 @@ function VistaRRHH() {
       setMensaje(`Solicitud ${modalRevision.decision === "APROBAR" ? "aprobada" : "devuelta"} correctamente`);
       setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
       cargarSolicitudes();
-    } catch {
-      setError("Error al procesar la revisión");
+    } catch (err) {
+      setError(err.message || "Error al procesar la revisión");
       setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
     } finally { setProcesando(false); }
   };
@@ -598,8 +598,8 @@ function VistaGerencia() {
       setMensaje(`Solicitud ${modalDecision.decision === "APROBAR" ? "aprobada" : "rechazada"} correctamente`);
       setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
       cargarSolicitudes();
-    } catch {
-      setError("Error al procesar la decisión");
+    } catch (err) {
+      setError(err.message || "Error al procesar la decisión");
       setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
     } finally { setProcesando(false); }
   };
