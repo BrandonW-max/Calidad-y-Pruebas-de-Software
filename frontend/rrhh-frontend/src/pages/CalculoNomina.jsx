@@ -55,7 +55,7 @@ export default function CalculoNomina() {
   const abrirEstructura = (n) => {
     setModalEstructura(n);
     setDatosBase({
-      sueldoBase:       Number(n.sueldoBase ?? 0),
+      sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
       horasTrabajadas:  Math.round(Number(n.totalHorasTrabajadas ?? 0) * 10) / 10,
       horasExtra:       Math.round(Number(n.totalHorasExtra ?? 0) * 10) / 10,
       horasNocturnas:   Math.round(Number(n.totalHorasNocturnas ?? 0) * 10) / 10,
@@ -622,7 +622,7 @@ export default function CalculoNomina() {
 
         const r1 = (v) => Math.round(Number(v ?? 0) * 10) / 10;
         const resetearValores = () => setDatosBase({
-          sueldoBase:       Number(n.sueldoBase ?? 0),
+          sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
           horasTrabajadas:  r1(n.totalHorasTrabajadas),
           horasExtra:       r1(n.totalHorasExtra),
           horasNocturnas:   r1(n.totalHorasNocturnas),
@@ -714,7 +714,12 @@ export default function CalculoNomina() {
                     <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#2563eb" }}>Datos Ingresados / Registrados</span>
                   </div>
 
-                  <InputField label="Sueldo Devengado (S/)" field="sueldoBase" step="1" />
+                  <InputField label="Sueldo Base del contrato (S/)" field="sueldoBase" step="1" />
+                  {datosBase.horasTrabajadas <= 0 && datosBase.horasExtra <= 0 && (
+                    <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: "8px 10px", fontSize: 12, color: "#92400e", marginBottom: 10 }}>
+                      ⚠️ Sin asistencias registradas en el período: el ajuste pagará el sueldo completo del contrato. Confirme antes de guardar.
+                    </div>
+                  )}
                   <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
                   <InputField label="Horas Extra" field="horasExtra" step="0.5" />
                   <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" disabled={!esNocturno} />

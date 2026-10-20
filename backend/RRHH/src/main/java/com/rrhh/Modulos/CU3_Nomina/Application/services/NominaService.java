@@ -422,7 +422,21 @@ public class NominaService implements INominaService {
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
 
         BigDecimal sueldoBase = normalizar(request.getSueldoBase());
-        if (sueldoBase.compareTo(BigDecimal.ZERO) < 0) {
+        if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
+        }
+        if (sueldoBase.compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
+            throw new IllegalArgumentException(
+                "El sueldo base debe ser mayor o igual al salario minimo legal (S/ "
+                + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString() + ")."
+            );
+        }
+
+        if (esNegativo(request.getTotalHorasTrabajadas()) || esNegativo(request.getTotalHorasExtra())
+                || esNegativo(request.getTotalHorasNocturnas())
+                || (request.getTotalMinutosTardanza() != null && request.getTotalMinutosTardanza() < 0)
+                || (request.getCantidadGuardias() != null && request.getCantidadGuardias() < 0)
+                || (request.getCantidadHijos() != null && request.getCantidadHijos() < 0)) {
             throw new IllegalArgumentException("Error: el valor debe ser mayor o igual a 0");
         }
 
@@ -546,6 +560,10 @@ public class NominaService implements INominaService {
                 .multiply(horasDobles);
 
         return montoBase.add(montoDoble).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private boolean esNegativo(BigDecimal valor) {
+        return valor != null && valor.signum() < 0;
     }
 
     private BigDecimal normalizar(BigDecimal valor) {

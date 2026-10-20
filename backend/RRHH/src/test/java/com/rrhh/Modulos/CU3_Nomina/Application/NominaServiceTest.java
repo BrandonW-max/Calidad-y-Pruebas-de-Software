@@ -18,6 +18,7 @@ import com.rrhh.Shared.config.RRHHProperties;
 import com.rrhh.Shared.exception.RecursoNoEncontradoException;
 import com.rrhh.Shared.persistence.ContratoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +32,7 @@ import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -226,6 +228,66 @@ class NominaServiceTest {
         NominaResponseDTO resultado = nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH);
 
         assertEquals("AJUSTADA", resultado.getEstadoPago());
+    }
+
+    // -----------------------------------------------------------------------
+    // VL-CU3-19/20 — turno nocturno: entrada 19:00 vs 18:59
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("VL-CU3-19 — Entrada 19:00 → bonificación nocturna > 0")
+    void turnoNocturno_EntradaA1900_ActivaBonificacion() {
+        BigDecimal bono = calcularBonifNocturnaCon(LocalTime.of(19, 0));
+
+        assertTrue(bono.compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    @Test
+    @DisplayName("VL-CU3-20 — Entrada 18:59 → bonificación nocturna = 0 (turno diurno)")
+    void turnoDiurno_EntradaA1859_NoActivaBonificacion() {
+        BigDecimal bono = calcularBonifNocturnaCon(LocalTime.of(18, 59));
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(bono));
+    }
+
+    private BigDecimal calcularBonifNocturnaCon(LocalTime horaEntrada) {
+        LocalDate inicio = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate fin = inicio.plusDays(27);
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(5L);
+        empleado.setNombres("Turno");
+        empleado.setApellidos("Prueba");
+        empleado.setEstado("ACTIVO");
+
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setSueldo(SUELDO_VALIDO);
+        contrato.setTipoPension("ONP");
+        contrato.setEstado("ACTIVO");
+
+        RegistroAsistenciaModel registro = new RegistroAsistenciaModel();
+        registro.setEmpleado(empleado);
+        registro.setFecha(inicio.plusDays(1));
+        registro.setHoraEntrada(horaEntrada);
+        registro.setHoraSalida(LocalTime.of(23, 0));
+        registro.setTipoRegistro("ORIGINAL");
+        registro.setMinutosTardanza(0);
+        registro.setMinutosExtra(0);
+
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+        when(jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+            .thenReturn(List.of(contrato));
+        when(jpaRegistroAsistenciaRepository.findByEmpleadoIdEmpleadoInAndFechaBetween(anyList(), any(), any()))
+            .thenReturn(List.of(registro));
+        when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(anyList())).thenReturn(List.of());
+        when(nominaFactory.crearNominaBase()).thenReturn(new Nomina());
+        when(nominaRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
+        List<NominaResponseDTO> resultado = nominaService.calcularNomina(req, ID_USUARIO_RRHH);
+
+        return resultado.get(0).getBonifTurnoNocturno();
     }
 
     // -----------------------------------------------------------------------
