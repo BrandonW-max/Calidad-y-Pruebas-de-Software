@@ -57,13 +57,13 @@ public class RegistrarAscensoUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirAscenso()) {
             return new EmpleadoResponseDTO(
                     false,
-                    "No se puede registrar ascenso a un empleado que no está activo",
+                    "Error: el empleado esta inactivo",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,
@@ -78,7 +78,7 @@ public class RegistrarAscensoUseCase {
         if (dto == null || dto.getNuevoCargo() == null || dto.getNuevoCargo().isBlank()) {
             return new EmpleadoResponseDTO(
                     false,
-                    "Debe ingresar el nuevo cargo del empleado",
+                    "El cargo es obligatorio",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,

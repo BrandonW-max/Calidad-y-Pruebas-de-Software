@@ -49,13 +49,13 @@ public class RegistrarSancionUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeSerSancionado()) {
             return new EmpleadoResponseDTO(
                     false,
-                    "No se puede registrar sanción a un empleado desvinculado",
+                    "Error: el empleado esta inactivo",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,
@@ -70,7 +70,7 @@ public class RegistrarSancionUseCase {
         if (dto == null || dto.getJustificacion() == null || dto.getJustificacion().isBlank()) {
             return new EmpleadoResponseDTO(
                     false,
-                    "Debe ingresar una justificación para la sanción",
+                    "La justificación es obligatoria",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,

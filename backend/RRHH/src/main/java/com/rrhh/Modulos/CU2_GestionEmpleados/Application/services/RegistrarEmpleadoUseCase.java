@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rrhh.Shared.security.HashService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -86,11 +87,19 @@ public class RegistrarEmpleadoUseCase {
             );
         }
 
+        if (dto.getSueldo() != null && dto.getSueldo().compareTo(BigDecimal.valueOf(1025)) < 0) {
+            throw new IllegalArgumentException("Error: el sueldo debe ser mayor o igual a 1025");
+        }
+
+        if (dto.getFechaNac() != null && dto.getFechaNac().isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Error: fecha invalida");
+        }
+
         Departamento departamento =
                 departamentoRepository.findById(dto.getIdDpto());
 
         if (departamento == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento no encontrado.");
         }
 
         Empleado empleado = new Empleado();

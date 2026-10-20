@@ -48,13 +48,13 @@ public class CambioSalarialUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirCambioSalarial()) {
             return new EmpleadoResponseDTO(
                     false,
-                    "No se puede registrar cambio salarial a un empleado que no está activo",
+                    "Error: el empleado esta inactivo",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,
@@ -69,7 +69,7 @@ public class CambioSalarialUseCase {
         if (dto == null || dto.getNuevoSueldo() == null) {
             return new EmpleadoResponseDTO(
                     false,
-                    "Debe ingresar el nuevo sueldo",
+                    "El sueldo es obligatorio",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,
@@ -84,7 +84,7 @@ public class CambioSalarialUseCase {
         if (dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
             return new EmpleadoResponseDTO(
                     false,
-                    "El nuevo sueldo debe ser mayor o igual al salario minimo legal (S/ " + rrhhProperties.getSalarioMinimo() + ")",
+                    "Error: el sueldo debe ser mayor o igual a 1025",
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,

@@ -79,6 +79,12 @@ export default function GestionEmpleados() {
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
   const [, setShowFechas]      = useState(false);
 
+  // Error modal (one error at a time, advances on each retry)
+  const [errorModal,   setErrorModal]   = useState({ open: false, message: "" });
+  const [fieldErrors,  setFieldErrors]  = useState({});
+  const [lastErrKeys,  setLastErrKeys]  = useState([]);
+  const [errPos,       setErrPos]       = useState(0);
+
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
   const [dropPos,  setDropPos]  = useState({ top: 0, left: 0 });
@@ -160,6 +166,23 @@ export default function GestionEmpleados() {
 
   const cargarEmpleados = () => setFetchKey(k => k + 1);
 
+  const showFormError = (errorsObj, singleMsg) => {
+    if (errorsObj && Object.keys(errorsObj).length > 0) {
+      const entries = Object.entries(errorsObj);
+      const keys = entries.map(([k]) => k).sort().join(",");
+      const prevKeys = [...lastErrKeys].sort().join(",");
+      const pos = keys === prevKeys ? (errPos + 1) % entries.length : 0;
+      setFieldErrors(Object.fromEntries(entries));
+      setLastErrKeys(entries.map(([k]) => k));
+      setErrPos(pos);
+      setErrorModal({ open: true, message: entries[pos][1] });
+    } else {
+      setErrorModal({ open: true, message: singleMsg || "Error al procesar la solicitud." });
+    }
+  };
+
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+
   const handleBuscar = () => {
     if (page !== 0) setPage(0);
     else setFetchKey(k => k + 1);
@@ -173,7 +196,6 @@ export default function GestionEmpleados() {
 
   const handleRegistrar = async (e) => {
     e.preventDefault();
-    setMensaje("");
     try {
       const data = await registrarEmpleado({
         ...form,
@@ -188,21 +210,19 @@ export default function GestionEmpleados() {
         contrasenia: form.numeroDi,
       });
       if (!data?.success) {
-        setMensajeOk(false);
-        setMensaje(data?.message || "No se pudo registrar el empleado.");
+        setErrorModal({ open: true, message: data?.message || "No se pudo registrar el empleado." });
         return;
       }
+      setFieldErrors({});
+      setLastErrKeys([]);
+      setErrPos(0);
       setMensajeOk(true);
       setMensaje("Empleado registrado correctamente");
       setForm(FORM_VACIO);
       setModalNuevo(false);
       cargarEmpleados();
     } catch (err) {
-      setMensajeOk(false);
-      const msg = err?.errors
-        ? Object.entries(err.errors).map(([k, v]) => `${k}: ${v}`).join(" | ")
-        : err?.message || "Error al registrar empleado. Verifique los datos.";
-      setMensaje(msg);
+      showFormError(err?.errors, err?.message || "Error al registrar empleado. Verifique los datos.");
     }
   };
 
@@ -263,8 +283,8 @@ export default function GestionEmpleados() {
       setMensaje("Sanción registrada correctamente");
       setSancionForm({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
       setModalSancion({ open: false, id: null });
-    } catch {
-      setMensaje("Error al registrar la sanción");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar la sanción.");
     }
   };
 
@@ -276,8 +296,8 @@ export default function GestionEmpleados() {
       setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
       setModalAscenso({ open: false, id: null });
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al registrar el ascenso");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar el ascenso.");
     }
   };
 
@@ -289,8 +309,8 @@ export default function GestionEmpleados() {
       setCambioForm({ idEmpleado: "", nuevoSueldo: "" });
       setModalCambio({ open: false, id: null });
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al registrar el cambio salarial");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar el cambio salarial.");
     }
   };
 
@@ -595,7 +615,7 @@ export default function GestionEmpleados() {
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>➕ Registrar Nuevo Empleado</h3></div>
-              <button className="modal-close" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>×</button>
+              <button className="modal-close" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); setFieldErrors({}); setLastErrKeys([]); setErrPos(0); }}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-info">
@@ -605,30 +625,36 @@ export default function GestionEmpleados() {
                 <div className="form-grid">
                   <div className="form-group">
                     <label>Tipo Documento *</label>
-                    <select value={form.docIdentidad} onChange={e => setForm({ ...form, docIdentidad: e.target.value })}>
+                    <select value={form.docIdentidad} onChange={e => setForm({ ...form, docIdentidad: e.target.value })}
+                      style={fieldErrors.docIdentidad ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="DNI">DNI</option>
                       <option value="CE">Carnet de Extranjería</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Número Documento *</label>
-                    <input value={form.numeroDi} onChange={e => setForm({ ...form, numeroDi: e.target.value })} placeholder="Ej: 12345678" required />
+                    <input value={form.numeroDi} onChange={e => setForm({ ...form, numeroDi: e.target.value })} placeholder="Ej: 12345678" required
+                      style={fieldErrors.numeroDi ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Nombres *</label>
-                    <input value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })} placeholder="Nombres completos" required />
+                    <input value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })} placeholder="Nombres completos" required
+                      style={fieldErrors.nombres ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Apellidos *</label>
-                    <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })} placeholder="Apellidos completos" required />
+                    <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })} placeholder="Apellidos completos" required
+                      style={fieldErrors.apellidos ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Fecha de Nacimiento *</label>
-                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} required />
+                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} required
+                      style={fieldErrors.fechaNac ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Sexo *</label>
-                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })} required>
+                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })} required
+                      style={fieldErrors.sexo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione</option>
                       <option value="M">Masculino</option>
                       <option value="F">Femenino</option>
@@ -636,7 +662,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Estado Civil</label>
-                    <select value={form.estadoCivil} onChange={e => setForm({ ...form, estadoCivil: e.target.value })}>
+                    <select value={form.estadoCivil} onChange={e => setForm({ ...form, estadoCivil: e.target.value })}
+                      style={fieldErrors.estadoCivil ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione</option>
                       <option value="SOLTERO">Soltero/a</option>
                       <option value="CASADO">Casado/a</option>
@@ -647,22 +674,26 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Correo Personal</label>
-                    <input type="email" value={form.correo} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="correo@ejemplo.com" />
+                    <input type="email" value={form.correo} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="correo@ejemplo.com"
+                      style={fieldErrors.correo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                     <small style={{ color: "var(--text-3)", fontSize: "11px" }}>
                       El correo institucional se genera automáticamente al registrar.
                     </small>
                   </div>
                   <div className="form-group">
                     <label>Teléfono</label>
-                    <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999" />
+                    <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999"
+                      style={fieldErrors.telefono ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Dirección *</label>
-                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required />
+                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required
+                      style={fieldErrors.direccion ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Departamento *</label>
-                    <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required>
+                    <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required
+                      style={fieldErrors.idDpto ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione departamento</option>
                       {departamentos.map(d => (
                         <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
@@ -671,7 +702,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Cargo *</label>
-                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required>
+                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required
+                      style={fieldErrors.cargo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione cargo</option>
                       {(form.idDpto
                         ? DEPT_CARGOS[departamentos.find(d => d.idDpto === parseInt(form.idDpto))?.nombre] ?? []
@@ -687,6 +719,7 @@ export default function GestionEmpleados() {
                         setForm({ ...form, tipoContrato: e.target.value, fechaInicio: "", fechaFin: "" });
                         setShowFechas(!!e.target.value);
                       }}
+                      style={fieldErrors.tipoContrato ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}
                     >
                       <option value="">Seleccione</option>
                       <option value="PLAZO FIJO">Plazo fijo</option>
@@ -699,7 +732,8 @@ export default function GestionEmpleados() {
                     <input type="number" step="0.01" min="0" placeholder="0.00"
                       value={form.sueldo}
                       onChange={e => setForm({ ...form, sueldo: e.target.value })}
-                      required />
+                      required
+                      style={fieldErrors.sueldo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
 
                   {form.tipoContrato && (
@@ -733,7 +767,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); setFieldErrors({}); setLastErrKeys([]); setErrPos(0); }}>Cancelar</button>
               <button className="btn btn-success" type="submit" form="form-nuevo">✅ Registrar Empleado</button>
             </div>
           </div>
@@ -1066,6 +1100,24 @@ export default function GestionEmpleados() {
               <button className="btn btn-success" type="submit" form="form-horario">
                 📅 Asignar turno
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR DE VALIDACIÓN (CU2) ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>
