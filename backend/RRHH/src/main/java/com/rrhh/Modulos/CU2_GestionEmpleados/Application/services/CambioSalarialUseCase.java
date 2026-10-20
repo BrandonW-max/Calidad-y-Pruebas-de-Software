@@ -84,7 +84,7 @@ public class CambioSalarialUseCase {
         if (dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
             return new EmpleadoResponseDTO(
                     false,
-                    "Error: el sueldo debe ser mayor o igual a 1025",
+                    "Error: el sueldo debe ser mayor o igual a " + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString(),
                     empleado.getIdEmpleado(),
                     empleado.getNombres() + " " + empleado.getApellidos(),
                     null,

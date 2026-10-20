@@ -183,6 +183,16 @@ export default function GestionEmpleados() {
 
   const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
+  const limpiarErroresCampos = () => {
+    setFieldErrors({});
+    setLastErrKeys([]);
+    setErrPos(0);
+  };
+
+  const cerrarModalSancion = () => { setModalSancion({ open: false, id: null }); limpiarErroresCampos(); };
+  const cerrarModalAscenso = () => { setModalAscenso({ open: false, id: null }); limpiarErroresCampos(); };
+  const cerrarModalCambio  = () => { setModalCambio({ open: false, id: null }); limpiarErroresCampos(); };
+
   const handleBuscar = () => {
     if (page !== 0) setPage(0);
     else setFetchKey(k => k + 1);
@@ -282,7 +292,7 @@ export default function GestionEmpleados() {
       });
       setMensaje("Sanción registrada correctamente");
       setSancionForm({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
-      setModalSancion({ open: false, id: null });
+      cerrarModalSancion();
     } catch (err) {
       showFormError(err?.errors, err?.message || "Error al registrar la sanción.");
     }
@@ -294,7 +304,7 @@ export default function GestionEmpleados() {
       await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
       setMensaje("Ascenso registrado correctamente");
       setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
-      setModalAscenso({ open: false, id: null });
+      cerrarModalAscenso();
       cargarEmpleados();
     } catch (err) {
       showFormError(err?.errors, err?.message || "Error al registrar el ascenso.");
@@ -307,7 +317,7 @@ export default function GestionEmpleados() {
       await cambioSalarial(cambioForm.idEmpleado, { nuevoSueldo: parseFloat(cambioForm.nuevoSueldo) });
       setMensaje("Cambio salarial registrado correctamente");
       setCambioForm({ idEmpleado: "", nuevoSueldo: "" });
-      setModalCambio({ open: false, id: null });
+      cerrarModalCambio();
       cargarEmpleados();
     } catch (err) {
       showFormError(err?.errors, err?.message || "Error al registrar el cambio salarial.");
@@ -537,11 +547,11 @@ export default function GestionEmpleados() {
                                   </div>
                                 )}
                                 <div className="action-drop-item drop-yellow"
-                                  onClick={() => { setModalSancion({ open: true, id: emp.idEmpleado }); setSancionForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
+                                  onClick={() => { limpiarErroresCampos(); setModalSancion({ open: true, id: emp.idEmpleado }); setSancionForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   ⚠️ Registrar sanción
                                 </div>
                                 <div className="action-drop-item drop-green"
-                                  onClick={() => { setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
+                                  onClick={() => { limpiarErroresCampos(); setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   ↑ Registrar ascenso
                                 </div>
                                 <div className="action-drop-item drop-gray"
@@ -887,7 +897,7 @@ export default function GestionEmpleados() {
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>⚠️ Registrar Sanción</h3><p>Empleado #{modalSancion.id}</p></div>
-              <button className="modal-close" onClick={() => setModalSancion({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalSancion()}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning">⚠️ La justificación es obligatoria.</div>
@@ -905,7 +915,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Días de Suspensión</label>
-                    <input type="number" min="0" value={sancionForm.diasSuspension}
+                    <input type="number" step="1" min={sancionForm.tipoSancion === "SUSPENSION" ? 1 : 0}
+                      value={sancionForm.diasSuspension}
                       onChange={e => setSancionForm({ ...sancionForm, diasSuspension: e.target.value })} />
                   </div>
                   <div className="form-group form-full">
@@ -918,7 +929,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalSancion({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalSancion()}>Cancelar</button>
               <button className="btn btn-danger" type="submit" form="form-sancion">🚫 Registrar Sanción</button>
             </div>
           </div>
@@ -931,7 +942,7 @@ export default function GestionEmpleados() {
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>↑ Registrar Ascenso</h3><p>Empleado #{modalAscenso.id}</p></div>
-              <button className="modal-close" onClick={() => setModalAscenso({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalAscenso()}>×</button>
             </div>
             <div className="modal-body">
               <form id="form-ascenso" onSubmit={handleAscenso}>
@@ -944,7 +955,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalAscenso({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalAscenso()}>Cancelar</button>
               <button className="btn btn-primary" type="submit" form="form-ascenso">↑ Registrar Ascenso</button>
             </div>
           </div>
@@ -957,7 +968,7 @@ export default function GestionEmpleados() {
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>💲 Cambio Salarial</h3><p>Empleado #{modalCambio.id}</p></div>
-              <button className="modal-close" onClick={() => setModalCambio({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalCambio()}>×</button>
             </div>
             <div className="modal-body">
               <form id="form-cambio" onSubmit={handleCambioSalarial}>
@@ -970,7 +981,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalCambio({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalCambio()}>Cancelar</button>
               <button className="btn btn-primary" type="submit" form="form-cambio">💾 Guardar Cambio</button>
             </div>
           </div>

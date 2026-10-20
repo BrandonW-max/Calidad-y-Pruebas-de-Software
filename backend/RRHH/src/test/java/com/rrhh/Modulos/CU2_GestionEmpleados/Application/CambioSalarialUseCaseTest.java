@@ -39,7 +39,7 @@ class CambioSalarialUseCaseTest {
     private CambioSalarialUseCase useCase;
 
     private static final Long ID_EMPLEADO = 1L;
-    private static final BigDecimal SUELDO_MINIMO = new BigDecimal("1025.00");
+    private static final BigDecimal SUELDO_MINIMO = new BigDecimal("1130.00");
     private static final BigDecimal SUELDO_ACTUAL = new BigDecimal("2000.00");
     private static final BigDecimal SUELDO_NUEVO  = new BigDecimal("2500.00");
 
@@ -79,8 +79,7 @@ class CambioSalarialUseCaseTest {
         EmpleadoResponseDTO resultado = useCase.ejecutar(ID_EMPLEADO, new CambioSalarialRequestDTO());
 
         assertFalse(resultado.isSuccess());
-        assertEquals("No se puede registrar cambio salarial a un empleado que no está activo",
-                resultado.getMessage());
+        assertEquals("Error: el empleado esta inactivo", resultado.getMessage());
     }
 
     @Test
@@ -95,7 +94,7 @@ class CambioSalarialUseCaseTest {
         EmpleadoResponseDTO resultado = useCase.ejecutar(ID_EMPLEADO, dto);
 
         assertFalse(resultado.isSuccess());
-        assertTrue(resultado.getMessage().contains("salario minimo legal"));
+        assertEquals("Error: el sueldo debe ser mayor o igual a 1130", resultado.getMessage());
     }
 
     @Test

@@ -86,6 +86,10 @@ public class RegistrarSancionUseCase {
         boolean esSuspension = "SUSPENSION".equals(dto.getTipoSancion());
         int dias = dto.getDiasSuspension();
 
+        if (esSuspension && dias <= 0) {
+            throw new IllegalArgumentException("Los dias de suspension deben ser mayor a cero");
+        }
+
         Sancion sancion = new Sancion();
 
         int secuencia = ThreadLocalRandom.current().nextInt(1000, 9999);
