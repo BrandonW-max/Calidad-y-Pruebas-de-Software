@@ -80,7 +80,7 @@ class AuthServiceTest {
         AuthResponseDTO resultado = authService.setPassword("abc1234", "abc1234", USERNAME);
 
         assertFalse(resultado.isSuccess());
-        assertEquals("La contrasenia debe tener al menos 8 caracteres", resultado.getMessage());
+        assertEquals("La contraseña debe tener al menos 8 caracteres", resultado.getMessage());
     }
 
     @Test
@@ -91,7 +91,7 @@ class AuthServiceTest {
         AuthResponseDTO resultado = authService.setPassword(PASSWORD_VALIDA, "OtraPass1!", USERNAME);
 
         assertFalse(resultado.isSuccess());
-        assertEquals("Las contrasenias no coinciden", resultado.getMessage());
+        assertEquals("Las contraseñas no coinciden", resultado.getMessage());
     }
 
     @Test

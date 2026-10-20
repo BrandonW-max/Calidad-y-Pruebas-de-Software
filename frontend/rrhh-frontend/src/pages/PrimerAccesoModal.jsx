@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { enable2FA, verify2FA, setPassword, saveSession, getUser } from "../services/api";
 import "../styles/Login.css";
 
@@ -23,6 +23,8 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
   const [showConf,     setShowConf]     = useState(false);
   const [errorNueva,   setErrorNueva]   = useState("");
   const [errorConfirmar, setErrorConfirmar] = useState("");
+
+  useEffect(() => { setError(""); }, [paso]);
 
   const user = getUser();
 
@@ -98,7 +100,12 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
     setLoading(true);
     try {
       const data = await setPassword(nueva, confirmar);
-      if (!data.success) { setErrorNueva(data.message || "No se pudo actualizar la contraseña."); return; }
+      if (!data.success) {
+        const msg = data.message || "No se pudo actualizar la contraseña.";
+        if (/coinciden/i.test(msg)) setErrorConfirmar(msg);
+        else setErrorNueva(msg);
+        return;
+      }
       sessionStorage.removeItem('show2FAReminder');
       sessionStorage.removeItem('primerAccesoPendiente');
       sessionStorage.removeItem('primerAccesoDosFa');
