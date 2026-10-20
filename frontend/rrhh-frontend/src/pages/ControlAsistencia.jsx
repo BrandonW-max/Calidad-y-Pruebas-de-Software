@@ -43,6 +43,9 @@ function VistaEmpleado() {
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+
   // ECU-03 A4: justificación de tardanza
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo, setJustifMotivo] = useState("");
@@ -124,7 +127,7 @@ function VistaEmpleado() {
       cerrarModalJustif();
       cargarJustificaciones();
     } catch (err) {
-      setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally {
       setJustifSaving(false);
@@ -152,7 +155,7 @@ function VistaEmpleado() {
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
     } catch (err) {
-      setError(err.message || "Error al registrar la asistencia. Intente de nuevo.");
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally {
       setSaving(false);
@@ -611,6 +614,24 @@ function VistaEmpleado() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -625,6 +646,8 @@ function VistaRRHH() {
   const [error,    setError]    = useState("");
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
   const [manualForm, setManualForm] = useState({
@@ -712,7 +735,7 @@ function VistaRRHH() {
       setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" });
       resetCorreccion();
     } catch (err) {
-      setError(err.message || "Error al guardar el registro manual");
+      setErrorModal({ open: true, message: err.message || "Error al guardar el registro manual" });
     }
   };
 
@@ -725,7 +748,7 @@ function VistaRRHH() {
       handleCorregirTardanza(j);
       cargarJustificaciones();
     } catch (err) {
-      setError(err.message || "Error al aprobar la justificación");
+      setErrorModal({ open: true, message: err.message || "Error al aprobar la justificación" });
     }
   };
 
@@ -743,7 +766,7 @@ function VistaRRHH() {
       setModalRechazar({ open: false, id: null, comentario: "" });
       cargarJustificaciones();
     } catch (err) {
-      setError(err.message || "Error al rechazar la justificación");
+      setErrorModal({ open: true, message: err.message || "Error al rechazar la justificación" });
       setModalRechazar({ open: false, id: null, comentario: "" });
     }
   };
@@ -1145,6 +1168,24 @@ function VistaRRHH() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1168,6 +1209,9 @@ function VistaGerencia() {
   const [modalManual,  setModalManual]  = useState({ open: false, tipo: "ENTRADA" });
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving,       setSaving]       = useState(false);
+
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo,    setJustifMotivo]    = useState("");
@@ -1239,7 +1283,7 @@ function VistaGerencia() {
       cerrarModalJustif();
       cargarJustificaciones();
     } catch (err) {
-      setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally { setJustifSaving(false); }
   };
@@ -1256,7 +1300,7 @@ function VistaGerencia() {
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
     } catch (err) {
-      setError(err.message || "Error al registrar la asistencia. Intente de nuevo.");
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally { setSaving(false); }
   };
@@ -1445,7 +1489,7 @@ function VistaGerencia() {
                   e.target.reset();
                   setTabActiva("justificaciones");
                   cargarJustificaciones();
-                } catch (err) { setError(err.message || "Error al enviar la justificación. Intente de nuevo."); }
+                } catch (err) { setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." }); }
                 finally  { setJustifSaving(false); }
               }}>
                 <div className="form-grid">
@@ -1593,6 +1637,24 @@ function VistaGerencia() {
                 onClick={handleRegistrarManual} disabled={!manualMotivo.trim() || saving}>
                 {saving ? "Guardando..." : (modalManual.tipo === "ENTRADA" ? "→ Confirmar Entrada" : "← Confirmar Salida")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

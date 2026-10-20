@@ -42,6 +42,8 @@ export default function CalculoNomina() {
   const [error,     setError]     = useState("");
   const [enviando,  setEnviando]  = useState({});
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [previewNomina, setPreviewNomina] = useState(null);
   const [modalEstructura, setModalEstructura] = useState(null);
   const [datosBase, setDatosBase] = useState({
@@ -148,7 +150,7 @@ export default function CalculoNomina() {
         throw new Error(data?.message || "Respuesta inválida");
       }
     } catch (err) {
-      setError(err.message || "Error al calcular la nómina. Verifique el período.");
+      setErrorModal({ open: true, message: err.message || "Error al calcular la nómina. Verifique el período." });
     } finally {
       setCalculando(false);
     }
@@ -175,7 +177,7 @@ export default function CalculoNomina() {
         setError(`No hay nóminas registradas para ${periodo}. Calcule primero.`);
       }
     } catch (err) {
-      setError(err.message || "Error al cargar el período");
+      setErrorModal({ open: true, message: err.message || "Error al cargar el período" });
     } finally {
       setLoading(false);
     }
@@ -189,7 +191,7 @@ export default function CalculoNomina() {
       await enviarComprobante(idNomina);
       setMensaje(`Comprobante enviado correctamente (Nómina #${idNomina})`);
     } catch (err) {
-      setError(err.message || "Error al enviar el comprobante");
+      setErrorModal({ open: true, message: err.message || "Error al enviar el comprobante" });
     } finally {
       setEnviando(v => ({ ...v, [idNomina]: false }));
     }
@@ -251,7 +253,7 @@ export default function CalculoNomina() {
       }));
       setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(calculos.neto)}`);
     } catch (err) {
-      setError(err.message || "Error al guardar el ajuste de nómina.");
+      setErrorModal({ open: true, message: err.message || "Error al guardar el ajuste de nómina." });
     } finally {
       setGuardandoAjuste(false);
     }
@@ -814,6 +816,24 @@ export default function CalculoNomina() {
           </div>
         );
       })()}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
