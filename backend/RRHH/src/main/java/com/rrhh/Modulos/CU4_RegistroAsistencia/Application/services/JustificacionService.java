@@ -46,7 +46,7 @@ public class JustificacionService {
                 .setParameter("idRegistro", idRegistroAsistencia)
                 .getSingleResult();
         if (existentes > 0) {
-            throw new RuntimeException("Ya existe una justificacion pendiente para este registro.");
+            throw new RuntimeException("Ya existe una justificación pendiente para este registro.");
         }
 
         LocalDate fechaRegistro = r.getFecha();

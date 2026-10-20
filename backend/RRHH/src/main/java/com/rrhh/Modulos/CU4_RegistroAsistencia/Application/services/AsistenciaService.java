@@ -134,6 +134,10 @@ public class AsistenciaService {
             return new MarcarAsistenciaResponseDTO(false, "Debe enviar la fecha y hora del registro.");
         }
 
+        if (request.getMotivo() != null && request.getMotivo().length() > 200) {
+            return new MarcarAsistenciaResponseDTO(false, "El motivo no puede superar los 200 caracteres.");
+        }
+
         LocalDate fecha = request.getFechaHora().toLocalDate();
         LocalDate hoy = LocalDate.now();
         if (fecha.isBefore(hoy.minusDays(1)) || fecha.isAfter(hoy.plusDays(1))) {

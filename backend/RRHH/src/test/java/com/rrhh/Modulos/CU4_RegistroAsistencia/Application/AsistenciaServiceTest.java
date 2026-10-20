@@ -298,6 +298,23 @@ class AsistenciaServiceTest {
         MarcarAsistenciaResponseDTO resultado = asistenciaService.registrarManual(req, 1L, "127.0.0.1");
 
         assertTrue(resultado.isSuccess());
-        assertEquals("Registro manual de asistencia almacenado correctamente.", resultado.getMessage());
+        assertEquals("Entrada registrada correctamente.", resultado.getMessage());
+    }
+
+    @Test
+    @DisplayName("VL-CU4-07 — Motivo de 201 caracteres → rechazado")
+    void registrarManual_MotivoMayorA200_Rechazado() {
+        when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
+
+        MarcarAsistenciaManualRequestDTO req = new MarcarAsistenciaManualRequestDTO();
+        req.setIdEmpleado(ID_EMPLEADO);
+        req.setTipo("ENTRADA");
+        req.setFechaHora(LocalDateTime.of(LocalDate.now(), LocalTime.of(8, 0)));
+        req.setMotivo("a".repeat(201));
+
+        MarcarAsistenciaResponseDTO resultado = asistenciaService.registrarManual(req, 1L, "127.0.0.1");
+
+        assertFalse(resultado.isSuccess());
+        assertEquals("El motivo no puede superar los 200 caracteres.", resultado.getMessage());
     }
 }
