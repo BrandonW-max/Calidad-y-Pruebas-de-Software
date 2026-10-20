@@ -13,7 +13,6 @@ export default function Login() {
   const [password, setPassword]     = useState("");
   const [showPwd,  setShowPwd]      = useState(false);
   const [mensaje,  setMensaje]      = useState("");
-  const [intentos, setIntentos]     = useState(null);
   const [show2FA,        setShow2FA]        = useState(false);
   const [resetKey,       setResetKey]       = useState(0);
   const [primerAcceso,       setPrimerAcceso]       = useState(false);
@@ -62,13 +61,10 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setMensaje("");
-    setIntentos(null);
     try {
       const data = await login(username, password);
       if (!data.success) {
-        const rem = data.intentosRestantes ?? data.remainingAttempts ?? null;
-        setIntentos(rem);
-        setMensaje(data.message || "Credenciales inválidas. Intente nuevamente.");
+        setMensaje(data.message || "Credenciales invalidas. Intente nuevamente.");
         return;
       }
       if (data.requires2FA) {
@@ -170,6 +166,12 @@ export default function Login() {
               </div>
             </div>
 
+            {mensaje && (
+              <div className="login-field-error">
+                ⚠️ {mensaje}
+              </div>
+            )}
+
             <button type="submit" className="login-btn">🔒 Iniciar Sesión</button>
           </form>
 
@@ -182,15 +184,6 @@ export default function Login() {
           {show2FA && (
             <div className="login-info-alert">
               ℹ️ Se requiere un código de verificación de dos pasos para acceder a su cuenta.
-            </div>
-          )}
-
-          {mensaje && (
-            <div className="login-error">
-              <div>⚠️ {mensaje}</div>
-              {intentos !== null && (
-                <div className="login-attempts">Intentos restantes: <strong>{intentos}</strong></div>
-              )}
             </div>
           )}
 

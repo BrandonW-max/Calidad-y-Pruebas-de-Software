@@ -73,7 +73,7 @@ public class AuthService implements IAuthService {
         if (!user.puedeIntentarLogin()) {
             return new AuthResponseDTO(
                     false,
-                    "Cuenta bloqueada por 5 minutos"
+                    "Cuenta bloqueada - acceso denegado"
             );
         }
 
@@ -154,15 +154,15 @@ public class AuthService implements IAuthService {
 
             historialRepository.save(logFallo);
 
-            String msg =
-                    user.isCuentaBloqueada()
-                            ? "Cuenta bloqueada"
-                            : "Contrasenia incorrecta";
+            String msg;
+            if (user.isCuentaBloqueada()) {
+                msg = "Cuenta bloqueada - acceso denegado";
+            } else {
+                int restantes = 3 - user.getIntentosFallidos();
+                msg = "Credenciales invalidas. Intentos restantes: " + restantes;
+            }
 
-            return new AuthResponseDTO(
-                    false,
-                    msg
-            );
+            return new AuthResponseDTO(false, msg);
         }
     }
 
@@ -208,7 +208,7 @@ public class AuthService implements IAuthService {
         if (!user.puedeIntentar2FA()) {
             return new TwoFactorResponseDTO(
                     false,
-                    "Verificacion 2FA bloqueada por 5 minutos. Demasiados intentos fallidos.",
+                    "Acceso bloqueado temporalmente (5 minutos)",
                     null,
                     null
             );
@@ -223,12 +223,10 @@ public class AuthService implements IAuthService {
         if (!codigoValido) {
             user.registrarFallo2FA();
             usuarioRepository.save(user);
-            return new TwoFactorResponseDTO(
-                    false,
-                    "Codigo incorrecto. Intentos restantes: " + (5 - user.getIntentosFalla2fa()),
-                    null,
-                    null
-            );
+            String msg2fa = user.getBloqueo2faHasta() != null
+                    ? "Cuenta bloqueada temporalmente por 5 minutos"
+                    : "Codigo 2FA invalido";
+            return new TwoFactorResponseDTO(false, msg2fa, null, null);
         }
 
         user.resetearIntentos2FA();
@@ -285,7 +283,7 @@ public class AuthService implements IAuthService {
         }
 
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
+            return new AuthResponseDTO(false, "Las contraseñas no coinciden");
         }
 
         user.setContrasenia(hashService.encriptar(dto.getNewPassword()));
@@ -300,11 +298,11 @@ public class AuthService implements IAuthService {
         if (user == null) {
             return new AuthResponseDTO(false, "Usuario no encontrado");
         }
-        if (!newPassword.equals(confirmPassword)) {
-            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
-        }
         if (newPassword.length() < 8) {
-            return new AuthResponseDTO(false, "La contrasenia debe tener al menos 8 caracteres");
+            return new AuthResponseDTO(false, "La contraseña debe tener al menos 8 caracteres");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return new AuthResponseDTO(false, "Las contraseñas no coinciden");
         }
         user.setContrasenia(hashService.encriptar(newPassword));
         usuarioRepository.save(user);

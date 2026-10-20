@@ -15,12 +15,14 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
   const [paso,      setPaso]      = useState(dosFaYaConfigurado ? PASO.CAMBIAR_PASS : PASO.ELECCION);
   const [qrSrc,     setQrSrc]    = useState(null);
   const [codigo2fa, setCodigo2fa] = useState("");
-  const [error,     setError]     = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [nueva,     setNueva]     = useState("");
-  const [confirmar, setConfirmar] = useState("");
-  const [showNueva, setShowNueva] = useState(false);
-  const [showConf,  setShowConf]  = useState(false);
+  const [error,        setError]        = useState("");
+  const [loading,      setLoading]      = useState(false);
+  const [nueva,        setNueva]        = useState("");
+  const [confirmar,    setConfirmar]    = useState("");
+  const [showNueva,    setShowNueva]    = useState(false);
+  const [showConf,     setShowConf]     = useState(false);
+  const [errorNueva,   setErrorNueva]   = useState("");
+  const [errorConfirmar, setErrorConfirmar] = useState("");
 
   const user = getUser();
 
@@ -79,20 +81,31 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
   // ── ESTABLECER CONTRASEÑA ──
   const handleSetPassword = async (e) => {
     e.preventDefault();
-    setError("");
-    if (nueva.length < 8) { setError("La contraseña debe tener al menos 8 caracteres."); return; }
-    if (nueva !== confirmar) { setError("Las contraseñas no coinciden."); return; }
+    setErrorNueva("");
+    setErrorConfirmar("");
+    if (nueva.length < 8) {
+      setErrorNueva("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+    if (!confirmar) {
+      setErrorConfirmar("El campo es obligatorio");
+      return;
+    }
+    if (nueva !== confirmar) {
+      setErrorConfirmar("Las contraseñas no coinciden");
+      return;
+    }
     setLoading(true);
     try {
       const data = await setPassword(nueva, confirmar);
-      if (!data.success) { setError(data.message || "No se pudo actualizar la contraseña."); return; }
+      if (!data.success) { setErrorNueva(data.message || "No se pudo actualizar la contraseña."); return; }
       sessionStorage.removeItem('show2FAReminder');
       sessionStorage.removeItem('primerAccesoPendiente');
       sessionStorage.removeItem('primerAccesoDosFa');
       saveSession(user.token, user.rol, username, user.idEmpleado, false);
       onDone(user.rol);
     } catch {
-      setError("Error al cambiar la contraseña.");
+      setErrorNueva("Error al cambiar la contraseña.");
     } finally {
       setLoading(false);
     }
@@ -222,42 +235,46 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
             <form onSubmit={handleSetPassword}>
               <div className="login-field">
                 <label>Nueva contraseña</label>
-                <div className="lf-wrap">
+                <div className="lf-wrap" style={errorNueva ? { borderColor: "#ef4444" } : {}}>
                   <span className="lf-prefix">🔒</span>
                   <input
                     type={showNueva ? "text" : "password"}
                     placeholder="Mínimo 8 caracteres"
                     value={nueva}
-                    onChange={e => { setNueva(e.target.value); setError(""); }}
-                    required autoFocus
+                    onChange={e => { setNueva(e.target.value); setErrorNueva(""); }}
+                    autoFocus
                   />
                   <button type="button" className="lf-eye" onClick={() => setShowNueva(v => !v)} tabIndex={-1}>
                     {showNueva ? "🙈" : "👁"}
                   </button>
                 </div>
+                {errorNueva && (
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b91c1c" }}>⚠️ {errorNueva}</p>
+                )}
               </div>
               <div className="login-field">
                 <label>Confirmar contraseña</label>
-                <div className="lf-wrap">
+                <div className="lf-wrap" style={errorConfirmar ? { borderColor: "#ef4444" } : {}}>
                   <span className="lf-prefix">🔒</span>
                   <input
                     type={showConf ? "text" : "password"}
                     placeholder="Repite la contraseña"
                     value={confirmar}
-                    onChange={e => { setConfirmar(e.target.value); setError(""); }}
-                    required
+                    onChange={e => { setConfirmar(e.target.value); setErrorConfirmar(""); }}
                   />
                   <button type="button" className="lf-eye" onClick={() => setShowConf(v => !v)} tabIndex={-1}>
                     {showConf ? "🙈" : "👁"}
                   </button>
                 </div>
+                {errorConfirmar && (
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b91c1c" }}>⚠️ {errorConfirmar}</p>
+                )}
               </div>
-              {error && <div className="login-error" style={{ margin: "8px 0" }}>⚠️ {error}</div>}
               <button
                 type="submit"
                 className="login-btn"
                 style={{ marginTop: 8 }}
-                disabled={loading || !nueva || !confirmar}
+                disabled={loading}
               >
                 {loading ? "Guardando..." : "💾 Guardar contraseña e ingresar"}
               </button>
