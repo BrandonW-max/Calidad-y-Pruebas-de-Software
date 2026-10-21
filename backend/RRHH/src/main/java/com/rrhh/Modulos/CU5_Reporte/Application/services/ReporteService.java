@@ -71,13 +71,23 @@ public class ReporteService implements IReporteService {
     public ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario) {
 
         validarFiltroEmpleado(filtro);
+        validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
+
+        LocalDateTime inicio = filtro.getFechaInicio() != null
+            ? filtro.getFechaInicio().atStartOfDay()
+            : LocalDateTime.of(1900, 1, 1, 0, 0);
+        LocalDateTime fin = filtro.getFechaFin() != null
+            ? filtro.getFechaFin().atTime(23, 59, 59)
+            : LocalDateTime.of(2999, 12, 31, 23, 59, 59);
 
         List<EmpleadoModel> empleados = jpaEmpleadoRepository.buscarConFiltros(
             filtro.getEstado(),
             filtro.getArea(),
             filtro.getCargo(),
             filtro.getTipoContrato(),
-            filtro.getIdEmpleado()
+            filtro.getIdEmpleado(),
+            inicio,
+            fin
         );
 
         if (empleados.isEmpty()) {

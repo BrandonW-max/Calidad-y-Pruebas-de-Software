@@ -280,7 +280,7 @@ export default function GenerarReportes() {
                         <option value="">Todos</option>
                         {tipoSeleccionado === "solicitudes"
                           ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADA">Aprobado</option><option value="RECHAZADA">Rechazado</option></>
-                          : <><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></>
+                          : <><option value="ACTIVO">Activo</option><option value="DESVINCULADO">Inactivo</option></>
                         }
                       </select>
                     </div>
