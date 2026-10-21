@@ -76,18 +76,8 @@ public class RegistrarEmpleadoUseCase {
     public EmpleadoResponseDTO ejecutar(RegistrarEmpleadoRequestDTO dto) {
 
         if (empleadoRepository.existsByNumeroDi(dto.getNumeroDi())) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Ya existe un empleado con ese documento de identidad",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            throw new com.rrhh.Shared.exception.ConflictoException(
+                    "Ya existe un empleado con ese documento de identidad");
         }
 
         if (dto.getSueldo() != null && dto.getSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
