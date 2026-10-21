@@ -57,18 +57,7 @@ public class ReactivarEmpleadoUseCase {
         }
 
         if (empleado.estaDesvinculado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede reactivar un empleado desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("No se puede reactivar un empleado desvinculado");
         }
 
         String estadoAnterior = empleado.getEstado();

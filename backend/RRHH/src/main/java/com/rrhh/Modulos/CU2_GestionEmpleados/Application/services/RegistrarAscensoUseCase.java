@@ -61,33 +61,11 @@ public class RegistrarAscensoUseCase {
         }
 
         if (!empleado.puedeRecibirAscenso()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Error: el empleado esta inactivo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getNuevoCargo() == null || dto.getNuevoCargo().isBlank()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El cargo es obligatorio",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El cargo es obligatorio");
         }
 
         Contrato contrato =

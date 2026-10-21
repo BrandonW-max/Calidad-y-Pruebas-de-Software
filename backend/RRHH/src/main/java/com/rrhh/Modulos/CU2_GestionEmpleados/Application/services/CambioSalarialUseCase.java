@@ -52,48 +52,15 @@ public class CambioSalarialUseCase {
         }
 
         if (!empleado.puedeRecibirCambioSalarial()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Error: el empleado esta inactivo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getNuevoSueldo() == null) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El sueldo es obligatorio",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El sueldo es obligatorio");
         }
 
         if (dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Error: el sueldo debe ser mayor o igual a " + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString(),
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("Error: el sueldo debe ser mayor o igual a " + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString());
         }
 
         Contrato contrato =
@@ -107,18 +74,7 @@ public class CambioSalarialUseCase {
         BigDecimal sueldoNuevo = dto.getNuevoSueldo();
 
         if (sueldoAnterior != null && sueldoAnterior.compareTo(sueldoNuevo) == 0) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El nuevo sueldo no puede ser igual al sueldo actual",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    contrato.getCargo(),
-                    contrato.getNombreDepartamento(),
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El nuevo sueldo no puede ser igual al sueldo actual");
         }
 
         contrato.cambiarSueldo(sueldoNuevo);

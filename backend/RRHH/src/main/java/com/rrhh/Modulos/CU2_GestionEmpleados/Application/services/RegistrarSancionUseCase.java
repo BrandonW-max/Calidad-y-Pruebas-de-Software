@@ -53,33 +53,11 @@ public class RegistrarSancionUseCase {
         }
 
         if (!empleado.puedeSerSancionado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Error: el empleado esta inactivo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getJustificacion() == null || dto.getJustificacion().isBlank()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "La justificación es obligatoria",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("La justificación es obligatoria");
         }
 
         String estadoAnterior = empleado.getEstado();

@@ -76,10 +76,10 @@ class CambioSalarialUseCaseTest {
         empleado.setEstado("INACTIVO");
         when(empleadoRepository.findById(ID_EMPLEADO)).thenReturn(empleado);
 
-        EmpleadoResponseDTO resultado = useCase.ejecutar(ID_EMPLEADO, new CambioSalarialRequestDTO());
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> useCase.ejecutar(ID_EMPLEADO, new CambioSalarialRequestDTO()));
 
-        assertFalse(resultado.isSuccess());
-        assertEquals("Error: el empleado esta inactivo", resultado.getMessage());
+        assertEquals("Error: el empleado esta inactivo", ex.getMessage());
     }
 
     @Test
@@ -91,10 +91,10 @@ class CambioSalarialUseCaseTest {
         CambioSalarialRequestDTO dto = new CambioSalarialRequestDTO();
         dto.setNuevoSueldo(new BigDecimal("900.00"));
 
-        EmpleadoResponseDTO resultado = useCase.ejecutar(ID_EMPLEADO, dto);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> useCase.ejecutar(ID_EMPLEADO, dto));
 
-        assertFalse(resultado.isSuccess());
-        assertEquals("Error: el sueldo debe ser mayor o igual a 1130", resultado.getMessage());
+        assertEquals("Error: el sueldo debe ser mayor o igual a 1130", ex.getMessage());
     }
 
     @Test
@@ -107,10 +107,10 @@ class CambioSalarialUseCaseTest {
         CambioSalarialRequestDTO dto = new CambioSalarialRequestDTO();
         dto.setNuevoSueldo(SUELDO_ACTUAL);
 
-        EmpleadoResponseDTO resultado = useCase.ejecutar(ID_EMPLEADO, dto);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> useCase.ejecutar(ID_EMPLEADO, dto));
 
-        assertFalse(resultado.isSuccess());
-        assertEquals("El nuevo sueldo no puede ser igual al sueldo actual", resultado.getMessage());
+        assertEquals("El nuevo sueldo no puede ser igual al sueldo actual", ex.getMessage());
     }
 
     @Test

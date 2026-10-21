@@ -49,18 +49,7 @@ public class ActualizarEmpleadoUseCase {
         }
 
         if (!empleado.puedeSerEditado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede editar un empleado desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("No se puede editar un empleado desvinculado");
         }
 
         String valorAnterior =
