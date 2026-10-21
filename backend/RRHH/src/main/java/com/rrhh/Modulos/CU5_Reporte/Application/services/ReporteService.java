@@ -18,6 +18,7 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -187,14 +188,15 @@ public class ReporteService implements IReporteService {
         if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
+        // Valores centinela en vez de null: PostgreSQL no puede tipar un parámetro nulo en "IS NULL".
         List<SolicitudModel> solicitudes = jpaSolicitudRepository.buscarConFiltros(
-            filtro.getIdEmpleado(),
-            filtro.getArea(),
-            filtro.getTipoSolicitud(),
-            filtro.getEstado(),
-            filtro.getCargo(),
-            filtro.getFechaInicio(),
-            filtro.getFechaFin()
+            filtro.getIdEmpleado() != null ? filtro.getIdEmpleado() : 0L,
+            filtro.getArea() != null ? filtro.getArea() : "",
+            filtro.getTipoSolicitud() != null ? filtro.getTipoSolicitud() : "",
+            filtro.getEstado() != null ? filtro.getEstado() : "",
+            filtro.getCargo() != null ? filtro.getCargo() : "",
+            filtro.getFechaInicio() != null ? filtro.getFechaInicio() : LocalDate.of(1900, 1, 1),
+            filtro.getFechaFin() != null ? filtro.getFechaFin() : LocalDate.of(2999, 12, 31)
         );
 
         if (solicitudes.isEmpty()) {

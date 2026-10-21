@@ -12,13 +12,13 @@ public interface JpaReporteSolicitudRepository extends JpaRepository<SolicitudMo
 
     @Query("SELECT s FROM SolicitudModel s " +
            "JOIN ContratoModel c ON c.empleado = s.empleado AND c.estado = 'ACTIVO' " +
-           "WHERE (:idEmpleado IS NULL OR s.empleado.idEmpleado = :idEmpleado) AND " +
-                       "(:area IS NULL OR c.departamento.nombre = :area) AND " +
-           "(:tipoSolicitud IS NULL OR s.tipoSolicitud = :tipoSolicitud) AND " +
-           "(:estado IS NULL OR s.estado = :estado) AND " +
-           "(:cargo IS NULL OR c.cargo = :cargo) AND " +
-           "(:fechaInicio IS NULL OR s.fechaInicio >= :fechaInicio) AND " +
-           "(:fechaFin IS NULL OR s.fechaFin <= :fechaFin)")
+           "WHERE (:idEmpleado = 0 OR s.empleado.idEmpleado = :idEmpleado) AND " +
+                       "(:area = '' OR c.departamento.nombre = :area) AND " +
+           "(:tipoSolicitud = '' OR s.tipoSolicitud = :tipoSolicitud) AND " +
+           "(:estado = '' OR s.estado = :estado) AND " +
+           "(:cargo = '' OR c.cargo = :cargo) AND " +
+           "s.fechaInicio >= :fechaInicio AND " +
+           "s.fechaFin <= :fechaFin")
     List<SolicitudModel> buscarConFiltros(
         @Param("idEmpleado") Long idEmpleado,
         @Param("area") String area,
