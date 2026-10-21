@@ -162,10 +162,15 @@ class NominaServiceTest {
     @Test
     @DisplayName("Test 40 — Sueldo base igual a cero → IllegalArgumentException")
     void ajuste_SueldoMenorOIgualCero_LanzaExcepcion() {
-        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nominaConId(ID_NOMINA)));
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setIdEmpleado(1L);
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+        ContratoModel contrato = new ContratoModel();
+        contrato.setSueldo(BigDecimal.ZERO);
+        when(jpaContratoRepository.findFirstByEmpleadoIdEmpleadoAndEstado(eq(1L), eq("ACTIVO")))
+                .thenReturn(Optional.of(contrato));
 
         AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
-        req.setSueldoBase(BigDecimal.ZERO);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH));
@@ -180,10 +185,15 @@ class NominaServiceTest {
     @Test
     @DisplayName("Test 41 — Sueldo base menor al mínimo legal → IllegalArgumentException")
     void ajuste_SueldoMenorAlMinimo_LanzaExcepcion() {
-        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nominaConId(ID_NOMINA)));
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setIdEmpleado(1L);
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+        ContratoModel contrato = new ContratoModel();
+        contrato.setSueldo(new BigDecimal("500.00"));
+        when(jpaContratoRepository.findFirstByEmpleadoIdEmpleadoAndEstado(eq(1L), eq("ACTIVO")))
+                .thenReturn(Optional.of(contrato));
 
         AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
-        req.setSueldoBase(new BigDecimal("500.00"));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH));

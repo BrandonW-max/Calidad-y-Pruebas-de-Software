@@ -421,7 +421,12 @@ public class NominaService implements INominaService {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
 
-        BigDecimal sueldoBase = normalizar(request.getSueldoBase());
+        ContratoModel contratoActivo = jpaContratoRepository
+            .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
+            .orElseThrow(() -> new IllegalStateException(
+                "El empleado asociado a la nomina no tiene contrato activo."
+            ));
+        BigDecimal sueldoBase = normalizar(contratoActivo.getSueldo());
         if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
         }
@@ -449,11 +454,6 @@ public class NominaService implements INominaService {
         int cantidadHijos = tieneHijos ? Math.max(0, request.getCantidadHijos() != null ? request.getCantidadHijos() : 0) : 0;
         String tipoPension = "AFP".equalsIgnoreCase(request.getTipoPensionAplicada()) ? "AFP" : "ONP";
 
-        ContratoModel contratoActivo = jpaContratoRepository
-            .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
-            .orElseThrow(() -> new IllegalStateException(
-                "El empleado asociado a la nomina no tiene contrato activo."
-            ));
         BigDecimal sueldoAnteriorContrato = contratoActivo.getSueldo();
 
         BigDecimal valorHora = sueldoBase
