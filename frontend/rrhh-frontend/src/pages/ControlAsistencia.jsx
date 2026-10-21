@@ -50,6 +50,7 @@ function VistaEmpleado() {
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo, setJustifMotivo] = useState("");
   const [justifFile,   setJustifFile]   = useState(null);
+  const [evidenciaPreview, setEvidenciaPreview] = useState("");
   const [justifSaving, setJustifSaving] = useState(false);
 
   const cerrarModalJustif = () => {
@@ -405,20 +406,28 @@ function VistaEmpleado() {
               }
               setJustifSaving(true); setMensaje(""); setError("");
               try {
+                const archivo = fd.get("evidencia");
+                let evidenciaUrl = "";
+                if (archivo && archivo.size > 0) {
+                  const res = await uploadEvidencia(archivo);
+                  evidenciaUrl = res.url ?? "";
+                }
                 await registrarJustificacion({
                   idRegistroAsistencia: registro.idRegistro,
                   idEmpleado,
                   motivo: fd.get("motivo"),
-                  evidenciaUrl: "",
+                  evidenciaUrl,
                 });
                 setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
+                setEvidenciaPreview("");
                 e.target.reset();
                 setTabActiva("justificaciones");
                 cargarJustificaciones();
               } catch (err) {
                 setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
               } finally { setJustifSaving(false); }
-            }}>
+            }}
+            onReset={() => setEvidenciaPreview("")}>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Fecha de la incidencia *</label>
@@ -431,6 +440,18 @@ function VistaEmpleado() {
                   <textarea name="motivo" rows={4}
                     placeholder="Describa detalladamente el motivo de su tardanza o inasistencia..."
                     required />
+                </div>
+                <div className="form-group form-full">
+                  <label>Evidencia (opcional)</label>
+                  <input type="file" name="evidencia" accept="image/*,application/pdf"
+                    onChange={e => {
+                      const f = e.target.files[0];
+                      setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
+                    }} />
+                  {evidenciaPreview && (
+                    <img src={evidenciaPreview} alt="Vista previa de la evidencia"
+                      style={{ display: "block", marginTop: 8, maxWidth: 200, maxHeight: 200, borderRadius: 8, border: "1px solid #e2e8f0" }} />
+                  )}
                 </div>
               </div>
               <div className="form-actions">
