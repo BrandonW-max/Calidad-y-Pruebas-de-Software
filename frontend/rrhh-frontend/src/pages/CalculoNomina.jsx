@@ -221,7 +221,7 @@ export default function CalculoNomina() {
     setModalEstructura(actualizada);
   };
 
-  const handleGuardarAjuste = async (calculos) => {
+  const handleGuardarAjuste = async () => {
     if (!modalEstructura?.idNomina) return;
     setGuardandoAjuste(true);
     setMensaje("");
@@ -251,7 +251,7 @@ export default function CalculoNomina() {
         cantidadGuardias: actualizada.cantidadGuardias ?? p.cantidadGuardias,
         tipoPension: actualizada.tipoPensionAplicada ?? p.tipoPension,
       }));
-      setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(calculos.neto)}`);
+      setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(actualizada.sueldoNeto)}`);
     } catch (err) {
       setErrorModal({ open: true, message: err.message || "Error al guardar el ajuste de nómina." });
     } finally {
@@ -714,7 +714,7 @@ export default function CalculoNomina() {
                     <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#2563eb" }}>Datos Ingresados / Registrados</span>
                   </div>
 
-                  <InputField label="Sueldo Base del contrato (S/)" field="sueldoBase" step="1" />
+                  <InputField label="Sueldo Base del contrato (S/)" field="sueldoBase" step="1" disabled />
                   {datosBase.horasTrabajadas <= 0 && datosBase.horasExtra <= 0 && (
                     <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: "8px 10px", fontSize: 12, color: "#92400e", marginBottom: 10 }}>
                       ⚠️ Sin asistencias registradas en el período: el ajuste pagará el sueldo completo del contrato. Confirme antes de guardar.
@@ -812,7 +812,7 @@ export default function CalculoNomina() {
 
               {/* Footer */}
               <div style={{ padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", background: "#fff" }}>
-                <button className="btn btn-primary" onClick={() => handleGuardarAjuste({ neto })} disabled={guardandoAjuste} style={{ marginRight: 10 }}>
+                <button className="btn btn-primary" onClick={() => handleGuardarAjuste()} disabled={guardandoAjuste} style={{ marginRight: 10 }}>
                   {guardandoAjuste ? "Guardando..." : "Guardar cambios"}
                 </button>
                 <button className="btn btn-secondary" onClick={() => setModalEstructura(null)}>Cerrar</button>

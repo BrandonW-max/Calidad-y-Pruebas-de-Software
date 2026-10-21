@@ -67,7 +67,7 @@ export default function GestionEmpleados() {
   const [form,        setForm]        = useState(FORM_VACIO);
   const [sancionForm, setSancionForm] = useState({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
   const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
-  const [cambioForm,  setCambioForm]  = useState({ idEmpleado: "", nuevoSueldo: "" });
+  const [cambioForm,  setCambioForm]  = useState({ idEmpleado: "", nuevoSueldo: "", fechaCambio: "" });
 
   // Modals
   const [modalNuevo,      setModalNuevo]      = useState(false);
@@ -285,11 +285,12 @@ export default function GestionEmpleados() {
   const handleSancion = async (e) => {
     e.preventDefault();
     try {
-      await registrarSancion(sancionForm.idEmpleado, {
+      const data = await registrarSancion(sancionForm.idEmpleado, {
         tipoSancion: sancionForm.tipoSancion,
         diasSuspension: parseInt(sancionForm.diasSuspension),
         justificacion: sancionForm.justificacion,
       });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Sanción registrada correctamente");
       setSancionForm({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
       cerrarModalSancion();
@@ -301,7 +302,8 @@ export default function GestionEmpleados() {
   const handleAscenso = async (e) => {
     e.preventDefault();
     try {
-      await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
+      const data = await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Ascenso registrado correctamente");
       setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
       cerrarModalAscenso();
@@ -314,9 +316,10 @@ export default function GestionEmpleados() {
   const handleCambioSalarial = async (e) => {
     e.preventDefault();
     try {
-      await cambioSalarial(cambioForm.idEmpleado, { nuevoSueldo: parseFloat(cambioForm.nuevoSueldo) });
+      const data = await cambioSalarial(cambioForm.idEmpleado, { nuevoSueldo: parseFloat(cambioForm.nuevoSueldo), fechaCambio: cambioForm.fechaCambio });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Cambio salarial registrado correctamente");
-      setCambioForm({ idEmpleado: "", nuevoSueldo: "" });
+      setCambioForm({ idEmpleado: "", nuevoSueldo: "", fechaCambio: "" });
       cerrarModalCambio();
       cargarEmpleados();
     } catch (err) {
@@ -553,6 +556,10 @@ export default function GestionEmpleados() {
                                 <div className="action-drop-item drop-green"
                                   onClick={() => { limpiarErroresCampos(); setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   ↑ Registrar ascenso
+                                </div>
+                                <div className="action-drop-item drop-blue"
+                                  onClick={() => { limpiarErroresCampos(); setModalCambio({ open: true, id: emp.idEmpleado }); setCambioForm(f => ({ ...f, idEmpleado: emp.idEmpleado, fechaCambio: new Date().toLocaleDateString('sv-SE') })); setOpenDrop(null); }}>
+                                  💲 Cambiar sueldo
                                 </div>
                                 <div className="action-drop-item drop-gray"
                                   onClick={async () => {
@@ -977,6 +984,11 @@ export default function GestionEmpleados() {
                   <input type="number" step="0.01" min="0" value={cambioForm.nuevoSueldo}
                     onChange={e => setCambioForm({ ...cambioForm, nuevoSueldo: e.target.value })}
                     placeholder="0.00" required />
+                </div>
+                <div className="form-group">
+                  <label>Fecha del cambio *</label>
+                  <input type="date" value={cambioForm.fechaCambio}
+                    onChange={e => setCambioForm({ ...cambioForm, fechaCambio: e.target.value })} required />
                 </div>
               </form>
             </div>
