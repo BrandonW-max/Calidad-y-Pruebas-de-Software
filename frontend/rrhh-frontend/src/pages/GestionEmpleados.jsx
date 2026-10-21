@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -73,7 +74,6 @@ export default function GestionEmpleados() {
   const [modalNuevo,      setModalNuevo]      = useState(false);
   const [modalEditar,     setModalEditar]     = useState(null);
   const [modalDesactivar, setModalDesactivar] = useState({ open: false, id: null, motivo: "" });
-  const [modalReactivar,  setModalReactivar]  = useState({ open: false, id: null });
   const [modalSancion,    setModalSancion]    = useState({ open: false, id: null });
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
@@ -270,15 +270,15 @@ export default function GestionEmpleados() {
     }
   };
 
-  const confirmarReactivar = async () => {
+  const confirmarReactivar = async (id) => {
     try {
-      await reactivarEmpleado(modalReactivar.id, "Reactivación manual");
+      await reactivarEmpleado(id, "Reactivación manual");
+      setMensajeOk(true);
       setMensaje("Empleado reactivado correctamente");
-      setModalReactivar({ open: false, id: null });
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al reactivar el empleado");
-      setModalReactivar({ open: false, id: null });
+    } catch (err) {
+      setMensajeOk(false);
+      setMensaje(err.message || "Error al reactivar el empleado");
     }
   };
 
@@ -329,9 +329,16 @@ export default function GestionEmpleados() {
 
   const openDropMenu = (id, e) => {
     if (openDrop === id) { setOpenDrop(null); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDropPos({ top: rect.bottom + 4, left: rect.right });
-    setOpenDrop(id);
+    const boton = e.currentTarget;
+    boton.scrollIntoView({ block: "nearest" });
+    requestAnimationFrame(() => {
+      const rect = boton.getBoundingClientRect();
+      const alturaMenu = 220;
+      const abajo = rect.bottom + 4;
+      const top = abajo + alturaMenu > window.innerHeight ? rect.top - alturaMenu - 4 : abajo;
+      setDropPos({ top, left: rect.right });
+      setOpenDrop(id);
+    });
   };
 
   // eslint-disable-next-line no-unused-vars
@@ -531,7 +538,7 @@ export default function GestionEmpleados() {
                               onClick={(e) => openDropMenu(emp.idEmpleado, e)}>
                               ⋯
                             </button>
-                            {openDrop === emp.idEmpleado && (
+                            {openDrop === emp.idEmpleado && createPortal(
                               <div className="action-drop-menu" style={{
                                 position: "fixed",
                                 top: dropPos.top,
@@ -545,7 +552,7 @@ export default function GestionEmpleados() {
                                   </div>
                                 ) : (
                                   <div className="action-drop-item drop-green"
-                                    onClick={() => { setModalReactivar({ open: true, id: emp.idEmpleado }); setOpenDrop(null); }}>
+                                    onClick={() => { setOpenDrop(null); confirmarReactivar(emp.idEmpleado); }}>
                                     ✅ Reactivar empleado
                                   </div>
                                 )}
@@ -578,7 +585,8 @@ export default function GestionEmpleados() {
                                   }}>
                                   🕐 Ver historial
                                 </div>
-                              </div>
+                              </div>,
+                              document.body
                             )}
                           </div>
                         </div>
@@ -874,25 +882,6 @@ export default function GestionEmpleados() {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModalDesactivar({ open: false, id: null, motivo: "" })}>Cancelar</button>
               <button className="btn btn-danger" onClick={confirmarDesactivar} disabled={!modalDesactivar.motivo.trim()}>Confirmar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══ MODAL: REACTIVAR ══ */}
-      {modalReactivar.open && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-header">
-              <div><h3>✅ Reactivar Empleado</h3></div>
-              <button className="modal-close" onClick={() => setModalReactivar({ open: false, id: null })}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: "14px", color: "#475569" }}>¿Confirma la reactivación? El empleado recuperará acceso al sistema.</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalReactivar({ open: false, id: null })}>Cancelar</button>
-              <button className="btn btn-success" onClick={confirmarReactivar}>Confirmar</button>
             </div>
           </div>
         </div>
