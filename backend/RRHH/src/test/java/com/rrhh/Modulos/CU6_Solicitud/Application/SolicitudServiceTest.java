@@ -29,6 +29,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -324,5 +325,125 @@ class SolicitudServiceTest {
         UsuarioModel usuario = new UsuarioModel();
         usuario.setEmpleado(emp);
         return usuario;
+    }
+
+    @Test
+    @DisplayName("registrar con fin de semana intermedio (vie-lun) → permitido; saldo cuenta solo laborables (2)")
+    void registrar_FinDeSemanaIntermedio_Permitido() {
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        Solicitud creada = new Solicitud();
+        creada.setEstado("PENDIENTE");
+        creada.setIdEmpleado(1L);
+        when(solicitudFactory.crearSolicitudPermiso(anyString(), anyString())).thenReturn(creada);
+        when(solicitudRepository.guardar(any())).thenReturn(creada);
+
+        RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
+        req.setTipoSolicitud("VACACIONES");
+        req.setFechaInicio(LocalDate.of(2026, 3, 6));   // viernes
+        req.setFechaFin(LocalDate.of(2026, 3, 9));      // lunes
+        req.setMotivo("Vacaciones");
+
+        SolicitudResponseDTO resultado = solicitudService.registrarSolicitud(req, ID_USUARIO);
+
+        assertEquals("PENDIENTE", resultado.getEstado());
+        assertEquals(2, resultado.getDiasSolicitados());
+    }
+
+    @Test
+    @DisplayName("clonar solicitud de otro empleado → AccessDeniedException")
+    void clonar_SolicitudDeOtroEmpleado_Denegado() {
+        Solicitud ajena = solicitudExistente("RECHAZADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
+        ajena.setIdSolicitud(ID_SOLICITUD);
+        ajena.setIdEmpleado(2L);
+        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(ajena));
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO));
+        verify(solicitudRepository, never()).guardar(any());
+    }
+
+    @Test
+    @DisplayName("validarPropiedad: el dueño pasa; otro empleado → AccessDeniedException")
+    void validarPropiedad_DuenoYAjeno() {
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+
+        assertDoesNotThrow(() -> solicitudService.validarPropiedad(ID_USUARIO, 1L));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> solicitudService.validarPropiedad(ID_USUARIO, 2L));
+    }
+
+    private static Solicitud solicitudExistente(String estado, LocalDate inicio, LocalDate fin) {
+        Solicitud s = new Solicitud();
+        s.setEstado(estado);
+        s.setFechaInicio(inicio);
+        s.setFechaFin(fin);
+        s.setIdEmpleado(1L);
+        return s;
+    }
+
+    @Test
+    @DisplayName("registrar con fechas que se cruzan con una solicitud PENDIENTE → IllegalStateException")
+    void registrar_SolapaConSolicitudActiva_LanzaExcepcion() {
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        when(solicitudRepository.buscarPorEmpleado(1L))
+                .thenReturn(List.of(solicitudExistente("PENDIENTE",
+                        LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 11))));
+
+        RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
+        req.setTipoSolicitud("PERMISO");
+        req.setFechaInicio(LocalDate.of(2026, 3, 10));
+        req.setFechaFin(LocalDate.of(2026, 3, 12));
+        req.setMotivo("Cita médica");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> solicitudService.registrarSolicitud(req, ID_USUARIO));
+
+        assertTrue(ex.getMessage().contains("se cruza"));
+        verify(solicitudRepository, never()).guardar(any());
+    }
+
+    @Test
+    @DisplayName("registrar con fechas que se cruzan con una solicitud RECHAZADA → permitido")
+    void registrar_SolicitudRechazadaNoBloquea() {
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        when(solicitudRepository.buscarPorEmpleado(1L))
+                .thenReturn(List.of(solicitudExistente("RECHAZADA",
+                        LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 11))));
+        Solicitud creada = new Solicitud();
+        creada.setEstado("PENDIENTE");
+        creada.setIdEmpleado(1L);
+        when(solicitudFactory.crearSolicitudPermiso(anyString(), anyString())).thenReturn(creada);
+        when(solicitudRepository.guardar(any())).thenReturn(creada);
+
+        RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
+        req.setTipoSolicitud("PERMISO");
+        req.setFechaInicio(LocalDate.of(2026, 3, 10));
+        req.setFechaFin(LocalDate.of(2026, 3, 12));
+        req.setMotivo("Cita médica");
+
+        assertEquals("PENDIENTE", solicitudService.registrarSolicitud(req, ID_USUARIO).getEstado());
+    }
+
+    @Test
+    @DisplayName("clonar una solicitud con fechas ya ocupadas por otra APROBADA → IllegalStateException")
+    void clonar_SolapaConSolicitudAprobada_LanzaExcepcion() {
+        Solicitud original = solicitudExistente("RECHAZADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
+        original.setIdSolicitud(ID_SOLICITUD);
+        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(original));
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        when(solicitudRepository.buscarPorEmpleado(1L))
+                .thenReturn(List.of(solicitudExistente("APROBADA",
+                        LocalDate.of(2026, 3, 11), LocalDate.of(2026, 3, 13))));
+
+        assertThrows(IllegalStateException.class,
+                () -> solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO));
+        verify(solicitudRepository, never()).guardar(any());
     }
 }
