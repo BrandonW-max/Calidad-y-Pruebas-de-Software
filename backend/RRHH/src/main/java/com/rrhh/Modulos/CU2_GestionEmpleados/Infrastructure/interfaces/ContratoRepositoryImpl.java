@@ -41,4 +41,16 @@ public class ContratoRepositoryImpl implements IContratoRepository {
                 .map(ContratoMapper::toDomain)
                 .orElse(null);
     }
+
+    @Override
+    public Contrato findUltimoContratoResueltoByEmpleado(Long idEmpleado) {
+
+        return jpaRepository
+                .findFirstByEmpleadoIdEmpleadoAndEstadoOrderByIdContratoDesc(
+                        idEmpleado,
+                        "RESUELTO"
+                )
+                .map(ContratoMapper::toDomain)
+                .orElse(null);
+    }
 }
