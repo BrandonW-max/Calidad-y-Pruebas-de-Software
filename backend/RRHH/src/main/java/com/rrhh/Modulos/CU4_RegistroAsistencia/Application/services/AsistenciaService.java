@@ -222,6 +222,14 @@ public class AsistenciaService {
                 return new MarcarAsistenciaResponseDTO(false,
                         "Registro duplicado. El empleado ya tiene entrada y salida registradas hoy.");
             }
+            if (esEntrada && registro.getHoraEntrada() != null) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "Ya existe una entrada registrada hoy para este empleado. Use la opcion de correccion para modificarla.");
+            }
+            if (esSalida && registro.getHoraSalida() != null) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "Ya existe una salida registrada hoy para este empleado. Use la opcion de correccion para modificarla.");
+            }
         }
 
         String motivo = request.getMotivo() != null ? request.getMotivo() : "Ajuste manual por RRHH";

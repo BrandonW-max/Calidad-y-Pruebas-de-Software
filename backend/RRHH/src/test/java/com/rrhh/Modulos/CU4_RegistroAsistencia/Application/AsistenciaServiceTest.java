@@ -317,4 +317,27 @@ class AsistenciaServiceTest {
         assertFalse(resultado.isSuccess());
         assertEquals("El motivo no puede superar los 200 caracteres.", resultado.getMessage());
     }
+
+    @Test
+    @DisplayName("registrarManual ENTRADA cuando ya hay entrada hoy → rechazado, no sobrescribe")
+    void registrarManual_EntradaYaRegistrada_Rechazada() {
+        when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
+
+        RegistroAsistenciaModel existente = new RegistroAsistenciaModel();
+        existente.setHoraEntrada(LocalTime.of(8, 0));
+        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.of(existente));
+
+        MarcarAsistenciaManualRequestDTO req = new MarcarAsistenciaManualRequestDTO();
+        req.setIdEmpleado(ID_EMPLEADO);
+        req.setTipo("ENTRADA");
+        req.setFechaHora(LocalDateTime.of(LocalDate.now(), LocalTime.of(9, 0)));
+        req.setMotivo("Segundo intento");
+
+        MarcarAsistenciaResponseDTO resultado = asistenciaService.registrarManual(req, 1L, "127.0.0.1");
+
+        assertFalse(resultado.isSuccess());
+        assertEquals(LocalTime.of(8, 0), existente.getHoraEntrada());
+        verify(registroRepository, never()).save(any());
+    }
 }
