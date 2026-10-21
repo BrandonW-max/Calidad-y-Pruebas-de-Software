@@ -62,7 +62,7 @@ class NominaServiceTest {
     private static final Long   ID_USUARIO_RRHH = 1L;
     private static final Integer ID_NOMINA      = 10;
 
-    private static final BigDecimal SUELDO_MINIMO = new BigDecimal("1025.00");
+    private static final BigDecimal SUELDO_MINIMO = new BigDecimal("1130.00");
     private static final BigDecimal SUELDO_VALIDO = new BigDecimal("2500.00");
 
     private static final String MSG_FECHA_INVALIDA   = "La fecha de inicio no puede ser mayor a la fecha fin.";
@@ -82,7 +82,7 @@ class NominaServiceTest {
         when(rrhhProperties.getBonifNocturno()).thenReturn(new BigDecimal("0.35"));
         when(rrhhProperties.getBonifGuardia()).thenReturn(new BigDecimal("15.00"));
         when(rrhhProperties.getBonifRiesgo()).thenReturn(new BigDecimal("0.05"));
-        when(rrhhProperties.getRmv()).thenReturn(new BigDecimal("1025.00"));
+        when(rrhhProperties.getRmv()).thenReturn(new BigDecimal("1130.00"));
         when(rrhhProperties.getTasaHoraExtra1_5()).thenReturn(new BigDecimal("1.5"));
         when(rrhhProperties.getTasaHoraExtra2_0()).thenReturn(new BigDecimal("2.0"));
         when(rrhhProperties.getUmbralHorasDobles()).thenReturn(2);
@@ -135,6 +135,30 @@ class NominaServiceTest {
         CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
 
         when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+
+        assertTrue(ex.getMessage().contains("No se encontraron empleados activos"));
+    }
+
+    @Test
+    @DisplayName("Periodo anterior a la contratación del empleado → IllegalStateException")
+    void periodoAnteriorAContratacion_LanzaExcepcion() {
+        LocalDate inicio = LocalDate.now().minusMonths(3).withDayOfMonth(1);
+        LocalDate fin    = inicio.plusDays(27);
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(9L);
+        empleado.setEstado("ACTIVO");
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setFechaInicio(LocalDate.now().minusMonths(1).withDayOfMonth(1));
+        empleado.setContratos(List.of(contrato));
+
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
@@ -275,6 +299,8 @@ class NominaServiceTest {
         contrato.setSueldo(SUELDO_VALIDO);
         contrato.setTipoPension("ONP");
         contrato.setEstado("ACTIVO");
+        contrato.setFechaInicio(inicio.minusMonths(1));
+        empleado.setContratos(List.of(contrato));
 
         RegistroAsistenciaModel registro = new RegistroAsistenciaModel();
         registro.setEmpleado(empleado);

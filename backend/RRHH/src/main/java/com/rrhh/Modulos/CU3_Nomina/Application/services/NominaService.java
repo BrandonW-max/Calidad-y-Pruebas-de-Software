@@ -97,7 +97,9 @@ public class NominaService implements INominaService {
             );
         }
 
-        List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request);
+        List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request).stream()
+            .filter(e -> contratadoHasta(e, request.getFechaFin()))
+            .collect(Collectors.toList());
 
         if (empleados.isEmpty()) {
             throw new IllegalStateException(
@@ -589,6 +591,11 @@ public class NominaService implements INominaService {
     }
 
 
+
+    private boolean contratadoHasta(EmpleadoModel empleado, LocalDate fechaFin) {
+        return empleado.getContratos() != null && empleado.getContratos().stream()
+            .anyMatch(c -> c.getFechaInicio() != null && !c.getFechaInicio().isAfter(fechaFin));
+    }
 
     private List<EmpleadoModel> obtenerEmpleadosActivos(CalcularNominaRequestDTO request) {
         if (request.getIdEmpleado() != null) {
