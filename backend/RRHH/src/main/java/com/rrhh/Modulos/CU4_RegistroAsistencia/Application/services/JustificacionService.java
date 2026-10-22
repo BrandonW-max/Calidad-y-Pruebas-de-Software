@@ -49,6 +49,10 @@ public class JustificacionService {
             throw new RuntimeException("Ya existe una justificación pendiente para este registro.");
         }
 
+        if (motivo != null && motivo.length() > 200) {
+            throw new RuntimeException("El motivo no puede superar los 200 caracteres.");
+        }
+
         LocalDate fechaRegistro = r.getFecha();
         if (LocalDate.now().isAfter(fechaRegistro.plusDays(1))) {
             throw new RuntimeException("El plazo de justificacion vencio. Solo puedes justificar el mismo dia o el dia siguiente.");
@@ -79,23 +83,33 @@ public class JustificacionService {
             throw new RuntimeException("La justificacion ya fue revisada");
         }
 
-        j.setEstado(decision);
+        RegistroAsistenciaModel r = j.getIdRegistroAsistencia() != null
+                ? em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia())
+                : null;
+
+        // Fuera de plazo no se puede aprobar: queda registrada como rechazada
+        String estadoFinal = decision;
+        String comentarioFinal = comentario;
+        if ("APROBADA".equals(decision) && r != null && r.getFecha() != null
+                && LocalDate.now().isAfter(r.getFecha().plusDays(1))) {
+            estadoFinal = "RECHAZADA";
+            comentarioFinal = "Plazo de justificacion vencido. Solo se puede justificar el mismo dia o el dia siguiente.";
+        }
+
+        j.setEstado(estadoFinal);
         j.setRevisadoPor(idRevisor);
         j.setFechaRevision(LocalDateTime.now());
 
-        if (comentario != null && !comentario.isBlank()) {
-            j.setComentarioRevision(comentario);
+        if (comentarioFinal != null && !comentarioFinal.isBlank()) {
+            j.setComentarioRevision(comentarioFinal);
         }
 
         // Si se aprueba: anular la tardanza en el registro de asistencia
         // para que la nómina no descuente esos minutos
-        if ("APROBADA".equals(decision) && j.getIdRegistroAsistencia() != null) {
-            RegistroAsistenciaModel r = em.find(RegistroAsistenciaModel.class, j.getIdRegistroAsistencia());
-            if (r != null) {
-                r.setMinutosTardanza(0);
-                r.setObservacion("Tardanza justificada y aprobada");
-                em.merge(r);
-            }
+        if ("APROBADA".equals(estadoFinal) && r != null) {
+            r.setMinutosTardanza(0);
+            r.setObservacion("Tardanza justificada y aprobada");
+            em.merge(r);
         }
 
         return em.merge(j);
@@ -107,6 +121,16 @@ public class JustificacionService {
                 JustificacionTardanzaModel.class).getResultList();
         pendientes.forEach(this::enriquecerConDatosAsistencia);
         return pendientes;
+    }
+
+    public List<JustificacionTardanzaModel> listarPorEstado(String estado) {
+        List<JustificacionTardanzaModel> lista = em.createQuery(
+                "SELECT j FROM JustificacionTardanzaModel j WHERE j.estado = :estado ORDER BY j.fechaRevision DESC",
+                JustificacionTardanzaModel.class)
+                .setParameter("estado", estado)
+                .getResultList();
+        lista.forEach(this::enriquecerConDatosAsistencia);
+        return lista;
     }
 
     public List<JustificacionTardanzaModel> listarPorEmpleado(Long idEmpleado) {
