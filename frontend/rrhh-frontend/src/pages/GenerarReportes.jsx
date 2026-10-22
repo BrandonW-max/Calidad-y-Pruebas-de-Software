@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
 import logo from "../assets/logo.png";
@@ -38,6 +38,12 @@ export default function GenerarReportes() {
   const [estado,    setEstado]    = useState("");
   const [generando, setGenerando] = useState(false);
   const [mensaje,   setMensaje]   = useState("");
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
   const [error,     setError]     = useState("");
   const [resultado, setResultado] = useState(null);
   const [historial, setHistorial] = useState([]);
@@ -210,7 +216,7 @@ export default function GenerarReportes() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         <div className="reportes-layout">
@@ -303,14 +309,13 @@ export default function GenerarReportes() {
             </div>
 
             {resultado && (
-              <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
-                <div style={{ padding: "16px 20px 10px" }}>
-                  <h2 style={{ margin: 0 }}>
+              <div className="section-card asistencia-panel">
+                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+                  <h2 style={{ margin: 0, border: "none", padding: 0 }}>
                     Resultados — {tipoActual?.label}
-                    <span className="badge badge-success" style={{ marginLeft: 10, fontSize: "12px" }}>{resultado.length} registros</span>
                   </h2>
                 </div>
-                <div className="table-wrapper" style={{ marginBottom: 0 }}>{renderTabla()}</div>
+                <div className="table-wrapper" style={{ marginBottom: 0, paddingBottom: 14, ...(resultado.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>{renderTabla()}</div>
               </div>
             )}
 

@@ -598,6 +598,13 @@ table tr:hover td { background: #f8fafc; }
   max-width: 520px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   cursor: pointer;
+  animation: alertDesvanece 7s ease-in forwards;
+}
+
+/* El aviso dura 7 s y se desvanece al final */
+@keyframes alertDesvanece {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* ══ DIVIDER ══ */

@@ -17,6 +17,12 @@ export default function GestionHorarios() {
   const [horarios,  setHorarios]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [mensaje,   setMensaje]   = useState("");
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
   const [mensajeOk, setMensajeOk] = useState(true);
 
   const [modalForm, setModalForm] = useState({ open: false, modo: "crear", data: null });

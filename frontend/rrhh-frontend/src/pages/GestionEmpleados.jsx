@@ -102,6 +102,19 @@ export default function GestionEmpleados() {
   const HORARIO_VACIO = { idHorario: "", fechaDesde: "", fechaHasta: "", esTemporal: false };
   const [horarioForm,   setHorarioForm]   = useState(HORARIO_VACIO);
 
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
     getHorarios().then(setHorarios).catch(() => {});

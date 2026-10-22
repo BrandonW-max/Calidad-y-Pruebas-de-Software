@@ -39,7 +39,19 @@ export default function CalculoNomina() {
   const [verificando, setVerificando] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [mensaje,   setMensaje]   = useState("");
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
   const [error,     setError]     = useState("");
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [enviando,  setEnviando]  = useState({});
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
@@ -384,16 +396,13 @@ export default function CalculoNomina() {
             </div>
 
             {resultList.length > 0 && (
-              <div className="section-card" style={{ padding: 0, overflow: "auto" }}>
-                <div style={{ padding: "20px 20px 10px" }}>
-                  <h2 style={{ margin: 0 }}>
+              <div className="section-card asistencia-panel">
+                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+                  <h2 style={{ margin: 0, border: "none", padding: 0 }}>
                     Resultados — {MESES.find(m => m.v === mes)?.l} {anio}
-                    <span className="badge badge-success" style={{ marginLeft: "10px", fontSize: "12px" }}>
-                      {resultList.length} empleado(s)
-                    </span>
                   </h2>
                 </div>
-                <div className="table-wrapper" style={{ marginBottom: 0, overflowX: "auto" }}>
+                <div className="table-wrapper" style={{ marginBottom: 0, overflowX: "auto", paddingBottom: 14, ...(resultList.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
                   <table style={{ minWidth: 700 }}>
                     <thead>
                       <tr>
@@ -419,11 +428,6 @@ export default function CalculoNomina() {
                           <td style={{ textAlign: "center", fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
                           <td style={{ textAlign: "center" }}>
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                              <button className="btn btn-secondary btn-sm"
-                                title="Estructura salarial"
-                                onClick={() => abrirEstructura(n)}>
-                                💰
-                              </button>
                               <button className="btn btn-secondary btn-sm"
                                 title="Vista previa detallada"
                                 onClick={e => { e.stopPropagation(); setPreviewNomina(n); }}>

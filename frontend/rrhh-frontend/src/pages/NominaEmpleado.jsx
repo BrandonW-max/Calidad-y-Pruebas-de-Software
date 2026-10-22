@@ -88,12 +88,12 @@ export default function NominaEmpleado() {
 
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid var(--border)" }}>
-            <h2 style={{ margin: 0 }}>Historial de Pagos</h2>
+        <div className="section-card asistencia-panel">
+          <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Pagos</h2>
           </div>
 
-          <div className="table-wrapper" style={{ marginBottom: 0 }}>
+          <div className="table-wrapper" style={{ marginBottom: 0, paddingBottom: 14, ...(nominas.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? (
               <div className="loading-text">Cargando tu historial de nómina...</div>
             ) : (
