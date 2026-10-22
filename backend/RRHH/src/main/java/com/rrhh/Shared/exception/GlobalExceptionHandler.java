@@ -105,6 +105,16 @@ public class GlobalExceptionHandler {
         return badRequest("DATOS_INVALIDOS", "Los datos enviados no tienen el formato correcto.");
     }
 
+    @ExceptionHandler(ArchivoInvalidoException.class)
+    public ResponseEntity<Map<String, Object>> handleArchivoInvalido(ArchivoInvalidoException ex) {
+        return badRequest("ARCHIVO_INVALIDO", ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return badRequest("ARCHIVO_INVALIDO", "El archivo excede el tamaño máximo permitido (10MB).");
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return badRequest("SOLICITUD_INVALIDA", ex.getMessage());

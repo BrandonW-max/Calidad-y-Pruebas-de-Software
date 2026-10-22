@@ -42,10 +42,17 @@ public class AuthService implements IAuthService {
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO dto, String ip) {
 
+        if (dto == null || dto.getNombreUsuario() == null || dto.getNombreUsuario().isBlank()) {
+            return new AuthResponseDTO(
+                    false,
+                    "Credenciales invalidas"
+            );
+        }
+
         Usuario user =
                 usuarioRepository.findByNombreUsuarioOrCorreoInst(
-                        dto.getNombreUsuario(),
-                        dto.getNombreUsuario()
+                        dto.getNombreUsuario().trim(),
+                        dto.getNombreUsuario().trim()
                 );
 
         if (user == null) {

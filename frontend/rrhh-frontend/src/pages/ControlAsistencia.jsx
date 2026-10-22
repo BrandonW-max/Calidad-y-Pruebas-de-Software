@@ -56,6 +56,13 @@ function getRolFromPath(pathname) {
   return "RRHH";
 }
 
+const resolveEvidenciaUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  return `${baseUrl.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
+
 /* ══════════════════════════════════════════════════════════
    VISTA EMPLEADO
 ══════════════════════════════════════════════════════════ */
@@ -399,9 +406,20 @@ function VistaEmpleado() {
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>
-                          {j.evidenciaUrl
-                            ? <span>📎 1 archivo</span>
-                            : <span style={{ color: "var(--text-3)" }}>-</span>}
+                          {j.evidenciaUrl ? (
+                            <a
+                              href={resolveEvidenciaUrl(j.evidenciaUrl)}
+                              download={j.evidenciaUrl.split("/").pop()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "3px 8px", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+                            >
+                              ⬇️ Descargar
+                            </a>
+                          ) : (
+                            <span style={{ color: "var(--text-3)" }}>-</span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <span className={`badge ${estadoBadge(j.estado)}`}>
@@ -496,6 +514,8 @@ function VistaEmpleado() {
                   )}
                 </div>
               </div>
+              {error && <div className="alert alert-warning" style={{ marginTop: 12, marginBottom: 12 }}>⚠️ {error}</div>}
+              {mensaje && <div className="alert alert-success" style={{ marginTop: 12, marginBottom: 12 }}>✅ {mensaje}</div>}
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={justifSaving}>
                   {justifSaving ? "Enviando..." : "📤 Enviar Justificación"}
@@ -1259,21 +1279,115 @@ function VistaRRHH() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 6 }}>
                   Evidencia adjunta
                 </div>
-                {modalDecision.justificacion.evidenciaUrl || modalDecision.justificacion.evidencia ? (
-                  <img
-                    src={modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia}
-                    alt="Evidencia"
-                    style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)" }}
-                  />
-                ) : (
-                  <div style={{
-                    border: "2px dashed var(--border)", borderRadius: 8, padding: "24px",
-                    textAlign: "center", color: "var(--text-3)", fontSize: 13,
-                  }}>
-                    <div style={{ fontSize: 32, marginBottom: 6 }}>📷</div>
-                    Sin evidencia adjunta
-                  </div>
-                )}
+                {(() => {
+                  const evUrl = modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia;
+                  if (!evUrl) {
+                    return (
+                      <div style={{
+                        border: "2px dashed var(--border)", borderRadius: 8, padding: "20px",
+                        textAlign: "center", color: "var(--text-3)", fontSize: 13,
+                      }}>
+                        <div style={{ fontSize: 28, marginBottom: 4 }}>📷</div>
+                        Sin evidencia adjunta
+                      </div>
+                    );
+                  }
+                  const fullUrl = resolveEvidenciaUrl(evUrl);
+                  const filename = evUrl.split("/").pop();
+                  const isPdfFile = evUrl.toLowerCase().endsWith(".pdf") || evUrl.toLowerCase().includes(".pdf");
+
+                  if (isPdfFile) {
+                    return (
+                      <div style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "14px 16px",
+                        background: "var(--bg-2, #f8fafc)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 32 }}>📄</span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-1)" }}>
+                              Documento PDF Adjunto
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text-3)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {filename}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <a
+                            href={fullUrl}
+                            download={filename}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            ⬇️ Descargar
+                          </a>
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            👁️ Abrir
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "10px",
+                      background: "var(--bg-2, #f8fafc)",
+                    }}>
+                      <img
+                        src={fullUrl}
+                        alt="Evidencia"
+                        style={{
+                          width: "100%",
+                          maxHeight: 220,
+                          objectFit: "contain",
+                          borderRadius: 6,
+                          marginBottom: 8,
+                          background: "#fff",
+                        }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                        <a
+                          href={fullUrl}
+                          download={filename}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          ⬇️ Descargar Imagen
+                        </a>
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          👁️ Ver en grande
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>

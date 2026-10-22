@@ -32,7 +32,7 @@ const USUARIOS_PRUEBA = [
     border: "#a5f3fc",
     username: "empleado_test",
     token: "placeholder-token-empleado",
-    idEmpleado: 1,
+    idEmpleado: 20,
     descripcion: "Acceso: mi asistencia, mis solicitudes, mi nómina.",
     redirect: "/empleado",
   },
