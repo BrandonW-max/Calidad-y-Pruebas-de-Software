@@ -6,14 +6,14 @@ import {
 import DashboardLayout from "../components/DashboardLayout";
 import DashboardHero from "../components/DashboardHero";
 import MetricCard from "../components/MetricCard";
-import { getUser, getIdEmpleado, getSolicitudesPorEmpleado, getNotificacionesEmpleado } from "../services/api";
+import { getUser, getIdEmpleado, getSolicitudesPorEmpleado, getNotificacionesEmpleado, getAsistenciaHoy } from "../services/api";
 
 export default function DashboardEmpleado() {
   const user = getUser();
   const idEmpleado = getIdEmpleado();
 
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
-  const [asistenciaHoy] = useState(null);
+  const [asistenciaHoy, setAsistenciaHoy] = useState(null);
   const [vacacionesDias] = useState(null);
   const [notifCount, setNotifCount] = useState(0);
 
@@ -26,6 +26,10 @@ export default function DashboardEmpleado() {
         ).length;
         setSolicitudesPendientes(pendientes);
       }
+    } catch { /* silently fail */ }
+    try {
+      const hoy = await getAsistenciaHoy(idEmpleado);
+      setAsistenciaHoy(hoy);
     } catch { /* silently fail */ }
     try {
       const notif = await getNotificacionesEmpleado(idEmpleado);
