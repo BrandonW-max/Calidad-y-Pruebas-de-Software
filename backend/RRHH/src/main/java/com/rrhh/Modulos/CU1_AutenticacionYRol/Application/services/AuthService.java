@@ -9,12 +9,10 @@ import com.rrhh.config.security.JwtConfig;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.TwoFactorService;
 
 import java.util.List;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 
 
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rrhh.Shared.security.HashService;
@@ -31,9 +29,6 @@ public class AuthService implements IAuthService {
     private final IHistorialRepository historialRepository;
 
     private final HashService hashService;
-
-    @Value("${sistema.usuarios-prueba:}")
-    private String usuariosPruebaConfig;
 
     public AuthService(JwtConfig jwtConfig, TwoFactorService twoFactorService, IUsuarioRepository usuarioRepository, IHistorialRepository historialRepository, HashService hashService) {
         this.jwtConfig = jwtConfig;
@@ -78,15 +73,15 @@ public class AuthService implements IAuthService {
         }
 
         // =========================
-        // BYPASS DE PRUEBA (configurable)
-        // Usuarios listados en sistema.usuarios-prueba entran sin validar
-        // contrasenia. Eliminar/desactivar en produccion.
+        // VERIFICACION DE CONTRASENIA
+        // Todos los usuarios, sin excepcion, deben presentar una contrasenia valida
         // =========================
-        boolean esUsuarioPrueba = !usuariosPruebaConfig.isBlank() && Arrays.stream(usuariosPruebaConfig.split(","))
-                .map(String::trim)
-                .anyMatch(u -> u.equals(user.getNombreUsuario()));
+        boolean passwordValida = dto.getPassword() != null
+                && !dto.getPassword().isBlank()
+                && user.getContrasenia() != null
+                && hashService.verificar(dto.getPassword(), user.getContrasenia());
 
-        if (esUsuarioPrueba || hashService.verificar(dto.getPassword(), user.getContrasenia())) {
+        if (passwordValida) {
 
             user.resetearIntentos();
             usuarioRepository.save(user);

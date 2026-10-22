@@ -45,7 +45,6 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(authService, "usuariosPruebaConfig", "");
         usuarioConDni = new Usuario();
         usuarioConDni.setNombreUsuario(USERNAME);
         usuarioConDni.setNumeroDi(DNI);
