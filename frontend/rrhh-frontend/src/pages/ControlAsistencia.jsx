@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
+  listarJustificacionesPorEstado,
   listarJustificacionesEmpleado,
   listarAsistenciaEmpleado,
   getAsistenciaHoy,
@@ -15,6 +16,39 @@ import {
   listarEmpleados,
   getIdEmpleado,
 } from "../services/api";
+
+/* Selector de archivo con botón propio (en lugar del input nativo del navegador) */
+function CampoArchivo({ name, accept, onChange }) {
+  const ref = useRef(null);
+  const [nombre, setNombre] = useState("");
+
+  // Al reiniciar el formulario, también se borra el nombre mostrado
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!form) return;
+    const limpiar = () => setNombre("");
+    form.addEventListener("reset", limpiar);
+    return () => form.removeEventListener("reset", limpiar);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", position: "relative" }}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()}>
+        📎 Seleccionar archivo
+      </button>
+      <input ref={ref} type="file" name={name} accept={accept}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        onChange={e => {
+          const f = e.target.files[0] ?? null;
+          setNombre(f ? f.name : "");
+          onChange(f);
+        }} />
+      <span style={{ fontSize: 13, color: "var(--text-2)", minWidth: 0, wordBreak: "break-all" }}>
+        {nombre || "Ningún archivo seleccionado"}
+      </span>
+    </div>
+  );
+}
 
 function getRolFromPath(pathname) {
   if (pathname.startsWith("/empleado")) return "EMPLEADO";
@@ -36,6 +70,18 @@ function VistaEmpleado() {
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error,   setError]     = useState("");
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [tabActiva, setTabActiva] = useState("info");
 
   // Registro manual modal
@@ -169,8 +215,8 @@ function VistaEmpleado() {
   const estadoBadge = (estado) => {
     const m = {
       PENDIENTE: "badge-warning",
-      APROBADO:  "badge-success",
-      RECHAZADO: "badge-danger",
+      APROBADA:  "badge-success",
+      RECHAZADA: "badge-danger",
     };
     return m[estado] ?? "badge-gray";
   };
@@ -194,8 +240,8 @@ function VistaEmpleado() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success" style={{ marginBottom: 16 }}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
+        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
         {/* ── FILA SUPERIOR: Registro manual | Asistencia Hoy ── */}
         <div className="asist-grid">
@@ -374,7 +420,7 @@ function VistaEmpleado() {
                             </button>
                           ) : (
                             <span className="badge badge-gray" style={{ fontSize: "11px" }}>
-                              {j.estado === "APROBADO" ? "✅ Aprobado" : "❌ Rechazado"}
+                              {j.estado === "APROBADA" ? "✅ Aprobado" : "❌ Rechazado"}
                             </span>
                           )}
                         </td>
@@ -443,11 +489,7 @@ function VistaEmpleado() {
                 </div>
                 <div className="form-group form-full">
                   <label>Evidencia (opcional)</label>
-                  <input type="file" name="evidencia" accept="image/*,application/pdf"
-                    onChange={e => {
-                      const f = e.target.files[0];
-                      setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
-                    }} />
+                  <CampoArchivo name="evidencia" accept="image/*,application/pdf" onChange={f => setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "")} />
                   {evidenciaPreview && (
                     <img src={evidenciaPreview} alt="Vista previa de la evidencia"
                       style={{ display: "block", marginTop: 8, maxWidth: 200, maxHeight: 200, borderRadius: 8, border: "1px solid #e2e8f0" }} />
@@ -494,7 +536,7 @@ function VistaEmpleado() {
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Asistencia</h2>
             <button className="btn btn-secondary btn-sm" onClick={cargarHistorial}>🔄 Actualizar</button>
           </div>
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ paddingBottom: 14, ...(historial.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? <div className="loading-text">Cargando historial...</div> : (
               <table>
                 <thead>
@@ -568,12 +610,7 @@ function VistaEmpleado() {
               </div>
               <div className="form-group">
                 <label>Evidencia (opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
-                  style={{ display: "block", width: "100%", fontSize: 13 }}
-                />
+                <CampoArchivo accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
                 {justifFile && (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
                     📎 {justifFile.name}
@@ -658,13 +695,83 @@ function VistaEmpleado() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   TABLA DE JUSTIFICACIONES DECIDIDAS (aprobadas o rechazadas)
+══════════════════════════════════════════════════════════ */
+function TablaDecididas({ titulo, lista, getNombre, estado }) {
+  const esAprobada = estado === "APROBADA";
+  return (
+    <div className="section-card asistencia-panel">
+      <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+        <h2 style={{ margin: 0, border: "none", padding: 0 }}>
+          {titulo}
+        </h2>
+      </div>
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "center" }}>Empleado</th>
+              <th style={{ textAlign: "center" }}>Fecha</th>
+              <th style={{ textAlign: "center" }}>Tardanza</th>
+              <th style={{ textAlign: "center" }}>Revisado el</th>
+              <th style={{ textAlign: "center" }}>Comentario</th>
+              <th style={{ textAlign: "center" }}>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.length === 0 ? (
+              <tr><td colSpan={6}>
+                <div className="empty-state">
+                  <p>No hay justificaciones {esAprobada ? "aprobadas" : "rechazadas"}</p>
+                </div>
+              </td></tr>
+            ) : lista.map(j => (
+              <tr key={j.id ?? j.idJustificacion}>
+                <td style={{ textAlign: "center" }}>{getNombre(j.idEmpleado)}</td>
+                <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? "—"}</td>
+                <td style={{ textAlign: "center" }}>
+                  {j.minutosTardanza != null && j.minutosTardanza > 0
+                    ? `${j.minutosTardanza} min`
+                    : "—"}
+                </td>
+                <td style={{ textAlign: "center" }}>{j.fechaRevision?.substring(0, 10) ?? "—"}</td>
+                <td style={{ textAlign: "center" }}>{j.comentarioRevision || "—"}</td>
+                <td style={{ textAlign: "center" }}>
+                  <span className={`badge ${esAprobada ? "badge-success" : "badge-danger"}`}>
+                    {esAprobada ? "Aprobada" : "Rechazada"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    VISTA RRHH
 ══════════════════════════════════════════════════════════ */
 function VistaRRHH() {
   const [justificaciones, setJustificaciones] = useState([]);
+  const [aprobadas,       setAprobadas]       = useState([]);
+  const [rechazadas,      setRechazadas]      = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
@@ -701,8 +808,14 @@ function VistaRRHH() {
     setLoading(true);
     setError("");
     try {
-      const data = await listarJustificacionesPendientes();
-      setJustificaciones(Array.isArray(data) ? data : []);
+      const [pendientes, aprobadasData, rechazadasData] = await Promise.all([
+        listarJustificacionesPendientes(),
+        listarJustificacionesPorEstado("APROBADA"),
+        listarJustificacionesPorEstado("RECHAZADA"),
+      ]);
+      setJustificaciones(Array.isArray(pendientes) ? pendientes : []);
+      setAprobadas(Array.isArray(aprobadasData) ? aprobadasData : []);
+      setRechazadas(Array.isArray(rechazadasData) ? rechazadasData : []);
     } catch {
       setError("No se pudieron cargar las justificaciones");
     } finally {
@@ -764,9 +877,13 @@ function VistaRRHH() {
     const j = modalDecision.justificacion;
     setModalDecision({ open: false, justificacion: null });
     try {
-      await revisarJustificacion(j.id ?? j.idJustificacion, "APROBADA", "");
-      setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
-      handleCorregirTardanza(j);
+      const resultado = await revisarJustificacion(j.id ?? j.idJustificacion, "APROBADA", "");
+      if (resultado.estado === "RECHAZADA") {
+        setError("Plazo vencido: la justificación se registró como rechazada y aparece en la tabla de rechazadas.");
+      } else {
+        setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
+        handleCorregirTardanza(j);
+      }
       cargarJustificaciones();
     } catch (err) {
       setErrorModal({ open: true, message: err.message || "Error al aprobar la justificación" });
@@ -839,7 +956,7 @@ function VistaRRHH() {
     setManualForm(f => ({
       ...f,
       idEmpleado: j.idEmpleado,
-      motivo: j.motivo ? "Corrección de tardanza justificada: " + j.motivo : "",
+      motivo: "Corrección de tardanza justificada",
     }));
 
     setCorreccionInfo({
@@ -875,8 +992,8 @@ function VistaRRHH() {
           <span className="role-pill role-pill-rrhh">ECU-03</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
+        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
         <div className="biometric-banner asistencia-biometric">
           <div className="biometric-banner-icon">🖐️</div>
@@ -887,8 +1004,9 @@ function VistaRRHH() {
         </div>
 
         <div className="asistencia-grid">
+        <div className="asistencia-justificaciones-col" style={{ order: 2, display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
         {/* ── SECCIÓN 1: JUSTIFICACIONES PENDIENTES ── */}
-        <div className="section-card asistencia-panel asistencia-justificaciones">
+        <div className="section-card asistencia-panel asistencia-justificaciones" style={{ order: 0 }}>
           <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>
               📋 Justificaciones Pendientes
@@ -908,11 +1026,10 @@ function VistaRRHH() {
               Revise cada justificación y decida si aprobarla o rechazarla.
             </div>
             <div className="table-wrapper">
-              {loading ? <div className="loading-text">Cargando justificaciones...</div> : (
+              {loading && justificaciones.length === 0 ? <div className="loading-text">Cargando justificaciones...</div> : (
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "center" }}>#</th>
                       <th style={{ textAlign: "center" }}>Empleado</th>
                       <th style={{ textAlign: "center" }}>Fecha</th>
                       <th style={{ textAlign: "center" }}>Debía llegar</th>
@@ -923,7 +1040,7 @@ function VistaRRHH() {
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
-                      <tr><td colSpan={7}>
+                      <tr><td colSpan={6}>
                         <div className="empty-state">
                           <div className="empty-state-icon">✅</div>
                           <p>No hay justificaciones pendientes de revisión</p>
@@ -940,7 +1057,6 @@ function VistaRRHH() {
                             : undefined,
                         }}
                       >
-                        <td style={{ textAlign: "center" }}>{j.id ?? j.idJustificacion}</td>
                         <td style={{ textAlign: "center" }}>{getNombreEmpleado(j.idEmpleado)}</td>
                         <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
                         <td style={{ textAlign: "center", fontWeight: 600, color: "var(--text-2)" }}>
@@ -965,6 +1081,20 @@ function VistaRRHH() {
                 </table>
               )}
             </div>
+        </div>
+
+            <TablaDecididas
+              titulo="✅ Justificaciones Aprobadas"
+              lista={aprobadas}
+              getNombre={getNombreEmpleado}
+              estado="APROBADA"
+            />
+            <TablaDecididas
+              titulo="❌ Justificaciones Rechazadas"
+              lista={rechazadas}
+              getNombre={getNombreEmpleado}
+              estado="RECHAZADA"
+            />
         </div>
 
         {/* ── SECCIÓN 2: REGISTRO MANUAL ── */}
@@ -1332,7 +1462,7 @@ function VistaGerencia() {
     r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
   );
 
-  const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADO: "badge-success", RECHAZADO: "badge-danger" }[estado] ?? "badge-gray");
+  const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADA: "badge-success", RECHAZADA: "badge-danger" }[estado] ?? "badge-gray");
 
   return (
     <div className="dashboard">
@@ -1477,7 +1607,7 @@ function VistaGerencia() {
                             </button>
                           ) : (
                             <span className="badge badge-gray" style={{ fontSize: "11px" }}>
-                              {j.estado === "APROBADO" ? "✅ Aprobado" : "❌ Rechazado"}
+                              {j.estado === "APROBADA" ? "✅ Aprobado" : "❌ Rechazado"}
                             </span>
                           )}
                         </td>
@@ -1551,7 +1681,7 @@ function VistaGerencia() {
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Asistencia</h2>
             <button className="btn btn-secondary btn-sm" onClick={cargarHistorial}>🔄 Actualizar</button>
           </div>
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ paddingBottom: 14, ...(historial.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? <div className="loading-text">Cargando historial...</div> : (
               <table>
                 <thead>
@@ -1611,12 +1741,7 @@ function VistaGerencia() {
               </div>
               <div className="form-group">
                 <label>Evidencia (opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
-                  style={{ display: "block", width: "100%", fontSize: 13 }}
-                />
+                <CampoArchivo accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
                 {justifFile && (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
                     📎 {justifFile.name}

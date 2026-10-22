@@ -187,6 +187,9 @@ export const listarAsistenciaEmpleado = (idEmpleado) =>
 export const listarJustificacionesPendientes = () =>
   f(`${BASE}/api/v1/asistencia/justificaciones/pendientes`, { headers: h() }).then(json);
 
+export const listarJustificacionesPorEstado = (estado) =>
+  f(`${BASE}/api/v1/asistencia/justificaciones/estado/${estado}`, { headers: h() }).then(json);
+
 export const listarJustificacionesEmpleado = (idEmpleado) =>
   f(`${BASE}/api/v1/asistencia/justificaciones/empleado/${idEmpleado}`, { headers: h() }).then(json);
 
