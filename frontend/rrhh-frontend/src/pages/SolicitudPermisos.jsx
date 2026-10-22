@@ -102,6 +102,48 @@ const estadoBadge = (estado) => {
 /* ══════════════════════════════════════════════════════════
    VISTA EMPLEADO
 ══════════════════════════════════════════════════════════ */
+/* ── Detalle de la solicitud seleccionada ── */
+function DetalleSolicitud({ solicitud, onCerrar }) {
+  if (!solicitud) return null;
+  const s = solicitud;
+  const filas = [
+    ["Empleado", s.nombreEmpleado ?? s.idEmpleado ?? "—"],
+    ["Tipo", TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud ?? "—"],
+    ["Fecha inicio", s.fechaInicio ?? "—"],
+    ["Fecha fin", s.fechaFin ?? "—"],
+    ["Días", s.diasSolicitados ?? "—"],
+    ["Estado", s.estado ?? "—"],
+    ["Motivo", s.motivo || "—"],
+    ["Respuesta", s.respuesta || "—"],
+    ["Observación RRHH", s.observacionRrhh || "—"],
+    ["Fecha de revisión", s.fechaRevision ? String(s.fechaRevision).substring(0, 10) : "—"],
+    ["Fecha de decisión", s.fechaDecision ? String(s.fechaDecision).substring(0, 10) : "—"],
+  ];
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onCerrar()}>
+      <div className="modal-box" style={{ maxWidth: 560, width: "95%", borderRadius: 16, overflow: "hidden", padding: 0 }}>
+        <div className="modal-header" style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
+          <h3 style={{ margin: 0, fontSize: 16 }}>Detalle de la solicitud #{s.idSolicitud ?? s.id}</h3>
+          <button className="modal-close" onClick={onCerrar}>×</button>
+        </div>
+        <div className="modal-body" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+            {filas.map(([label, valor]) => (
+              <div key={label} style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+                <div style={{ fontSize: 14, color: "var(--text-1)", wordBreak: "break-word" }}>{valor}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-footer" style={{ padding: "14px 24px", borderTop: "1px solid var(--border)" }}>
+          <button className="btn btn-secondary" onClick={onCerrar}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VistaEmpleado() {
   const idEmpleado = getIdEmpleado();
   const [solicitudes, setSolicitudes] = useState([]);
@@ -111,6 +153,7 @@ function VistaEmpleado() {
   const [enviando, setEnviando] = useState(false);
   const [tabActiva, setTabActiva] = useState("lista");
   const [solicitudActiva, setSolicitudActiva] = useState(null);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [form, setForm] = useState({
     tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "",
   });
@@ -188,11 +231,11 @@ function VistaEmpleado() {
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
                   <thead>
-                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Desde</th><th style={{ textAlign: "center" }}>Hasta</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Respuesta</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Desde</th><th style={{ textAlign: "center" }}>Hasta</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Respuesta</th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.length === 0 ? (
-                      <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
+                      <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
                     ) : solicitudes.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
@@ -204,9 +247,8 @@ function VistaEmpleado() {
                             : null;
                       return (
                         <tr key={id}
-                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
@@ -284,6 +326,7 @@ function VistaEmpleado() {
             </div>
           </div>
         )}
+        <DetalleSolicitud solicitud={detalleAbierto ? solicitudActiva : null} onCerrar={() => setDetalleAbierto(false)} />
       </main>
 
       {/* ══ MODAL: ERROR ══ */}
@@ -317,6 +360,7 @@ function VistaRRHH() {
   const [error,            setError]            = useState("");
   const [filtroEstado,     setFiltroEstado]     = useState("PENDIENTE");
   const [solicitudActiva,  setSolicitudActiva]  = useState(null);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [modalRevision,    setModalRevision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,       setProcesando]       = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
@@ -409,7 +453,7 @@ function VistaRRHH() {
                 const cfg = ESTADO_TAB_CONFIG[e];
                 const isActive = filtroEstado === e;
                 return (
-                  <button key={e} onClick={() => setFiltroEstado(e)} style={{
+                  <button key={e} onClick={() => { setFiltroEstado(e); setSolicitudActiva(null); }} style={{
                     padding: "7px 16px",
                     borderRadius: "20px",
                     border: `1.5px solid ${cfg.activeBg}`,
@@ -436,26 +480,25 @@ function VistaRRHH() {
             {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
               <table>
                 <thead>
-                  <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th>{filtroEstado !== "PROCESADO" && <th style={{ textAlign: "center" }}>Acciones</th>}</tr>
+                  <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Estado</th>{filtroEstado === "PENDIENTE" && <th style={{ textAlign: "center" }}>Acciones</th>}</tr>
                 </thead>
                 <tbody>
                   {solicitudes.length === 0 ? (
-                    <tr><td colSpan={filtroEstado === "PROCESADO" ? 7 : 8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
+                    <tr><td colSpan={filtroEstado === "PENDIENTE" ? 7 : 6}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
                   ) : solicitudes.map((s, idx) => {
                     const id = s.idSolicitud ?? s.id;
                     const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                     return (
                       <tr key={id}
-                        onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                        onClick={() => { if (filtroEstado !== "PENDIENTE") { setSolicitudActiva(s); setDetalleAbierto(true); } }}
                         style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                        <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                         <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
                         <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                         <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
                         <td style={{ textAlign: "center", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.motivo}</td>
                         <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
-                        {filtroEstado !== "PROCESADO" && (
+                        {filtroEstado === "PENDIENTE" && (
                           <td style={{ textAlign: "center" }}>
                             {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
                               <button className="btn btn-primary btn-sm"
@@ -473,6 +516,7 @@ function VistaRRHH() {
             )}
           </div>
         </div>
+        <DetalleSolicitud solicitud={detalleAbierto ? solicitudActiva : null} onCerrar={() => setDetalleAbierto(false)} />
       </main>
 
       {modalRevision.open && (
@@ -607,6 +651,7 @@ function VistaGerencia() {
   const [mensaje,        setMensaje]        = useState("");
   const [error,          setError]          = useState("");
   const [solicitudActiva,  setSolicitudActiva]  = useState(null);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [modalDecision,    setModalDecision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,       setProcesando]       = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
@@ -678,19 +723,18 @@ function VistaGerencia() {
               {loading ? <div className="loading-text">Cargando solicitudes...</div> : (
                 <table>
                   <thead>
-                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Rev. RRHH</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Decisión</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Motivo</th><th style={{ textAlign: "center" }}>Rev. RRHH</th><th style={{ textAlign: "center" }}>Estado</th><th style={{ textAlign: "center" }}>Decisión</th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.length === 0 ? (
-                      <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
+                      <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
                     ) : solicitudes.map((s, idx) => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: "13px" }}>{idx + 1}</td>
                           <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
@@ -738,7 +782,7 @@ function VistaGerencia() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Respuesta Gerencia</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Respuesta Gerencia</th></tr>
                   </thead>
                   <tbody>
                     {solAprobadas.map((s, idx) => {
@@ -746,9 +790,8 @@ function VistaGerencia() {
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
                           style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
                           <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
@@ -783,7 +826,7 @@ function VistaGerencia() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th style={{ textAlign: "center" }}>#</th><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Motivo del Rechazo</th></tr>
+                    <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Motivo del Rechazo</th></tr>
                   </thead>
                   <tbody>
                     {solRechazadas.map((s, idx) => {
@@ -791,9 +834,8 @@ function VistaGerencia() {
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          onClick={() => setSolicitudActiva(isSelected ? null : s)}
+                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
                           style={{ cursor: "pointer", background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
-                          <td style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13 }}>{idx + 1}</td>
                           <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
@@ -809,6 +851,7 @@ function VistaGerencia() {
             </div>
           </div>
         </div>
+        <DetalleSolicitud solicitud={detalleAbierto ? solicitudActiva : null} onCerrar={() => setDetalleAbierto(false)} />
       </main>
 
       {modalDecision.open && (
