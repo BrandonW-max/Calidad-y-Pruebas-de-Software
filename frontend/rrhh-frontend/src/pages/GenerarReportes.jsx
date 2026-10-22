@@ -42,6 +42,8 @@ export default function GenerarReportes() {
   const [resultado, setResultado] = useState(null);
   const [historial, setHistorial] = useState([]);
   const [modalPreview, setModalPreview] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   const nombreArchivo = (ext) =>
     `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${ext}`;
@@ -168,7 +170,7 @@ export default function GenerarReportes() {
         setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: lista.length > 0 ? "Generado" : "Sin datos" }, ...h].slice(0, 10));
       }
     } catch (e) {
-      setError(e.message || "Error al generar el reporte. Verifique los filtros e intente de nuevo.");
+      setErrorModal({ open: true, message: e.message || "Error al generar el reporte. Verifique los filtros e intente de nuevo." });
     } finally {
       setGenerando(false);
     }
@@ -278,7 +280,7 @@ export default function GenerarReportes() {
                         <option value="">Todos</option>
                         {tipoSeleccionado === "solicitudes"
                           ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADA">Aprobado</option><option value="RECHAZADA">Rechazado</option></>
-                          : <><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></>
+                          : <><option value="ACTIVO">Activo</option><option value="DESVINCULADO">Inactivo</option></>
                         }
                       </select>
                     </div>
@@ -366,6 +368,24 @@ export default function GenerarReportes() {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModalPreview(false)}>Cerrar</button>
               <button className="btn btn-secondary" onClick={exportar}>💾 Exportar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

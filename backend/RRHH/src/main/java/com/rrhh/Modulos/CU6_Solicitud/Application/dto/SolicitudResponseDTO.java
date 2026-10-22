@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class SolicitudResponseDTO {
 
     private Integer idSolicitud;
+    private String mensaje;
     private String tipoSolicitud;
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
@@ -25,6 +26,9 @@ public class SolicitudResponseDTO {
 
     public Integer getIdSolicitud() { return idSolicitud; }
     public void setIdSolicitud(Integer idSolicitud) { this.idSolicitud = idSolicitud; }
+
+    public String getMensaje() { return mensaje; }
+    public void setMensaje(String mensaje) { this.mensaje = mensaje; }
 
     public String getTipoSolicitud() { return tipoSolicitud; }
     public void setTipoSolicitud(String tipoSolicitud) { this.tipoSolicitud = tipoSolicitud; }

@@ -97,7 +97,9 @@ public class NominaService implements INominaService {
             );
         }
 
-        List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request);
+        List<EmpleadoModel> empleados = obtenerEmpleadosActivos(request).stream()
+            .filter(e -> contratadoHasta(e, request.getFechaFin()))
+            .collect(Collectors.toList());
 
         if (empleados.isEmpty()) {
             throw new IllegalStateException(
@@ -421,15 +423,28 @@ public class NominaService implements INominaService {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
 
-        BigDecimal sueldoBase = normalizar(request.getSueldoBase());
+        ContratoModel contratoActivo = jpaContratoRepository
+            .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
+            .orElseThrow(() -> new IllegalStateException(
+                "El empleado asociado a la nomina no tiene contrato activo."
+            ));
+        BigDecimal sueldoBase = normalizar(contratoActivo.getSueldo());
         if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
         }
         if (sueldoBase.compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
             throw new IllegalArgumentException(
-                "El sueldo base debe ser mayor o igual al salario minimo legal (S/ " +
-                    rrhhProperties.getSalarioMinimo() + ")."
+                "El sueldo base debe ser mayor o igual al salario minimo legal (S/ "
+                + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString() + ")."
             );
+        }
+
+        if (esNegativo(request.getTotalHorasTrabajadas()) || esNegativo(request.getTotalHorasExtra())
+                || esNegativo(request.getTotalHorasNocturnas())
+                || (request.getTotalMinutosTardanza() != null && request.getTotalMinutosTardanza() < 0)
+                || (request.getCantidadGuardias() != null && request.getCantidadGuardias() < 0)
+                || (request.getCantidadHijos() != null && request.getCantidadHijos() < 0)) {
+            throw new IllegalArgumentException("Error: el valor debe ser mayor o igual a 0");
         }
 
         BigDecimal totalHorasTrabajadas = normalizar(request.getTotalHorasTrabajadas());
@@ -441,11 +456,6 @@ public class NominaService implements INominaService {
         int cantidadHijos = tieneHijos ? Math.max(0, request.getCantidadHijos() != null ? request.getCantidadHijos() : 0) : 0;
         String tipoPension = "AFP".equalsIgnoreCase(request.getTipoPensionAplicada()) ? "AFP" : "ONP";
 
-        ContratoModel contratoActivo = jpaContratoRepository
-            .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
-            .orElseThrow(() -> new IllegalStateException(
-                "El empleado asociado a la nomina no tiene contrato activo."
-            ));
         BigDecimal sueldoAnteriorContrato = contratoActivo.getSueldo();
 
         BigDecimal valorHora = sueldoBase
@@ -554,6 +564,10 @@ public class NominaService implements INominaService {
         return montoBase.add(montoDoble).setScale(2, RoundingMode.HALF_UP);
     }
 
+    private boolean esNegativo(BigDecimal valor) {
+        return valor != null && valor.signum() < 0;
+    }
+
     private BigDecimal normalizar(BigDecimal valor) {
         return valor != null ? valor.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
@@ -577,6 +591,11 @@ public class NominaService implements INominaService {
     }
 
 
+
+    private boolean contratadoHasta(EmpleadoModel empleado, LocalDate fechaFin) {
+        return empleado.getContratos() != null && empleado.getContratos().stream()
+            .anyMatch(c -> c.getFechaInicio() != null && !c.getFechaInicio().isAfter(fechaFin));
+    }
 
     private List<EmpleadoModel> obtenerEmpleadosActivos(CalcularNominaRequestDTO request) {
         if (request.getIdEmpleado() != null) {

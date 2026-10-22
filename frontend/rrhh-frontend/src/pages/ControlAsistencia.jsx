@@ -22,6 +22,13 @@ function getRolFromPath(pathname) {
   return "RRHH";
 }
 
+const resolveEvidenciaUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  return `${baseUrl.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
+
 /* ══════════════════════════════════════════════════════════
    VISTA EMPLEADO
 ══════════════════════════════════════════════════════════ */
@@ -43,10 +50,14 @@ function VistaEmpleado() {
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+
   // ECU-03 A4: justificación de tardanza
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo, setJustifMotivo] = useState("");
   const [justifFile,   setJustifFile]   = useState(null);
+  const [evidenciaPreview, setEvidenciaPreview] = useState("");
   const [justifSaving, setJustifSaving] = useState(false);
 
   const cerrarModalJustif = () => {
@@ -123,8 +134,8 @@ function VistaEmpleado() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally {
       setJustifSaving(false);
@@ -151,8 +162,8 @@ function VistaEmpleado() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally {
       setSaving(false);
@@ -349,9 +360,20 @@ function VistaEmpleado() {
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>
-                          {j.evidenciaUrl
-                            ? <span>📎 1 archivo</span>
-                            : <span style={{ color: "var(--text-3)" }}>-</span>}
+                          {j.evidenciaUrl ? (
+                            <a
+                              href={resolveEvidenciaUrl(j.evidenciaUrl)}
+                              download={j.evidenciaUrl.split("/").pop()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "3px 8px", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+                            >
+                              ⬇️ Descargar
+                            </a>
+                          ) : (
+                            <span style={{ color: "var(--text-3)" }}>-</span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <span className={`badge ${estadoBadge(j.estado)}`}>
@@ -402,20 +424,28 @@ function VistaEmpleado() {
               }
               setJustifSaving(true); setMensaje(""); setError("");
               try {
+                const archivo = fd.get("evidencia");
+                let evidenciaUrl = "";
+                if (archivo && archivo.size > 0) {
+                  const res = await uploadEvidencia(archivo);
+                  evidenciaUrl = res.url ?? "";
+                }
                 await registrarJustificacion({
                   idRegistroAsistencia: registro.idRegistro,
                   idEmpleado,
                   motivo: fd.get("motivo"),
-                  evidenciaUrl: "",
+                  evidenciaUrl,
                 });
                 setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
+                setEvidenciaPreview("");
                 e.target.reset();
                 setTabActiva("justificaciones");
                 cargarJustificaciones();
-              } catch {
-                setError("Error al enviar la justificación. Intente de nuevo.");
+              } catch (err) {
+                setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
               } finally { setJustifSaving(false); }
-            }}>
+            }}
+            onReset={() => setEvidenciaPreview("")}>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Fecha de la incidencia *</label>
@@ -429,7 +459,21 @@ function VistaEmpleado() {
                     placeholder="Describa detalladamente el motivo de su tardanza o inasistencia..."
                     required />
                 </div>
+                <div className="form-group form-full">
+                  <label>Evidencia (opcional)</label>
+                  <input type="file" name="evidencia" accept="image/*,application/pdf"
+                    onChange={e => {
+                      const f = e.target.files[0];
+                      setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
+                    }} />
+                  {evidenciaPreview && (
+                    <img src={evidenciaPreview} alt="Vista previa de la evidencia"
+                      style={{ display: "block", marginTop: 8, maxWidth: 200, maxHeight: 200, borderRadius: 8, border: "1px solid #e2e8f0" }} />
+                  )}
+                </div>
               </div>
+              {error && <div className="alert alert-warning" style={{ marginTop: 12, marginBottom: 12 }}>⚠️ {error}</div>}
+              {mensaje && <div className="alert alert-success" style={{ marginTop: 12, marginBottom: 12 }}>✅ {mensaje}</div>}
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={justifSaving}>
                   {justifSaving ? "Enviando..." : "📤 Enviar Justificación"}
@@ -611,6 +655,24 @@ function VistaEmpleado() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -625,6 +687,8 @@ function VistaRRHH() {
   const [error,    setError]    = useState("");
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
   const [manualForm, setManualForm] = useState({
@@ -711,8 +775,8 @@ function VistaRRHH() {
       setMensaje("Registro manual guardado correctamente");
       setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" });
       resetCorreccion();
-    } catch {
-      setMensaje("Error al guardar el registro manual");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al guardar el registro manual" });
     }
   };
 
@@ -724,8 +788,8 @@ function VistaRRHH() {
       setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
       handleCorregirTardanza(j);
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al aprobar la justificación");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al aprobar la justificación" });
     }
   };
 
@@ -742,8 +806,8 @@ function VistaRRHH() {
       setMensaje("Justificación rechazada correctamente");
       setModalRechazar({ open: false, id: null, comentario: "" });
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al rechazar la justificación");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al rechazar la justificación" });
       setModalRechazar({ open: false, id: null, comentario: "" });
     }
   };
@@ -1085,21 +1149,115 @@ function VistaRRHH() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 6 }}>
                   Evidencia adjunta
                 </div>
-                {modalDecision.justificacion.evidenciaUrl || modalDecision.justificacion.evidencia ? (
-                  <img
-                    src={modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia}
-                    alt="Evidencia"
-                    style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)" }}
-                  />
-                ) : (
-                  <div style={{
-                    border: "2px dashed var(--border)", borderRadius: 8, padding: "24px",
-                    textAlign: "center", color: "var(--text-3)", fontSize: 13,
-                  }}>
-                    <div style={{ fontSize: 32, marginBottom: 6 }}>📷</div>
-                    Sin evidencia adjunta
-                  </div>
-                )}
+                {(() => {
+                  const evUrl = modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia;
+                  if (!evUrl) {
+                    return (
+                      <div style={{
+                        border: "2px dashed var(--border)", borderRadius: 8, padding: "20px",
+                        textAlign: "center", color: "var(--text-3)", fontSize: 13,
+                      }}>
+                        <div style={{ fontSize: 28, marginBottom: 4 }}>📷</div>
+                        Sin evidencia adjunta
+                      </div>
+                    );
+                  }
+                  const fullUrl = resolveEvidenciaUrl(evUrl);
+                  const filename = evUrl.split("/").pop();
+                  const isPdfFile = evUrl.toLowerCase().endsWith(".pdf") || evUrl.toLowerCase().includes(".pdf");
+
+                  if (isPdfFile) {
+                    return (
+                      <div style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "14px 16px",
+                        background: "var(--bg-2, #f8fafc)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 32 }}>📄</span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-1)" }}>
+                              Documento PDF Adjunto
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text-3)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {filename}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <a
+                            href={fullUrl}
+                            download={filename}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            ⬇️ Descargar
+                          </a>
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            👁️ Abrir
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "10px",
+                      background: "var(--bg-2, #f8fafc)",
+                    }}>
+                      <img
+                        src={fullUrl}
+                        alt="Evidencia"
+                        style={{
+                          width: "100%",
+                          maxHeight: 220,
+                          objectFit: "contain",
+                          borderRadius: 6,
+                          marginBottom: 8,
+                          background: "#fff",
+                        }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                        <a
+                          href={fullUrl}
+                          download={filename}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          ⬇️ Descargar Imagen
+                        </a>
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          👁️ Ver en grande
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>
@@ -1145,6 +1303,24 @@ function VistaRRHH() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1168,6 +1344,9 @@ function VistaGerencia() {
   const [modalManual,  setModalManual]  = useState({ open: false, tipo: "ENTRADA" });
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving,       setSaving]       = useState(false);
+
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo,    setJustifMotivo]    = useState("");
@@ -1238,8 +1417,8 @@ function VistaGerencia() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally { setJustifSaving(false); }
   };
@@ -1255,8 +1434,8 @@ function VistaGerencia() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally { setSaving(false); }
   };
@@ -1445,7 +1624,7 @@ function VistaGerencia() {
                   e.target.reset();
                   setTabActiva("justificaciones");
                   cargarJustificaciones();
-                } catch { setError("Error al enviar la justificación. Intente de nuevo."); }
+                } catch (err) { setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." }); }
                 finally  { setJustifSaving(false); }
               }}>
                 <div className="form-grid">
@@ -1593,6 +1772,24 @@ function VistaGerencia() {
                 onClick={handleRegistrarManual} disabled={!manualMotivo.trim() || saving}>
                 {saving ? "Guardando..." : (modalManual.tipo === "ENTRADA" ? "→ Confirmar Entrada" : "← Confirmar Salida")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

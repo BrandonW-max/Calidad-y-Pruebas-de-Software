@@ -5,9 +5,9 @@ import java.time.LocalDate;
 
 public class CalcularNominaRequestDTO {
 
-    @NotNull(message = "La fecha de inicio es obligatoria")
+    @NotNull(message = "Error: campo requerido")
     private LocalDate fechaInicio;
-    @NotNull(message = "La fecha de fin es obligatoria")
+    @NotNull(message = "Error: campo requerido")
     private LocalDate fechaFin;
     private Long idEmpleado;
     private Integer idDepartamento;

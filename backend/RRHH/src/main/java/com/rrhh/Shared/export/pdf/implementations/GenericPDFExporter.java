@@ -27,9 +27,7 @@ public class GenericPDFExporter implements PDFExporter {
 
     @Override
     public byte[] export(String titulo, List<Map<String, Object>> datos, String[] headers, String[] keys) {
-        if (datos == null || datos.isEmpty()) {
-            return new byte[0];
-        }
+        boolean sinDatos = datos == null || datos.isEmpty();
 
         Document document = new Document(PageSize.A4.rotate(), 30, 30, 30, 30);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -47,6 +45,12 @@ public class GenericPDFExporter implements PDFExporter {
             dateParagraph.setAlignment(Element.ALIGN_RIGHT);
             dateParagraph.setSpacingAfter(10);
             document.add(dateParagraph);
+
+            if (sinDatos) {
+                document.add(new Paragraph("Sin registros para el periodo seleccionado.", FONT_CELL));
+                document.close();
+                return baos.toByteArray();
+            }
 
             PdfPTable table = new PdfPTable(headers.length);
             table.setWidthPercentage(100);

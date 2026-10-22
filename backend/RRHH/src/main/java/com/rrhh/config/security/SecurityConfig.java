@@ -19,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
 
@@ -53,6 +54,19 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"mensaje\":\"Acceso no autorizado. Se requiere autenticación.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"mensaje\":\"Acceso denegado. Permisos insuficientes.\"}");
+                        })
+                )
+
                 .authorizeHttpRequests(auth -> auth
 
                         // =========================
@@ -64,8 +78,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/recovery",
                                 "/api/v1/auth/reset-password",
                                 "/uploads/**",
-                                // App móvil: autenticación propia por device_token
-                                "/api/v1/dispositivos/**",
+                                // App móvil: registro y vinculación de dispositivo
+                                "/api/v1/dispositivos/enviar-otp",
+                                "/api/v1/dispositivos/registrar",
                                 "/api/v1/asistencia/biometrico",
                                 "/api/v1/asistencia/biometrico/estado/**"
                         ).permitAll()

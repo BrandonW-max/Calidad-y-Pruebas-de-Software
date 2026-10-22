@@ -1,5 +1,4 @@
 // LOCAL: usa tu IP (ipconfig → IPv4), ej: 'http://192.168.1.100:8080'
-// AZURE: usa la URL pública del backend, ej: 'https://mi-backend.azurewebsites.net'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.100:8080';
 
 const leerRespuesta = async (res) => {

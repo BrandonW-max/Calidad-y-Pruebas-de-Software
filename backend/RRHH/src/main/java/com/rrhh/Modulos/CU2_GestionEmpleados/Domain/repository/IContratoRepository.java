@@ -7,4 +7,6 @@ public interface IContratoRepository {
     Contrato save(Contrato contrato);
 
     Contrato findContratoActivoByEmpleado(Long idEmpleado);
+
+    Contrato findUltimoContratoResueltoByEmpleado(Long idEmpleado);
 }

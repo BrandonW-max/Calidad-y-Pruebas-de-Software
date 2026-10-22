@@ -1,11 +1,13 @@
 package com.rrhh.Modulos.CU3_Nomina.Application.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class AjustarNominaRequestDTO {
 
-    @DecimalMin(value = "0.0", message = "El sueldo base no puede ser negativo")
+    @NotNull(message = "Error: campo requerido")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Error: el valor debe ser mayor o igual a 0")
     private BigDecimal sueldoBase;
     private BigDecimal totalHorasTrabajadas;
     private BigDecimal totalHorasExtra;

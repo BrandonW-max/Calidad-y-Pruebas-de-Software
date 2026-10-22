@@ -42,6 +42,8 @@ export default function CalculoNomina() {
   const [error,     setError]     = useState("");
   const [enviando,  setEnviando]  = useState({});
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [previewNomina, setPreviewNomina] = useState(null);
   const [modalEstructura, setModalEstructura] = useState(null);
   const [datosBase, setDatosBase] = useState({
@@ -53,7 +55,7 @@ export default function CalculoNomina() {
   const abrirEstructura = (n) => {
     setModalEstructura(n);
     setDatosBase({
-      sueldoBase:       Number(n.sueldoBase ?? 0),
+      sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
       horasTrabajadas:  Math.round(Number(n.totalHorasTrabajadas ?? 0) * 10) / 10,
       horasExtra:       Math.round(Number(n.totalHorasExtra ?? 0) * 10) / 10,
       horasNocturnas:   Math.round(Number(n.totalHorasNocturnas ?? 0) * 10) / 10,
@@ -147,8 +149,8 @@ export default function CalculoNomina() {
       } else {
         throw new Error(data?.message || "Respuesta inválida");
       }
-    } catch {
-      setError("Error al calcular la nómina. Verifique el período.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al calcular la nómina. Verifique el período." });
     } finally {
       setCalculando(false);
     }
@@ -174,8 +176,8 @@ export default function CalculoNomina() {
       } else {
         setError(`No hay nóminas registradas para ${periodo}. Calcule primero.`);
       }
-    } catch {
-      setError("Error al cargar el período");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al cargar el período" });
     } finally {
       setLoading(false);
     }
@@ -188,8 +190,8 @@ export default function CalculoNomina() {
     try {
       await enviarComprobante(idNomina);
       setMensaje(`Comprobante enviado correctamente (Nómina #${idNomina})`);
-    } catch {
-      setError("Error al enviar el comprobante");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al enviar el comprobante" });
     } finally {
       setEnviando(v => ({ ...v, [idNomina]: false }));
     }
@@ -219,7 +221,7 @@ export default function CalculoNomina() {
     setModalEstructura(actualizada);
   };
 
-  const handleGuardarAjuste = async (calculos) => {
+  const handleGuardarAjuste = async () => {
     if (!modalEstructura?.idNomina) return;
     setGuardandoAjuste(true);
     setMensaje("");
@@ -249,9 +251,9 @@ export default function CalculoNomina() {
         cantidadGuardias: actualizada.cantidadGuardias ?? p.cantidadGuardias,
         tipoPension: actualizada.tipoPensionAplicada ?? p.tipoPension,
       }));
-      setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(calculos.neto)}`);
-    } catch {
-      setError("Error al guardar el ajuste de nómina.");
+      setMensaje(`Nómina #${actualizada.idNomina} ajustada correctamente. Neto: ${fmtS(actualizada.sueldoNeto)}`);
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al guardar el ajuste de nómina." });
     } finally {
       setGuardandoAjuste(false);
     }
@@ -620,7 +622,7 @@ export default function CalculoNomina() {
 
         const r1 = (v) => Math.round(Number(v ?? 0) * 10) / 10;
         const resetearValores = () => setDatosBase({
-          sueldoBase:       Number(n.sueldoBase ?? 0),
+          sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
           horasTrabajadas:  r1(n.totalHorasTrabajadas),
           horasExtra:       r1(n.totalHorasExtra),
           horasNocturnas:   r1(n.totalHorasNocturnas),
@@ -712,7 +714,12 @@ export default function CalculoNomina() {
                     <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#2563eb" }}>Datos Ingresados / Registrados</span>
                   </div>
 
-                  <InputField label="Sueldo Devengado (S/)" field="sueldoBase" step="1" />
+                  <InputField label="Sueldo Base del contrato (S/)" field="sueldoBase" step="1" disabled />
+                  {datosBase.horasTrabajadas <= 0 && datosBase.horasExtra <= 0 && (
+                    <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: "8px 10px", fontSize: 12, color: "#92400e", marginBottom: 10 }}>
+                      ⚠️ Sin asistencias registradas en el período: el ajuste pagará el sueldo completo del contrato. Confirme antes de guardar.
+                    </div>
+                  )}
                   <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
                   <InputField label="Horas Extra" field="horasExtra" step="0.5" />
                   <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" disabled={!esNocturno} />
@@ -805,7 +812,7 @@ export default function CalculoNomina() {
 
               {/* Footer */}
               <div style={{ padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", background: "#fff" }}>
-                <button className="btn btn-primary" onClick={() => handleGuardarAjuste({ neto })} disabled={guardandoAjuste} style={{ marginRight: 10 }}>
+                <button className="btn btn-primary" onClick={() => handleGuardarAjuste()} disabled={guardandoAjuste} style={{ marginRight: 10 }}>
                   {guardandoAjuste ? "Guardando..." : "Guardar cambios"}
                 </button>
                 <button className="btn btn-secondary" onClick={() => setModalEstructura(null)}>Cerrar</button>
@@ -814,6 +821,24 @@ export default function CalculoNomina() {
           </div>
         );
       })()}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

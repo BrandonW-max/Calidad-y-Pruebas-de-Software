@@ -71,15 +71,26 @@ public class SolicitudController {
 
     @GetMapping(SolicitudApiRoutes.POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<List<SolicitudResponseDTO>> listarPorEmpleado(@PathVariable Long idEmpleado) {
+    public ResponseEntity<List<SolicitudResponseDTO>> listarPorEmpleado(
+            @PathVariable Long idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        if (esEmpleado(user)) {
+            solicitudService.validarPropiedad(user.getIdUsuario(), idEmpleado);
+        }
         return ResponseEntity.ok(solicitudService.listarPorEmpleado(idEmpleado));
     }
 
     @GetMapping(SolicitudApiRoutes.BUSCAR_ID)
     @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA', 'EMPLEADO')")
-    public ResponseEntity<?> buscarPorId(@PathVariable Integer id) {
+    public ResponseEntity<?> buscarPorId(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal AuthenticatedUser user) {
         try {
-            return ResponseEntity.ok(solicitudService.buscarPorId(id));
+            SolicitudResponseDTO solicitud = solicitudService.buscarPorId(id);
+            if (esEmpleado(user)) {
+                solicitudService.validarPropiedad(user.getIdUsuario(), solicitud.getIdEmpleado());
+            }
+            return ResponseEntity.ok(solicitud);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -101,7 +112,15 @@ public class SolicitudController {
     @GetMapping(SolicitudApiRoutes.NOTIFICACIONES)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<List<SolicitudResponseDTO>> listarNotificaciones(
-            @PathVariable Long idEmpleado) {
+            @PathVariable Long idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        if (esEmpleado(user)) {
+            solicitudService.validarPropiedad(user.getIdUsuario(), idEmpleado);
+        }
         return ResponseEntity.ok(solicitudService.listarNotificacionesPorEmpleado(idEmpleado));
+    }
+
+    private boolean esEmpleado(AuthenticatedUser user) {
+        return user != null && "EMPLEADO".equalsIgnoreCase(user.getRol());
     }
 }

@@ -56,21 +56,6 @@ public class ReactivarEmpleadoUseCase {
             throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
         }
 
-        if (empleado.estaDesvinculado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede reactivar un empleado desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
-        }
-
         String estadoAnterior = empleado.getEstado();
 
         String motivo = "Reactivación manual";
@@ -107,6 +92,15 @@ public class ReactivarEmpleadoUseCase {
 
         Contrato contrato =
                 contratoRepository.findContratoActivoByEmpleado(idEmpleado);
+
+        if (contrato == null) {
+            Contrato ultimo =
+                    contratoRepository.findUltimoContratoResueltoByEmpleado(idEmpleado);
+            if (ultimo != null) {
+                ultimo.reactivar();
+                contrato = contratoRepository.save(ultimo);
+            }
+        }
 
         auditoriaEmpleadoService.registrar(
                 empleadoGuardado.getIdEmpleado(),

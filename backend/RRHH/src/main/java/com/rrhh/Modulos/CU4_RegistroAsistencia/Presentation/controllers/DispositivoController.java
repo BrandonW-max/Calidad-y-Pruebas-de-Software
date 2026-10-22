@@ -7,7 +7,10 @@ import com.rrhh.Modulos.CU4_RegistroAsistencia.Infrastructure.interfaces.JpaDisp
 import com.rrhh.Modulos.CU4_RegistroAsistencia.Presentation.routes.DispositivoApiRoutes;
 import com.rrhh.Shared.persistence.DispositivoEmpleadoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -16,6 +19,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping(DispositivoApiRoutes.BASE)
 public class DispositivoController {
+
+    private static final Logger log = LoggerFactory.getLogger(DispositivoController.class);
 
     private final JpaDispositivoEmpleadoRepository dispositivoRepository;
     private final JpaEmpleadoRepository empleadoRepository;
@@ -35,13 +40,16 @@ public class DispositivoController {
     /** Envía un código OTP al correo del empleado para verificar su identidad */
     @PostMapping(DispositivoApiRoutes.ENVIAR_OTP)
     public ResponseEntity<Map<String, Object>> enviarOtp(@RequestBody Map<String, String> body) {
-        String dni = body.get("numeroDi");
+        String dni = body != null ? body.get("numeroDi") : null;
         if (dni == null || dni.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("mensaje", "DNI requerido."));
         }
+        if (!dni.matches("^\\d{8}$")) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "Formato de DNI inválido. Debe contener 8 dígitos numéricos."));
+        }
 
         EmpleadoModel emp = empleadoRepository.findByNumeroDi(dni)
-                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado con DNI: " + dni));
+                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("No se encontró un empleado activo con el documento indicado."));
 
         if (!"ACTIVO".equals(emp.getEstado())) {
             return ResponseEntity.badRequest().body(Map.of("mensaje", "Empleado inactivo o desvinculado."));
@@ -84,7 +92,7 @@ public class DispositivoController {
         if (body.containsKey("numeroDi")) {
             String dni = body.get("numeroDi").toString();
             emp = empleadoRepository.findByNumeroDi(dni)
-                    .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado con DNI: " + dni));
+                    .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("No se encontró un empleado activo con el documento indicado."));
         } else {
             Long idEmpleado = Long.valueOf(body.get("idEmpleado").toString());
             emp = empleadoRepository.findById(java.util.Objects.requireNonNull(idEmpleado))
@@ -112,15 +120,32 @@ public class DispositivoController {
     }
 
     /**
-     * Confirma que el DNI corresponde a un empleado activo, previo a enviar el OTP.
-     * No devuelve datos personales (nombre/apellido): la app no los usa en este paso
-     * y exponerlos permitiría enumerar empleados solo con el DNI.
+     * Consulta interna/administrativa para verificar si un DNI corresponde a un empleado activo.
+     * Restringido exclusivamente a roles con privilegios (RRHH, GERENCIA).
+     * No devuelve datos personales del empleado.
      */
+    @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA')")
     @GetMapping(DispositivoApiRoutes.POR_DNI)
     public ResponseEntity<Map<String, Object>> getEmpleadoPorDni(@PathVariable String numeroDi) {
+        if (numeroDi == null || !numeroDi.matches("^\\d{8}$")) {
+            log.warn("Consulta de DNI rechazada por formato inválido: {}", enmascararDni(numeroDi));
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "Formato de DNI inválido. Debe contener 8 dígitos numéricos."));
+        }
+
         Optional<EmpleadoModel> opt = empleadoRepository.findByNumeroDi(numeroDi);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
-        if (!"ACTIVO".equals(opt.get().getEstado())) return ResponseEntity.badRequest().build();
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (!"ACTIVO".equals(opt.get().getEstado())) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "Empleado inactivo o desvinculado."));
+        }
+
         return ResponseEntity.ok(Map.of("existe", true));
+    }
+
+    private String enmascararDni(String dni) {
+        if (dni == null || dni.length() < 4) return "****";
+        return dni.substring(0, 2) + "****" + dni.substring(dni.length() - 2);
     }
 }

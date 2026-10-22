@@ -18,6 +18,7 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,13 +71,23 @@ public class ReporteService implements IReporteService {
     public ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario) {
 
         validarFiltroEmpleado(filtro);
+        validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
+
+        LocalDateTime inicio = filtro.getFechaInicio() != null
+            ? filtro.getFechaInicio().atStartOfDay()
+            : LocalDateTime.of(1900, 1, 1, 0, 0);
+        LocalDateTime fin = filtro.getFechaFin() != null
+            ? filtro.getFechaFin().atTime(23, 59, 59)
+            : LocalDateTime.of(2999, 12, 31, 23, 59, 59);
 
         List<EmpleadoModel> empleados = jpaEmpleadoRepository.buscarConFiltros(
             filtro.getEstado(),
             filtro.getArea(),
             filtro.getCargo(),
             filtro.getTipoContrato(),
-            filtro.getIdEmpleado()
+            filtro.getIdEmpleado(),
+            inicio,
+            fin
         );
 
         if (empleados.isEmpty()) {
@@ -187,14 +198,15 @@ public class ReporteService implements IReporteService {
         if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
+        // Valores centinela en vez de null: PostgreSQL no puede tipar un parámetro nulo en "IS NULL".
         List<SolicitudModel> solicitudes = jpaSolicitudRepository.buscarConFiltros(
-            filtro.getIdEmpleado(),
-            filtro.getArea(),
-            filtro.getTipoSolicitud(),
-            filtro.getEstado(),
-            filtro.getCargo(),
-            filtro.getFechaInicio(),
-            filtro.getFechaFin()
+            filtro.getIdEmpleado() != null ? filtro.getIdEmpleado() : 0L,
+            filtro.getArea() != null ? filtro.getArea() : "",
+            filtro.getTipoSolicitud() != null ? filtro.getTipoSolicitud() : "",
+            filtro.getEstado() != null ? filtro.getEstado() : "",
+            filtro.getCargo() != null ? filtro.getCargo() : "",
+            filtro.getFechaInicio() != null ? filtro.getFechaInicio() : LocalDate.of(1900, 1, 1),
+            filtro.getFechaFin() != null ? filtro.getFechaFin() : LocalDate.of(2999, 12, 31)
         );
 
         if (solicitudes.isEmpty()) {
@@ -313,8 +325,10 @@ public class ReporteService implements IReporteService {
     @Override
     public byte[] exportarReporte(String tipo, String formato,
                                    List<Map<String, Object>> datos) {
-        String factoryBeanName = FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory");
-        ExportAbstractFactory factory = exportFactories.get(factoryBeanName);
+        String factoryBeanName = tipo != null
+                ? FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory")
+                : null;
+        ExportAbstractFactory factory = factoryBeanName != null ? exportFactories.get(factoryBeanName) : null;
         if (factory == null) {
             throw new IllegalArgumentException("No existe fabrica de exportacion para: " + tipo);
         }

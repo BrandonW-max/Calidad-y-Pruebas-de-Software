@@ -2,12 +2,19 @@ package com.rrhh.Shared.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -42,6 +49,70 @@ public class GlobalExceptionHandler {
         response.put("error", "RECURSO_NO_ENCONTRADO");
         response.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<Map<String, Object>> handleConflicto(ConflictoException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "CONFLICTO");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingRequestHeaderException.class})
+    public ResponseEntity<Map<String, Object>> handleFaltaDato(Exception ex) {
+        String nombre = ex instanceof MissingServletRequestParameterException p
+                ? p.getParameterName() : ((MissingRequestHeaderException) ex).getHeaderName();
+        return badRequest("DATOS_INVALIDOS", "Falta el dato requerido: " + nombre + ".");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTipoIncorrecto(MethodArgumentTypeMismatchException ex) {
+        return badRequest("DATOS_INVALIDOS", "Error: el valor de '" + ex.getName() + "' no es valido.");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMetodoNoPermitido(HttpRequestMethodNotSupportedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "METODO_NO_PERMITIDO");
+        response.put("message", "Metodo no permitido para esta ruta.");
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleContenidoNoSoportado(HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "CONTENIDO_NO_SOPORTADO");
+        response.put("message", "Tipo de contenido no soportado. Use application/json.");
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonInvalido(HttpMessageNotReadableException ex) {
+        if (ex.getCause() instanceof InvalidFormatException formato) {
+            String campo = formato.getPath().isEmpty() ? "" : formato.getPath().get(0).getFieldName();
+            Class<?> tipo = formato.getTargetType();
+            if (tipo != null && (Number.class.isAssignableFrom(tipo) || tipo.isPrimitive())) {
+                String texto = (Integer.class == tipo || Long.class == tipo || int.class == tipo || long.class == tipo)
+                        ? "Error: solo se permiten numeros enteros."
+                        : "Error: solo se permiten numeros.";
+                return badRequest("DATOS_INVALIDOS", texto + (campo.isEmpty() ? "" : " (campo: " + campo + ")"));
+            }
+        }
+        return badRequest("DATOS_INVALIDOS", "Los datos enviados no tienen el formato correcto.");
+    }
+
+    @ExceptionHandler(ArchivoInvalidoException.class)
+    public ResponseEntity<Map<String, Object>> handleArchivoInvalido(ArchivoInvalidoException ex) {
+        return badRequest("ARCHIVO_INVALIDO", ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return badRequest("ARCHIVO_INVALIDO", "El archivo excede el tamaño máximo permitido (10MB).");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

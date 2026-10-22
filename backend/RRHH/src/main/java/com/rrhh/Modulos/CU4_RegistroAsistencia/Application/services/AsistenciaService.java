@@ -134,6 +134,10 @@ public class AsistenciaService {
             return new MarcarAsistenciaResponseDTO(false, "Debe enviar la fecha y hora del registro.");
         }
 
+        if (request.getMotivo() != null && request.getMotivo().length() > 200) {
+            return new MarcarAsistenciaResponseDTO(false, "El motivo no puede superar los 200 caracteres.");
+        }
+
         LocalDate fecha = request.getFechaHora().toLocalDate();
         LocalDate hoy = LocalDate.now();
         if (fecha.isBefore(hoy.minusDays(1)) || fecha.isAfter(hoy.plusDays(1))) {
@@ -142,7 +146,21 @@ public class AsistenciaService {
         }
 
         boolean esEntrada = "ENTRADA".equalsIgnoreCase(request.getTipo());
-        boolean esCorreccion = "CORRECCION".equalsIgnoreCase(request.getTipoRegistro());
+        boolean esSalida = "SALIDA".equalsIgnoreCase(request.getTipo());
+        if (!esEntrada && !esSalida) {
+            return new MarcarAsistenciaResponseDTO(false, "Error: tipo de registro invalido");
+        }
+
+        String tipoRegistroRaw = request.getTipoRegistro();
+        if (tipoRegistroRaw != null) {
+            boolean tipoRegistroValido = "ORIGINAL".equalsIgnoreCase(tipoRegistroRaw)
+                    || "CORRECCION".equalsIgnoreCase(tipoRegistroRaw)
+                    || tipoRegistroRaw.matches("[0-9]+");
+            if (!tipoRegistroValido) {
+                return new MarcarAsistenciaResponseDTO(false, "Error: tipo de registro invalido");
+            }
+        }
+        boolean esCorreccion = "CORRECCION".equalsIgnoreCase(tipoRegistroRaw);
 
         if (esCorreccion) {
             Optional<RegistroAsistenciaModel> existente = registroAsistenciaRepository
@@ -202,7 +220,15 @@ public class AsistenciaService {
             registro = registroOptional.get();
             if (registro.getHoraEntrada() != null && registro.getHoraSalida() != null) {
                 return new MarcarAsistenciaResponseDTO(false,
-                        "El empleado ya tiene entrada y salida registradas para este dia.");
+                        "Registro duplicado. El empleado ya tiene entrada y salida registradas hoy.");
+            }
+            if (esEntrada && registro.getHoraEntrada() != null) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "Ya existe una entrada registrada hoy para este empleado. Use la opcion de correccion para modificarla.");
+            }
+            if (esSalida && registro.getHoraSalida() != null) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "Ya existe una salida registrada hoy para este empleado. Use la opcion de correccion para modificarla.");
             }
         }
 
@@ -251,9 +277,12 @@ public class AsistenciaService {
                 + " | Fecha: " + fecha);
         historialRepository.save(log);
 
+        String mensajeExito = esEntrada
+                ? "Entrada registrada correctamente."
+                : "Salida registrada correctamente. El registro de asistencia ha sido almacenado correctamente en el sistema.";
         return new MarcarAsistenciaResponseDTO(
                 true,
-                "Registro manual de asistencia almacenado correctamente.",
+                mensajeExito,
                 esEntrada ? "ENTRADA" : "SALIDA",
                 guardado.getFecha(),
                 guardado.getHoraEntrada(),

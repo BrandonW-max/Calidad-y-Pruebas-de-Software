@@ -114,6 +114,8 @@ function VistaEmpleado() {
   const [form, setForm] = useState({
     tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "",
   });
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   useEffect(() => { if (idEmpleado) cargarMisSolicitudes(); }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -141,7 +143,7 @@ function VistaEmpleado() {
       setForm({ tipo: "VACACIONES", fechaInicio: "", fechaFin: "", descripcion: "" });
       setTabActiva("lista");
       cargarMisSolicitudes();
-    } catch (e) { setError(e.message || "Error al enviar la solicitud. Intente de nuevo."); }
+    } catch (e) { setErrorModal({ open: true, message: e.message || "Error al enviar la solicitud. Intente de nuevo." }); }
     finally  { setEnviando(false); }
   };
 
@@ -283,6 +285,24 @@ function VistaEmpleado() {
           </div>
         )}
       </main>
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -299,6 +319,8 @@ function VistaRRHH() {
   const [solicitudActiva,  setSolicitudActiva]  = useState(null);
   const [modalRevision,    setModalRevision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,       setProcesando]       = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   // Derivado: solo las del filtro activo (para la tabla)
   // "PENDIENTE" incluye también OBSERVADO (devueltas), que se revisan de nuevo
@@ -341,8 +363,8 @@ function VistaRRHH() {
       setMensaje(`Solicitud ${modalRevision.decision === "APROBAR" ? "aprobada" : "devuelta"} correctamente`);
       setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
       cargarSolicitudes();
-    } catch {
-      setError("Error al procesar la revisión");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al procesar la revisión" });
       setModalRevision({ open: false, solicitud: null, decision: "", comentario: "" });
     } finally { setProcesando(false); }
   };
@@ -552,6 +574,24 @@ function VistaRRHH() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -569,6 +609,8 @@ function VistaGerencia() {
   const [solicitudActiva,  setSolicitudActiva]  = useState(null);
   const [modalDecision,    setModalDecision]    = useState({ open: false, solicitud: null, decision: "", comentario: "" });
   const [procesando,       setProcesando]       = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   useEffect(() => { cargarSolicitudes(); }, []);
 
@@ -598,8 +640,8 @@ function VistaGerencia() {
       setMensaje(`Solicitud ${modalDecision.decision === "APROBAR" ? "aprobada" : "rechazada"} correctamente`);
       setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
       cargarSolicitudes();
-    } catch {
-      setError("Error al procesar la decisión");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al procesar la decisión" });
       setModalDecision({ open: false, solicitud: null, decision: "", comentario: "" });
     } finally { setProcesando(false); }
   };
@@ -795,6 +837,24 @@ function VistaGerencia() {
                 disabled={!modalDecision.comentario.trim() || procesando}>
                 {procesando ? "Procesando..." : (modalDecision.decision === "APROBAR" ? "✅ Confirmar Aprobación" : "❌ Confirmar Rechazo")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

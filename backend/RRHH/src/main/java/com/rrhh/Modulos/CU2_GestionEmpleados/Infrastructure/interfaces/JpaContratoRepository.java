@@ -16,5 +16,7 @@ public interface JpaContratoRepository extends JpaRepository<ContratoModel, Long
 
     Optional<ContratoModel> findFirstByEmpleadoIdEmpleadoAndEstado(Long idEmpleado, String estado);
 
+    Optional<ContratoModel> findFirstByEmpleadoIdEmpleadoAndEstadoOrderByIdContratoDesc(Long idEmpleado, String estado);
+
     List<ContratoModel> findByEmpleadoIdEmpleadoInAndEstado(List<Long> idsEmpleados, String estado);
 }

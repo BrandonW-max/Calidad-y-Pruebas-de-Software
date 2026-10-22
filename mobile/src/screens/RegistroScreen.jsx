@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
-import { enviarOtp, registrarDispositivo, buscarEmpleadoPorDni } from '../services/api';
+import { enviarOtp, registrarDispositivo } from '../services/api';
 
 export default function RegistroScreen({ onRegistrado }) {
   const [step,         setStep]         = useState('dni');
@@ -45,7 +45,6 @@ export default function RegistroScreen({ onRegistrado }) {
     }
     setCargando(true);
     try {
-      await buscarEmpleadoPorDni(dni.trim());
       const resp = await enviarOtp(dni.trim());
       setSessionId(resp.sessionId);
       setCodigo('');

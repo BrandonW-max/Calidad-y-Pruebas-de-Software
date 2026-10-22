@@ -2,6 +2,7 @@ package com.rrhh.Modulos.CU6_Solicitud.Application.services;
 
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
+import org.springframework.security.access.AccessDeniedException;
 import com.rrhh.Shared.persistence.UsuarioModel;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.DecisionGerenciaRequestDTO;
@@ -51,6 +52,14 @@ public class SolicitudService implements ISolicitudService {
     @Transactional
     public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
+        java.util.List<String> tiposValidos = java.util.List.of(
+                "VACACIONES", "PERMISO", "PERMISO_PERSONAL", "PERMISO_MEDICO", "OTROS");
+        boolean tipoValido = tiposValidos.stream()
+                .anyMatch(t -> t.equalsIgnoreCase(request.getTipoSolicitud()));
+        if (!tipoValido) {
+            throw new IllegalArgumentException("Error: tipo de solicitud invalido");
+        }
+
         if (request.getFechaInicio().isAfter(request.getFechaFin())) {
             throw new IllegalArgumentException(
                 "La fecha de inicio no puede ser mayor que la fecha fin."
@@ -80,6 +89,8 @@ public class SolicitudService implements ISolicitudService {
             }
         }
 
+        validarSinSolapamiento(idEmpleado, request.getFechaInicio(), request.getFechaFin());
+
         Solicitud solicitud = solicitudFactory.crearSolicitudPermiso(
                 request.getTipoSolicitud(), request.getMotivo());
         solicitud.setFechaInicio(request.getFechaInicio());
@@ -92,7 +103,9 @@ public class SolicitudService implements ISolicitudService {
         solicitud.setActualizadoEl(LocalDateTime.now());
 
         Solicitud guardada = solicitudRepository.guardar(solicitud);
-        return mapearAResponse(guardada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(guardada, empleado);
+        response.setMensaje("Solicitud registrada correctamente. Estado: PENDIENTE.");
+        return response;
     }
 
     @Override
@@ -132,7 +145,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", observacion=" + (request.getObservacionRrhh() != null ? request.getObservacionRrhh() : ""));
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por RRHH. Estado: PROCESADO."
+                : "Solicitud devuelta. Estado: OBSERVADO.");
+        return response;
     }
 
     @Override
@@ -148,11 +165,7 @@ public class SolicitudService implements ISolicitudService {
 
         if (request.isAprobado()) {
             solicitud.setEstado("APROBADA");
-            solicitud.setRespuesta(
-                (request.getRespuesta() != null && !request.getRespuesta().isBlank())
-                    ? request.getRespuesta()
-                    : "Su solicitud de vacaciones o permisos ha sido aprobada por Gerencia."
-            );
+            solicitud.setRespuesta("Solicitud aprobada por Gerencia. Estado: APROBADA.");
 
             // RNF86: Descontar saldo de vacaciones
             if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
@@ -168,9 +181,7 @@ public class SolicitudService implements ISolicitudService {
                 throw new IllegalArgumentException("Ingrese el motivo del rechazo.");
             }
             solicitud.setEstado("RECHAZADA");
-            solicitud.setRespuesta(
-                "Su solicitud de vacaciones o permisos ha sido rechazada por Gerencia. Motivo: " + request.getRespuesta()
-            );
+            solicitud.setRespuesta("Solicitud rechazada. Estado: RECHAZADA.");
         }
 
         solicitud.setAprobadoPor(idUsuarioGerencia);
@@ -189,7 +200,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", respuesta=" + actualizada.getRespuesta());
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por Gerencia. Estado: APROBADA."
+                : "Solicitud rechazada. Estado: RECHAZADA.");
+        return response;
     }
 
     @Override
@@ -232,6 +247,9 @@ public class SolicitudService implements ISolicitudService {
         if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
         Long idEmpleado = empleado.getIdEmpleado();
 
+        validarPropiedad(idUsuario, original.getIdEmpleado());
+        validarSinSolapamiento(idEmpleado, original.getFechaInicio(), original.getFechaFin());
+
         Solicitud clon = original.clonePrototype();
 
         clon.setIdSolicitud(null);
@@ -266,19 +284,40 @@ public class SolicitudService implements ISolicitudService {
     // PRIVATE
     // ================================
 
+    /** Una solicitud RECHAZADA no bloquea nuevas fechas; las demás estados activos sí. */
+    private void validarSinSolapamiento(Long idEmpleado, LocalDate inicio, LocalDate fin) {
+        List<String> estadosActivos = List.of("PENDIENTE", "OBSERVADO", "PROCESADO", "APROBADA");
+        boolean solapada = solicitudRepository.buscarPorEmpleado(idEmpleado).stream()
+                .filter(s -> estadosActivos.contains(s.getEstado()))
+                .anyMatch(s -> !s.getFechaInicio().isAfter(fin) && !s.getFechaFin().isBefore(inicio));
+        if (solapada) {
+            throw new IllegalStateException(
+                "Ya tiene una solicitud activa que se cruza con las fechas indicadas.");
+        }
+    }
+
+    /** Inicio y fin deben ser días laborables; los fines de semana intermedios se permiten y no cuentan para el saldo. */
     private void validarDiasLaborables(LocalDate inicio, LocalDate fin) {
         List<LocalDate> feriados = em.createQuery(
                 "SELECT f.fecha FROM FeriadoModel f", LocalDate.class).getResultList();
 
-        LocalDate fecha = inicio;
-        while (!fecha.isAfter(fin)) {
-            DayOfWeek dia = fecha.getDayOfWeek();
-            if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY || feriados.contains(fecha)) {
+        for (LocalDate extremo : List.of(inicio, fin)) {
+            DayOfWeek dia = extremo.getDayOfWeek();
+            if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY || feriados.contains(extremo)) {
                 throw new IllegalArgumentException(
                     "Las fechas seleccionadas incluyen fines de semana o feriados."
                 );
             }
-            fecha = fecha.plusDays(1);
+        }
+    }
+
+    /** Lanza 403 si el empleado de la sesión no es dueño del registro indicado. */
+    public void validarPropiedad(Long idUsuario, Long idEmpleadoDueno) {
+        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
+        EmpleadoModel empleado = usuario.getEmpleado();
+        if (empleado == null || !Objects.equals(empleado.getIdEmpleado(), idEmpleadoDueno)) {
+            throw new AccessDeniedException("No puede acceder a solicitudes de otro empleado.");
         }
     }
 
