@@ -125,7 +125,7 @@ public class EmailService {
             + "Se te ha enviado el enlace para descargar la aplicación móvil del\n"
             + "Hospital San Gabriel para registrar tu asistencia con huella dactilar.\n\n"
             + "Descarga la app aquí:\n"
-            + "https://drive.google.com/drive/folders/1X9YqNT2XjY0wXcS_cps1VtG1DInROikB?usp=sharing\n\n"
+            + "https://drive.google.com/drive/folders/1RyDJZOmX3ssAwlmDwHnFe3Ce3VFgcxy9?usp=sharing\n\n"
             + "Pasos:\n"
             + "1. Descarga e instala la app desde el enlace\n"
             + "2. Abre la app e ingresa tu DNI\n"
