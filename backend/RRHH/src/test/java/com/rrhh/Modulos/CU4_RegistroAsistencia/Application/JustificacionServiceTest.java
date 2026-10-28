@@ -139,4 +139,47 @@ class JustificacionServiceTest {
 
         assertEquals(MSG_PLAZO_VENCIDO, ex.getMessage());
     }
+
+    // -----------------------------------------------------------------------
+    // Motivo de la justificación: máximo 200 caracteres
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Motivo de 201 caracteres en la justificación → rechazado")
+    void motivoMayorA200_Rechazado() {
+        RegistroAsistenciaModel registro = registroConTardanza(90, LocalDate.now());
+        when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(registro);
+        mockConteoJustificaciones(0L);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> justificacionService.registrar(ID_REGISTRO, ID_EMPLEADO, "x".repeat(201), null));
+
+        assertEquals("El motivo no puede superar los 200 caracteres.", ex.getMessage());
+    }
+
+    // -----------------------------------------------------------------------
+    // Aprobar fuera de plazo: queda RECHAZADA y la tardanza no se anula
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Aprobar una justificación fuera de plazo → queda RECHAZADA y conserva la tardanza")
+    void aprobarFueraDePlazo_QuedaRechazadaYConservaTardanza() {
+        JustificacionTardanzaModel justificacion = new JustificacionTardanzaModel();
+        justificacion.setIdJustificacion(5);
+        justificacion.setIdRegistroAsistencia(ID_REGISTRO);
+        justificacion.setIdEmpleado(ID_EMPLEADO);
+        justificacion.setEstado("PENDIENTE");
+
+        RegistroAsistenciaModel registro = registroConTardanza(90, LocalDate.now().minusDays(2));
+
+        when(em.find(JustificacionTardanzaModel.class, 5L)).thenReturn(justificacion);
+        when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(registro);
+        when(em.merge(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        JustificacionTardanzaModel resultado = justificacionService.revisar(5L, "APROBADA", 99L, "");
+
+        assertEquals("RECHAZADA", resultado.getEstado());
+        assertEquals(90, registro.getMinutosTardanza());
+        assertTrue(resultado.getComentarioRevision().contains("Plazo de justificacion vencido"));
+    }
 }
