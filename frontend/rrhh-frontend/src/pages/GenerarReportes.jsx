@@ -3,13 +3,14 @@ import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
 import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
-import { generarReporte } from "../services/api";
+import { generarReporte, getDepartamentos, getCargos, listarEmpleados } from "../services/api";
 
 const TIPOS_REPORTE = [
   { id: "empleados",   label: "Reporte de Empleados",   icon: "👥", desc: "Listado general o filtrado de empleados con sus datos personales y laborales.", color: "#3b82f6" },
   { id: "nomina",      label: "Reporte de Nómina",      icon: "💲", desc: "Detalle de pagos, bonificaciones y descuentos por período.",                    color: "#10b981" },
   { id: "asistencia",  label: "Reporte de Asistencia",  icon: "🕐", desc: "Registro de entradas, salidas, tardanzas e inasistencias.",                     color: "#f59e0b" },
   { id: "solicitudes", label: "Reporte de Solicitudes", icon: "📋", desc: "Permisos y licencias solicitadas, aprobadas o rechazadas.",                      color: "#8b5cf6" },
+  { id: "historial-laboral", label: "Historial Laboral", icon: "📜", desc: "Ascensos, cambios de sueldo y sanciones de un empleado o de todos.",            color: "#ec4899" },
 ];
 
 const FORMATOS = [
@@ -36,6 +37,12 @@ export default function GenerarReportes() {
   const [fechaIni,  setFechaIni]  = useState("");
   const [fechaFin,  setFechaFin]  = useState("");
   const [estado,    setEstado]    = useState("");
+  const [departamentos, setDepartamentos] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [empleadoId, setEmpleadoId] = useState("");
+  const [departamento,  setDepartamento]  = useState("");
+  const [cargo,         setCargo]         = useState("");
+  const [cargos,        setCargos]        = useState([]);
   const [generando, setGenerando] = useState(false);
   const [mensaje,   setMensaje]   = useState("");
   // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
@@ -44,6 +51,15 @@ export default function GenerarReportes() {
     const t = setTimeout(() => setMensaje(""), 7000);
     return () => clearTimeout(t);
   }, [mensaje]);
+  useEffect(() => {
+    getDepartamentos().then(setDepartamentos).catch(() => {});
+    listarEmpleados(0, 200)
+      .then(d => setEmpleados((d?.content ?? []).filter(e => e.estado === "ACTIVO")))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    getCargos(departamento).then(setCargos).catch(() => setCargos([]));
+  }, [departamento]);
   const [error,     setError]     = useState("");
   const [resultado, setResultado] = useState(null);
   const [historial, setHistorial] = useState([]);
@@ -140,6 +156,9 @@ export default function GenerarReportes() {
       fechaInicio: inicio,
       fechaFin:    fin,
       estado:     (tipoSeleccionado === "solicitudes" || tipoSeleccionado === "empleados") ? estado || undefined : undefined,
+      area:       (tipoSeleccionado === "nomina" || tipoSeleccionado === "solicitudes") ? departamento || undefined : undefined,
+      cargo:      tipoSeleccionado === "solicitudes" ? cargo.trim() || undefined : undefined,
+      idEmpleado: tipoSeleccionado === "historial-laboral" && empleadoId ? Number(empleadoId) : undefined,
     };
 
     try {
@@ -267,6 +286,36 @@ export default function GenerarReportes() {
                       </select>
                     </div>
                   </>)}
+
+                  {(tipoSeleccionado === "nomina" || tipoSeleccionado === "solicitudes") && (
+                    <div className="form-group">
+                      <label>Departamento</label>
+                      <select value={departamento} onChange={e => { setDepartamento(e.target.value); setCargo(""); }}>
+                        <option value="">Todos</option>
+                        {departamentos.map(d => <option key={d.idDpto} value={d.nombre}>{d.nombre}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {tipoSeleccionado === "solicitudes" && (
+                    <div className="form-group">
+                      <label>Cargo</label>
+                      <select value={cargo} onChange={e => setCargo(e.target.value)}>
+                        <option value="">Todos</option>
+                        {cargos.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {tipoSeleccionado === "historial-laboral" && (
+                    <div className="form-group">
+                      <label>Empleado</label>
+                      <select value={empleadoId} onChange={e => setEmpleadoId(e.target.value)}>
+                        <option value="">Todos los empleados</option>
+                        {empleados.map(e => <option key={e.idEmpleado} value={e.idEmpleado}>{e.nombres} {e.apellidos}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   {(tipoSeleccionado === "empleados" || tipoSeleccionado === "solicitudes") && (<>
                     <div className="form-group">

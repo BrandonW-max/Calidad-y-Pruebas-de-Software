@@ -18,6 +18,7 @@ public class NominaResponseDTO {
     private BigDecimal sueldoContrato;
     private BigDecimal totalHorasTrabajadas;
     private BigDecimal totalHorasExtra;
+    private BigDecimal totalHorasExtraAsistencia;
     private Integer totalMinutosTardanza;
 
     private BigDecimal bonifFamiliar;
@@ -76,6 +77,8 @@ public class NominaResponseDTO {
 
     public BigDecimal getTotalHorasExtra() { return totalHorasExtra; }
     public void setTotalHorasExtra(BigDecimal totalHorasExtra) { this.totalHorasExtra = totalHorasExtra; }
+    public BigDecimal getTotalHorasExtraAsistencia() { return totalHorasExtraAsistencia; }
+    public void setTotalHorasExtraAsistencia(BigDecimal totalHorasExtraAsistencia) { this.totalHorasExtraAsistencia = totalHorasExtraAsistencia; }
 
     public Integer getTotalMinutosTardanza() { return totalMinutosTardanza; }
     public void setTotalMinutosTardanza(Integer totalMinutosTardanza) { this.totalMinutosTardanza = totalMinutosTardanza; }

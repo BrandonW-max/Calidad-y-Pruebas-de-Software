@@ -67,7 +67,7 @@ export default function GestionEmpleados() {
   // Forms
   const [form,        setForm]        = useState(FORM_VACIO);
   const [sancionForm, setSancionForm] = useState({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
-  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
+  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaAscenso: "" });
   const [cambioForm,  setCambioForm]  = useState({ idEmpleado: "", nuevoSueldo: "", fechaCambio: "" });
 
   // Modals
@@ -252,6 +252,10 @@ export default function GestionEmpleados() {
   const handleGuardarEdicion = async (e) => {
     e.preventDefault();
     if (!modalEditar) return;
+    if (modalEditar.idDpto && !modalEditar.cargo) {
+      showFormError(null, "Seleccione un cargo del departamento.");
+      return;
+    }
     try {
       await actualizarEmpleado(modalEditar.idEmpleado, {
         cargo: modalEditar.cargo,
@@ -265,8 +269,8 @@ export default function GestionEmpleados() {
       setMensaje("Datos del empleado actualizados correctamente");
       setModalEditar(null);
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al actualizar el empleado.");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al actualizar el empleado.");
     }
   };
 
@@ -315,10 +319,14 @@ export default function GestionEmpleados() {
   const handleAscenso = async (e) => {
     e.preventDefault();
     try {
-      const data = await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
+      const data = await registrarAscenso(ascensoForm.idEmpleado, {
+        nuevoCargo: ascensoForm.nuevoCargo,
+        fechaAscenso: ascensoForm.fechaAscenso,
+        nuevoSueldo: ascensoForm.nuevoSueldo ? parseFloat(ascensoForm.nuevoSueldo) : null,
+      });
       if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Ascenso registrado correctamente");
-      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
+      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaAscenso: "" });
       cerrarModalAscenso();
       cargarEmpleados();
     } catch (err) {
@@ -396,6 +404,16 @@ export default function GestionEmpleados() {
 
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
+  // Editar: los cargos dependen del departamento elegido; si el cargo actual no está en el catálogo, se conserva como opción
+  const deptEditar = departamentos.find(d => String(d.idDpto) === String(modalEditar?.idDpto))?.nombre;
+  const cargosEditar = [...(DEPT_CARGOS[deptEditar] ?? [])];
+  if (modalEditar?.cargo && !cargosEditar.includes(modalEditar.cargo)) cargosEditar.unshift(modalEditar.cargo);
+
+  // Ascenso: el cargo nuevo debe pertenecer al departamento actual del empleado
+  const empAscenso = empleados.find(e => e.idEmpleado === modalAscenso.id);
+  const ascensoSinDepartamento = !!empAscenso && !empAscenso.departamento;
+  const cargosAscenso = (DEPT_CARGOS[empAscenso?.departamento] ?? []).filter(c => c !== empAscenso?.cargo);
+  const ascensoSinCargos = !!empAscenso && !ascensoSinDepartamento && cargosAscenso.length === 0;
 
   return (
     <div className="dashboard">
@@ -574,7 +592,7 @@ export default function GestionEmpleados() {
                                   ⚠️ Registrar sanción
                                 </div>
                                 <div className="action-drop-item drop-green"
-                                  onClick={() => { limpiarErroresCampos(); setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
+                                  onClick={() => { limpiarErroresCampos(); setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm({ idEmpleado: emp.idEmpleado, nuevoCargo: "", nuevoSueldo: "", fechaAscenso: new Date().toLocaleDateString('sv-SE') }); setOpenDrop(null); }}>
                                   ↑ Registrar ascenso
                                 </div>
                                 <div className="action-drop-item drop-blue"
@@ -825,8 +843,21 @@ export default function GestionEmpleados() {
               <form id="form-editar" onSubmit={handleGuardarEdicion}>
                 <div className="form-grid">
                   <div className="form-group">
+                    <label>Departamento</label>
+                    <select value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value, cargo: "" })}>
+                      <option value="">Seleccione departamento</option>
+                      {departamentos.map(d => (
+                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
                     <label>Cargo</label>
-                    <input value={modalEditar.cargo ?? ""} onChange={e => setModalEditar({ ...modalEditar, cargo: e.target.value })} />
+                    <select value={modalEditar.cargo ?? ""} disabled={!modalEditar.idDpto}
+                      onChange={e => setModalEditar({ ...modalEditar, cargo: e.target.value })}>
+                      <option value="">{modalEditar.idDpto ? "Seleccione cargo" : "Seleccione primero un departamento"}</option>
+                      {cargosEditar.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Tipo de Contrato</label>
@@ -842,15 +873,6 @@ export default function GestionEmpleados() {
                     <input type="number" step="0.01" min="0" placeholder="0.00"
                       value={modalEditar.sueldo ?? ""}
                       onChange={e => setModalEditar({ ...modalEditar, sueldo: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Departamento</label>
-                    <select value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value })}>
-                      <option value="">Seleccione departamento</option>
-                      {departamentos.map(d => (
-                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
-                      ))}
-                    </select>
                   </div>
                   <div className="form-group">
                     <label>Correo Electrónico</label>
@@ -956,16 +978,45 @@ export default function GestionEmpleados() {
             <div className="modal-body">
               <form id="form-ascenso" onSubmit={handleAscenso}>
                 <div className="form-group">
-                  <label>Nuevo Cargo</label>
-                  <input value={ascensoForm.nuevoCargo}
-                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoCargo: e.target.value })}
-                    placeholder="Ej: Jefe de Área, Especialista..." />
+                  <label>Departamento actual</label>
+                  <input value={empAscenso?.departamento ?? "Sin departamento"} disabled />
+                </div>
+                {ascensoSinDepartamento && (
+                  <div style={{ color: "#b91c1c", fontSize: 12, marginBottom: 10 }}>
+                    El empleado no tiene departamento asignado. Asígnele uno en Editar antes de registrar el ascenso.
+                  </div>
+                )}
+                {ascensoSinCargos && (
+                  <div style={{ color: "#b91c1c", fontSize: 12, marginBottom: 10 }}>
+                    No hay otros cargos definidos para {empAscenso.departamento}.
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Nuevo Cargo *</label>
+                  <select value={ascensoForm.nuevoCargo} required
+                    disabled={ascensoSinDepartamento || ascensoSinCargos}
+                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoCargo: e.target.value })}>
+                    <option value="">Seleccione cargo</option>
+                    {cargosAscenso.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Fecha de ascenso *</label>
+                  <input type="date" required value={ascensoForm.fechaAscenso}
+                    onChange={e => setAscensoForm({ ...ascensoForm, fechaAscenso: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Nuevo Sueldo (S/)</label>
+                  <input type="number" step="0.01" min="0" value={ascensoForm.nuevoSueldo}
+                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoSueldo: e.target.value })}
+                    placeholder={empAscenso ? `Actual: S/ ${Number(empAscenso.sueldo ?? 0).toFixed(2)}. Vacío = sin cambio` : "Vacío = sin cambio"} />
                 </div>
               </form>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => cerrarModalAscenso()}>Cancelar</button>
-              <button className="btn btn-primary" type="submit" form="form-ascenso">↑ Registrar Ascenso</button>
+              <button className="btn btn-primary" type="submit" form="form-ascenso"
+                disabled={ascensoSinDepartamento || ascensoSinCargos}>↑ Registrar Ascenso</button>
             </div>
           </div>
         </div>

@@ -80,7 +80,7 @@ class SolicitudServiceTest {
     @DisplayName("Test 43 — fechaInicio posterior a fechaFin → IllegalArgumentException")
     void registrar_FechaInicioMayorFechaFin_LanzaExcepcion() {
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 10));
         req.setFechaFin(LocalDate.of(2026, 3, 5));
         req.setMotivo("Motivo");
@@ -103,7 +103,7 @@ class SolicitudServiceTest {
 
         // 2026-03-14 es sábado
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 12));
         req.setFechaFin(LocalDate.of(2026, 3, 14));
         req.setMotivo("Motivo");
@@ -125,7 +125,7 @@ class SolicitudServiceTest {
                 .thenReturn(Optional.of(usuarioConEmpleado("INACTIVO")));
 
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 10));
         req.setFechaFin(LocalDate.of(2026, 3, 11));
         req.setMotivo("Motivo");
@@ -174,12 +174,12 @@ class SolicitudServiceTest {
         Solicitud solicitudCreada = new Solicitud();
         solicitudCreada.setEstado("PENDIENTE");
         solicitudCreada.setIdEmpleado(1L);
-        solicitudCreada.setTipoSolicitud("PERMISO");
+        solicitudCreada.setTipoSolicitud("PERMISO_PERSONAL");
         when(solicitudFactory.crearSolicitudPermiso(anyString(), anyString())).thenReturn(solicitudCreada);
         when(solicitudRepository.guardar(any())).thenReturn(solicitudCreada);
 
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 10));
         req.setFechaFin(LocalDate.of(2026, 3, 11));
         req.setMotivo("Cita médica");
@@ -281,7 +281,7 @@ class SolicitudServiceTest {
     void gerencia_Aprobada_EstadoAPROBADA() {
         Solicitud solicitud = solicitudConEstado("PROCESADO");
         solicitud.setIdEmpleado(1L);
-        solicitud.setTipoSolicitud("PERMISO");
+        solicitud.setTipoSolicitud("PERMISO_PERSONAL");
         when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(solicitud));
 
         Solicitud aprobada = solicitudConEstado("APROBADA");
@@ -395,7 +395,7 @@ class SolicitudServiceTest {
                         LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 11))));
 
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 10));
         req.setFechaFin(LocalDate.of(2026, 3, 12));
         req.setMotivo("Cita médica");
@@ -422,7 +422,7 @@ class SolicitudServiceTest {
         when(solicitudRepository.guardar(any())).thenReturn(creada);
 
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("PERMISO");
+        req.setTipoSolicitud("PERMISO_PERSONAL");
         req.setFechaInicio(LocalDate.of(2026, 3, 10));
         req.setFechaFin(LocalDate.of(2026, 3, 12));
         req.setMotivo("Cita médica");

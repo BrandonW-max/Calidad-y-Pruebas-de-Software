@@ -39,7 +39,7 @@ class JustificacionServiceTest {
     private static final Long    ID_EMPLEADO  = 1L;
 
     private static final String MSG_TARDANZA_MINIMA =
-            "Solo se pueden justificar tardanzas de una hora o más e inasistencias.";
+            "Solo se pueden justificar tardanzas de 10 minutos o más e inasistencias.";
     private static final String MSG_YA_PENDIENTE =
             "Ya existe una justificación pendiente para este registro.";
     private static final String MSG_PLAZO_VENCIDO =
@@ -50,6 +50,11 @@ class JustificacionServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(justificacionService, "em", em);
+        jakarta.persistence.Query nativeQuery = org.mockito.Mockito.mock(jakarta.persistence.Query.class);
+        org.mockito.Mockito.lenient().when(em.createNativeQuery(org.mockito.ArgumentMatchers.anyString())).thenReturn(nativeQuery);
+        org.mockito.Mockito.lenient().when(nativeQuery.setParameter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        org.mockito.Mockito.lenient().when(nativeQuery.getResultList()).thenReturn(java.util.List.of());
+        org.mockito.Mockito.lenient().when(nativeQuery.executeUpdate()).thenReturn(1);
 
         empleado = new EmpleadoModel();
         empleado.setIdEmpleado(ID_EMPLEADO);
@@ -72,13 +77,13 @@ class JustificacionServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 32 — RF18: Tardanza < 60 min → no justificable
+    // Test 32 — RF18: Tardanza < 10 min → no justificable
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 32 — Tardanza de 30 min → no justificable")
-    void tardanzaMenorA60Min_NoJustificable() {
-        RegistroAsistenciaModel registro = registroConTardanza(30, LocalDate.now());
+    @DisplayName("Test 32 — Tardanza de 9 min → no justificable")
+    void tardanzaMenorA10Min_NoJustificable() {
+        RegistroAsistenciaModel registro = registroConTardanza(9, LocalDate.now());
         when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(registro);
 
         RuntimeException ex = assertThrows(RuntimeException.class,

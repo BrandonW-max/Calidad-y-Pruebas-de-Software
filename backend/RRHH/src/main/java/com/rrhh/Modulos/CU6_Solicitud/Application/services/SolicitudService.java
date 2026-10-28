@@ -53,7 +53,7 @@ public class SolicitudService implements ISolicitudService {
     public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
         java.util.List<String> tiposValidos = java.util.List.of(
-                "VACACIONES", "PERMISO", "PERMISO_PERSONAL", "PERMISO_MEDICO", "OTROS");
+                "VACACIONES", "PERMISO_PERSONAL", "PERMISO_MEDICO", "OTROS");
         boolean tipoValido = tiposValidos.stream()
                 .anyMatch(t -> t.equalsIgnoreCase(request.getTipoSolicitud()));
         if (!tipoValido) {

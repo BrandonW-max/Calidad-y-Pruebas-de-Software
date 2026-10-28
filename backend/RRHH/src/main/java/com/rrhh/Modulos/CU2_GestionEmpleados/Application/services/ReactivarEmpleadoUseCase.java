@@ -86,6 +86,11 @@ public class ReactivarEmpleadoUseCase {
 
             jpaUsuarioRepository.findByEmpleadoIdEmpleado(idEmpleado).ifPresent(model -> {
                 model.setTokenInvalidoDesde(null);
+                // RF32: reiniciar la configuración de 2FA; el empleado debe configurarlo de nuevo
+                model.setDosfaActivo(false);
+                model.setDosfaSecret(null);
+                model.setIntentosFalla2fa(0);
+                model.setBloqueo2faHasta(null);
                 jpaUsuarioRepository.save(model);
             });
         }

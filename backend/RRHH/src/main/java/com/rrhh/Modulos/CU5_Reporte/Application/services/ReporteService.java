@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +34,8 @@ public class ReporteService implements IReporteService {
         "EMPLEADOS", "gestionEmpleadosExportFactory",
         "ASISTENCIA", "registroAsistenciaExportFactory",
         "NOMINA", "nominaExportFactory",
-        "SOLICITUDES", "solicitudExportFactory"
+        "SOLICITUDES", "solicitudExportFactory",
+        "HISTORIAL_LABORAL", "historialLaboralExportFactory"
     );
 
     private final IReporteGeneradoRepository reporteGeneradoRepository;
@@ -229,6 +232,64 @@ public class ReporteService implements IReporteService {
         }).collect(Collectors.toList());
 
         return guardarYRetornar("SOLICITUDES", filtro, datos, idUsuario);
+    }
+
+    @Override
+    @Transactional(timeout = 30)
+    public ReporteResponseDTO generarReporteHistorialLaboral(FiltroHistorialLaboralDTO filtro, Long idUsuario) {
+
+        if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
+
+        // 0 como centinela de "todos los empleados" (PostgreSQL no tipa un parámetro nulo)
+        Long id = filtro.getIdEmpleado() != null ? filtro.getIdEmpleado() : 0L;
+
+        Map<Long, String> nombres = em.createQuery(
+                "SELECT e FROM EmpleadoModel e WHERE (:id = 0L OR e.idEmpleado = :id)", EmpleadoModel.class)
+            .setParameter("id", id)
+            .getResultList().stream()
+            .collect(Collectors.toMap(EmpleadoModel::getIdEmpleado, e -> e.getNombres() + " " + e.getApellidos()));
+
+        List<HistorialAuditoriaModel> cambios = em.createQuery(
+                "SELECT h FROM HistorialAuditoriaModel h WHERE h.tablaAfectada = 'EMPLEADO' " +
+                "AND h.accion IN ('ASCENSO_EMPLEADO', 'ACTUALIZACION_EMPLEADO') " +
+                "AND (:id = 0L OR h.idRegistroAfectado = :id)", HistorialAuditoriaModel.class)
+            .setParameter("id", id)
+            .getResultList();
+
+        List<SancionModel> sanciones = em.createQuery(
+                "SELECT s FROM SancionModel s WHERE (:id = 0L OR s.empleado.idEmpleado = :id)", SancionModel.class)
+            .setParameter("id", id)
+            .getResultList();
+
+        List<Map<String, Object>> datos = new ArrayList<>();
+
+        for (HistorialAuditoriaModel h : cambios) {
+            Map<String, Object> fila = new LinkedHashMap<>();
+            fila.put("fecha", h.getFechaDeCambio() != null ? h.getFechaDeCambio().toLocalDate() : null);
+            fila.put("empleado", nombres.getOrDefault(h.getIdRegistroAfectado(), ""));
+            fila.put("tipo", "ASCENSO_EMPLEADO".equals(h.getAccion()) ? "Ascenso / cambio de sueldo" : "Actualización de datos");
+            fila.put("detalle", h.getValorNuevo());
+            datos.add(fila);
+        }
+
+        for (SancionModel s : sanciones) {
+            Map<String, Object> fila = new LinkedHashMap<>();
+            fila.put("fecha", s.getFechaInicio());
+            fila.put("empleado", s.getEmpleado() != null ? nombres.getOrDefault(s.getEmpleado().getIdEmpleado(), "") : "");
+            fila.put("tipo", "Sanción");
+            fila.put("detalle", s.getMotivo() + " | Estado: " + s.getEstado()
+                + (s.getFechaFin() != null ? " | Hasta: " + s.getFechaFin() : ""));
+            datos.add(fila);
+        }
+
+        datos.sort(Comparator.comparing((Map<String, Object> m) -> (LocalDate) m.get("fecha"),
+                Comparator.nullsLast(Comparator.reverseOrder())));
+
+        if (datos.isEmpty()) {
+            return guardarYRetornar("HISTORIAL_LABORAL", filtro, List.of(), idUsuario);
+        }
+
+        return guardarYRetornar("HISTORIAL_LABORAL", filtro, datos, idUsuario);
     }
 
     // ================================

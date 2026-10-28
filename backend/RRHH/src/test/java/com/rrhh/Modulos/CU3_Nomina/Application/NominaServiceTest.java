@@ -6,6 +6,7 @@ import com.rrhh.Modulos.CU2_GestionEmpleados.Infrastructure.interfaces.JpaEmplea
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaVersionDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.factory.INominaFactory;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.NominaService;
 import com.rrhh.Modulos.CU3_Nomina.Domain.entities.Nomina;
@@ -13,17 +14,22 @@ import com.rrhh.Modulos.CU3_Nomina.Domain.repository.IDetalleNominaRepository;
 import com.rrhh.Modulos.CU3_Nomina.Domain.repository.INominaRepository;
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.export.NominaComprobantePDFGenerator;
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepository;
+import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionRepository;
+import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaAjusteNominaManualRepository;
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository;
 import com.rrhh.Shared.config.RRHHProperties;
 import com.rrhh.Shared.exception.RecursoNoEncontradoException;
 import com.rrhh.Shared.persistence.ContratoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
+import com.rrhh.Shared.persistence.AjusteNominaManualModel;
+import com.rrhh.Shared.persistence.NominaVersionModel;
 import com.rrhh.Shared.persistence.RegistroAsistenciaModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,6 +61,9 @@ class NominaServiceTest {
     @Mock private JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository;
     @Mock private JpaContratoRepository jpaContratoRepository;
     @Mock private JpaFamiliaInfoRepository jpaFamiliaInfoRepository;
+    @Mock private JpaNominaVersionRepository jpaNominaVersionRepository;
+    @Mock private JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository;
+    @Mock private com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository;
 
     @InjectMocks
     private NominaService nominaService;
@@ -262,6 +271,100 @@ class NominaServiceTest {
         NominaResponseDTO resultado = nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH);
 
         assertEquals("AJUSTADA", resultado.getEstadoPago());
+    }
+
+    @Test
+    @DisplayName("RF45 — Ajuste guarda la versión anterior antes de sobrescribir la nómina")
+    void ajuste_GuardaVersionAnteriorAntesDeSobrescribir() {
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setIdEmpleado(1L);
+        nomina.setVersion(1);
+        nomina.setSueldoNeto(new BigDecimal("1500.00"));
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+
+        ContratoModel contrato = new ContratoModel();
+        contrato.setSueldo(new BigDecimal("2000.00"));
+        contrato.setTipoPension("ONP");
+        when(jpaContratoRepository.findFirstByEmpleadoIdEmpleadoAndEstado(eq(1L), eq("ACTIVO")))
+                .thenReturn(Optional.of(contrato));
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(1L);
+        when(jpaEmpleadoRepository.findById(1L)).thenReturn(Optional.of(empleado));
+        when(nominaRepository.guardar(any())).thenReturn(nomina);
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setTipoPensionAplicada("ONP");
+
+        nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH);
+
+        ArgumentCaptor<NominaVersionModel> captor = ArgumentCaptor.forClass(NominaVersionModel.class);
+        verify(jpaNominaVersionRepository).save(captor.capture());
+        NominaVersionModel anterior = captor.getValue();
+        assertEquals(ID_NOMINA, anterior.getIdNomina());
+        assertEquals(1, anterior.getVersion());
+        assertEquals(new BigDecimal("1500.00"), anterior.getSueldoNeto());
+        assertEquals(ID_USUARIO_RRHH, anterior.getReemplazadoPor());
+    }
+
+    @Test
+    @DisplayName("Ajuste manual guarda sus valores para que un recálculo los reaplique")
+    void ajuste_GuardaValoresManualesParaRecalculo() {
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setIdEmpleado(1L);
+        nomina.setPeriodo("2026-05");
+        nomina.setVersion(1);
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+
+        ContratoModel contrato = new ContratoModel();
+        contrato.setSueldo(new BigDecimal("2000.00"));
+        contrato.setTipoPension("ONP");
+        when(jpaContratoRepository.findFirstByEmpleadoIdEmpleadoAndEstado(eq(1L), eq("ACTIVO")))
+                .thenReturn(Optional.of(contrato));
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(1L);
+        when(jpaEmpleadoRepository.findById(1L)).thenReturn(Optional.of(empleado));
+        when(nominaRepository.guardar(any())).thenReturn(nomina);
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setTotalHorasExtra(new BigDecimal("4"));
+        req.setTotalMinutosTardanza(15);
+        req.setTipoPensionAplicada("ONP");
+
+        nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH);
+
+        ArgumentCaptor<AjusteNominaManualModel> captor = ArgumentCaptor.forClass(AjusteNominaManualModel.class);
+        verify(jpaAjusteNominaManualRepository).save(captor.capture());
+        AjusteNominaManualModel guardado = captor.getValue();
+        assertEquals(1L, guardado.getIdEmpleado());
+        assertEquals("2026-05", guardado.getPeriodo());
+        assertEquals(0, new BigDecimal("4.00").compareTo(guardado.getTotalHorasExtra()));
+        assertEquals(15, guardado.getTotalMinutosTardanza());
+    }
+
+    @Test
+    @DisplayName("RF45 — Listar versiones: la vigente primero y luego las anteriores")
+    void listarVersiones_VigenteYAnteriores() {
+        Nomina nomina = nominaConId(ID_NOMINA);
+        nomina.setVersion(2);
+        nomina.setSueldoNeto(new BigDecimal("1800.00"));
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(nomina));
+
+        NominaVersionModel anterior = new NominaVersionModel();
+        anterior.setIdNomina(ID_NOMINA);
+        anterior.setVersion(1);
+        anterior.setSueldoNeto(new BigDecimal("1500.00"));
+        when(jpaNominaVersionRepository.findByIdNominaOrderByVersionDesc(ID_NOMINA)).thenReturn(List.of(anterior));
+
+        List<NominaVersionDTO> versiones = nominaService.listarVersiones(ID_NOMINA);
+
+        assertEquals(2, versiones.size());
+        assertEquals(2, versiones.get(0).getVersion());
+        assertTrue(versiones.get(0).isVigente());
+        assertEquals(1, versiones.get(1).getVersion());
+        assertFalse(versiones.get(1).isVigente());
+        assertEquals(new BigDecimal("1500.00"), versiones.get(1).getSueldoNeto());
     }
 
     // -----------------------------------------------------------------------

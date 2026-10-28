@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
+  listarPlanesRecuperacion,
   listarJustificacionesPorEstado,
   listarJustificacionesEmpleado,
   listarAsistenciaEmpleado,
@@ -229,7 +230,7 @@ function VistaEmpleado() {
   };
 
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+    r.minutosTardanza >= 10 || r.estado === "INASISTENCIA"
   );
 
   return (
@@ -350,7 +351,7 @@ function VistaEmpleado() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 1 hora o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes 10 minutos o más de tardanza" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -527,7 +528,7 @@ function VistaEmpleado() {
         ) : (
           <div className="section-card">
             <div className="alert alert-info">
-              📋 Para justificar necesitas al menos 1 hora de tardanza o una inasistencia en tu historial.
+              📋 Para justificar necesitas al menos 10 minutos de tardanza o una inasistencia en tu historial.
             </div>
           </div>
         ))}
@@ -773,10 +774,61 @@ function TablaDecididas({ titulo, lista, getNombre, estado }) {
 /* ══════════════════════════════════════════════════════════
    VISTA RRHH
 ══════════════════════════════════════════════════════════ */
+function TablaPlanesRecuperacion({ lista }) {
+  return (
+    <div className="section-card asistencia-panel">
+      <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+        <h2 style={{ margin: 0, border: "none", padding: 0 }}>⏱️ Planes de Recuperación</h2>
+      </div>
+      <div className="table-wrapper">
+        {lista.length === 0 ? (
+          <div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay planes de recuperación</p></div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "center" }}>Empleado</th>
+                <th style={{ textAlign: "center" }}>Minutos iniciales</th>
+                <th style={{ textAlign: "center" }}>Tipo</th>
+                <th style={{ textAlign: "center" }}>Pendientes</th>
+                <th style={{ textAlign: "center" }}>Inicio</th>
+                <th style={{ textAlign: "center" }}>Límite</th>
+                <th style={{ textAlign: "center" }}>Estado</th>
+                <th style={{ textAlign: "center" }}>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(p => (
+                <tr key={p.id} style={p.estado === "VENCIDO" ? { background: "#fef2f2" } : undefined}>
+                  <td>{p.empleado}</td>
+                  <td style={{ textAlign: "center" }}>{p.minutosIniciales} min</td>
+                  <td style={{ textAlign: "center" }}>{p.tipo === "INASISTENCIA" ? "Inasistencia (bloques de 2 h)" : "Tardanza"}</td>
+                  <td style={{ textAlign: "center" }}>{p.minutosPendientes} min</td>
+                  <td style={{ textAlign: "center" }}>{p.fechaInicio}</td>
+                  <td style={{ textAlign: "center" }}>{p.fechaLimite}</td>
+                  <td style={{ textAlign: "center" }}>
+                    <span className={`badge ${p.estado === "DESCUENTO" ? "badge-sol-rechazada" : "badge-sol-pendiente"}`}>{p.estado}</span>
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    {p.estado === "DESCUENTO"
+                      ? `Descuento S/ ${Number(p.montoDescuento).toFixed(2)} en nómina ${p.periodoDescuento}`
+                      : p.estado === "PERDONADO" ? "Perdonado (menos de 1 hora)" : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function VistaRRHH() {
   const [justificaciones, setJustificaciones] = useState([]);
   const [aprobadas,       setAprobadas]       = useState([]);
   const [rechazadas,      setRechazadas]      = useState([]);
+  const [planes,          setPlanes]          = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
@@ -828,14 +880,16 @@ function VistaRRHH() {
     setLoading(true);
     setError("");
     try {
-      const [pendientes, aprobadasData, rechazadasData] = await Promise.all([
+      const [pendientes, aprobadasData, rechazadasData, planesData] = await Promise.all([
         listarJustificacionesPendientes(),
         listarJustificacionesPorEstado("APROBADA"),
         listarJustificacionesPorEstado("RECHAZADA"),
+        listarPlanesRecuperacion().catch(() => []),
       ]);
       setJustificaciones(Array.isArray(pendientes) ? pendientes : []);
       setAprobadas(Array.isArray(aprobadasData) ? aprobadasData : []);
       setRechazadas(Array.isArray(rechazadasData) ? rechazadasData : []);
+      setPlanes(Array.isArray(planesData) ? planesData : []);
     } catch {
       setError("No se pudieron cargar las justificaciones");
     } finally {
@@ -1115,6 +1169,7 @@ function VistaRRHH() {
               getNombre={getNombreEmpleado}
               estado="RECHAZADA"
             />
+            <TablaPlanesRecuperacion lista={planes} />
         </div>
 
         {/* ── SECCIÓN 2: REGISTRO MANUAL ── */}
@@ -1573,7 +1628,7 @@ function VistaGerencia() {
   const horaStr  = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   const fechaCorta = hora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+    r.minutosTardanza >= 10 || r.estado === "INASISTENCIA"
   );
 
   const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADA: "badge-success", RECHAZADA: "badge-danger" }[estado] ?? "badge-gray");
@@ -1669,7 +1724,7 @@ function VistaGerencia() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 1 hora o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes 10 minutos o más de tardanza" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -1775,7 +1830,7 @@ function VistaGerencia() {
             </div>
           ) : (
             <div className="section-card">
-              <div className="alert alert-info">📋 Para justificar necesitas al menos 1 hora de tardanza en tu registro de hoy.</div>
+              <div className="alert alert-info">📋 Para justificar necesitas al menos 10 minutos de tardanza en tu registro de hoy.</div>
             </div>
           )
         )}

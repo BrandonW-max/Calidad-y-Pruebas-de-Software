@@ -68,6 +68,11 @@ class AsistenciaServiceTest {
         // EntityManager mock: sin horario asignado → usa defaults (08:00, tolerancia 10 min)
         TypedQuery<AsignacionHorarioModel> queryMock = mock(TypedQuery.class);
         lenient().when(em.createQuery(anyString(), eq(AsignacionHorarioModel.class))).thenReturn(queryMock);
+        jakarta.persistence.Query nativeQuery = mock(jakarta.persistence.Query.class);
+        lenient().when(em.createNativeQuery(anyString())).thenReturn(nativeQuery);
+        lenient().when(nativeQuery.setParameter(anyString(), any())).thenReturn(nativeQuery);
+        lenient().when(nativeQuery.getResultList()).thenReturn(java.util.List.of());
+        lenient().when(nativeQuery.executeUpdate()).thenReturn(1);
         lenient().when(queryMock.setParameter(anyString(), any())).thenReturn(queryMock);
         lenient().when(queryMock.getResultList()).thenReturn(Collections.emptyList());
 
@@ -152,7 +157,7 @@ class AsistenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Test 24 — Salida a las 17:30 → minutosExtra=30")
+    @DisplayName("Test 24 — Salida a las 17:30 → minutosExtra=60 (30 min cuentan como una hora)")
     void salidaTarde_ConExtra() {
         RegistroAsistenciaModel registroExistente = new RegistroAsistenciaModel();
         registroExistente.setEmpleado(empleado);
@@ -174,7 +179,7 @@ class AsistenciaServiceTest {
         MarcarAsistenciaResponseDTO resultado = asistenciaService.registrarManual(req, 1L, "127.0.0.1");
 
         assertTrue(resultado.isSuccess());
-        assertEquals(30, resultado.getMinutosExtra());
+        assertEquals(60, resultado.getMinutosExtra());
     }
 
     // -----------------------------------------------------------------------

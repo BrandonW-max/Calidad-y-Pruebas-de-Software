@@ -22,6 +22,7 @@ public class Nomina implements Prototype<Nomina> {
     private BigDecimal sueldoBase;
     private BigDecimal totalHorasTrabajadas;
     private BigDecimal totalHorasExtra;
+    private BigDecimal totalHorasExtraAsistencia;
     private Integer totalMinutosTardanza;
 
     private BigDecimal bonifFamiliar;
@@ -58,7 +59,8 @@ public class Nomina implements Prototype<Nomina> {
 
     public Nomina(Integer idNomina, String periodo, LocalDate fechaInicio, LocalDate fechaFin,
                   LocalDate fechaEmision, BigDecimal sueldoBase, BigDecimal totalHorasTrabajadas,
-                  BigDecimal totalHorasExtra, Integer totalMinutosTardanza,
+                  BigDecimal totalHorasExtra, BigDecimal totalHorasExtraAsistencia,
+                  Integer totalMinutosTardanza,
                   BigDecimal bonifFamiliar, BigDecimal bonifTurnoNocturno,
                   BigDecimal bonifGuardia, BigDecimal bonifRiesgo, BigDecimal bonifCargo,
                   BigDecimal descuentoTardanzas, BigDecimal descuentoLey,
@@ -78,6 +80,7 @@ public class Nomina implements Prototype<Nomina> {
         this.sueldoBase = sueldoBase;
         this.totalHorasTrabajadas = totalHorasTrabajadas;
         this.totalHorasExtra = totalHorasExtra;
+        this.totalHorasExtraAsistencia = totalHorasExtraAsistencia;
         this.totalMinutosTardanza = totalMinutosTardanza;
         this.bonifFamiliar = bonifFamiliar;
         this.bonifTurnoNocturno = bonifTurnoNocturno;
@@ -127,6 +130,8 @@ public class Nomina implements Prototype<Nomina> {
 
     public BigDecimal getTotalHorasExtra() { return totalHorasExtra; }
     public void setTotalHorasExtra(BigDecimal totalHorasExtra) { this.totalHorasExtra = totalHorasExtra; }
+    public BigDecimal getTotalHorasExtraAsistencia() { return totalHorasExtraAsistencia; }
+    public void setTotalHorasExtraAsistencia(BigDecimal totalHorasExtraAsistencia) { this.totalHorasExtraAsistencia = totalHorasExtraAsistencia; }
 
     public Integer getTotalMinutosTardanza() { return totalMinutosTardanza; }
     public void setTotalMinutosTardanza(Integer totalMinutosTardanza) { this.totalMinutosTardanza = totalMinutosTardanza; }

@@ -31,7 +31,7 @@ CREATE TABLE empleado(
     direccion VARCHAR (80) NOT NULL ,
     correo VARCHAR (50) NOT NULL,
     telefono VARCHAR (15),
-    estado VARCHAR (30) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN('ACTIVO','LICENCIA','SUSPENDIDO','DESVINCULADO')),
+    estado VARCHAR (30) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN('ACTIVO','SUSPENDIDO','DESVINCULADO')),
     huella_template TEXT,
     saldo_vacaciones INT DEFAULT 30,
     creado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -176,6 +176,7 @@ CREATE TABLE nomina (
     sueldo_base DECIMAL(10,2),
     total_horas_trabajadas DECIMAL(10,2) DEFAULT 0,
     total_horas_extra DECIMAL(10,2) DEFAULT 0,
+    total_horas_extra_asistencia DECIMAL(10,2) DEFAULT 0,
     total_minutos_tardanza INT DEFAULT 0,
     bonif_familiar DECIMAL(10,2) DEFAULT 0,
     bonif_turno_nocturno DECIMAL(10,2) DEFAULT 0,
@@ -265,7 +266,7 @@ CREATE TABLE asignacion_horario (
 
 CREATE TABLE reporte_generado (
     id_reporte SERIAL PRIMARY KEY,
-    tipo_reporte VARCHAR(50) NOT NULL CHECK (tipo_reporte IN ('EMPLEADOS', 'ASISTENCIA', 'NOMINA', 'SOLICITUDES')),
+    tipo_reporte VARCHAR(50) NOT NULL CHECK (tipo_reporte IN ('EMPLEADOS', 'ASISTENCIA', 'NOMINA', 'SOLICITUDES', 'HISTORIAL_LABORAL')),
     filtros_aplicados TEXT,
     total_registros INT DEFAULT 0,
     formato_exportacion VARCHAR(10),
@@ -302,6 +303,102 @@ CREATE TABLE feriado (
     id_feriado SERIAL PRIMARY KEY,
     fecha DATE NOT NULL UNIQUE,
     descripcion VARCHAR(100)
+);
+
+CREATE TABLE historial_version_nomina (
+    id_version SERIAL PRIMARY KEY,
+    id_nomina INT NOT NULL REFERENCES nomina(id_nomina) ON DELETE CASCADE,
+    version INT NOT NULL,
+    sueldo_base DECIMAL(10,2),
+    total_horas_trabajadas DECIMAL(10,2) DEFAULT 0,
+    total_horas_extra DECIMAL(10,2) DEFAULT 0,
+    total_minutos_tardanza INT DEFAULT 0,
+    bonif_familiar DECIMAL(10,2) DEFAULT 0,
+    bonif_turno_nocturno DECIMAL(10,2) DEFAULT 0,
+    bonif_guardia DECIMAL(10,2) DEFAULT 0,
+    bonif_riesgo DECIMAL(10,2) DEFAULT 0,
+    descuento_tardanzas DECIMAL(10,2) DEFAULT 0,
+    descuento_ley DECIMAL(10,2) DEFAULT 0,
+    sueldo_bruto DECIMAL(10,2) DEFAULT 0,
+    sueldo_neto DECIMAL(10,2) NOT NULL,
+    tipo_pension_aplicada VARCHAR(10),
+    reemplazado_por BIGINT REFERENCES usuario(id_usuario),
+    reemplazado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_version_nomina UNIQUE (id_nomina, version)
+);
+
+CREATE TABLE ajuste_nomina_manual (
+    id_ajuste SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    periodo VARCHAR(20) NOT NULL,
+    total_horas_trabajadas DECIMAL(10,2),
+    total_horas_extra DECIMAL(10,2),
+    total_horas_nocturnas DECIMAL(6,2),
+    total_minutos_tardanza INT,
+    tiene_hijos BOOLEAN,
+    cantidad_hijos INT,
+    cantidad_guardias INT,
+    tipo_pension_aplicada VARCHAR(10),
+    actualizado_por BIGINT REFERENCES usuario(id_usuario),
+    actualizado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ajuste_nomina_manual UNIQUE (id_empleado, periodo)
+);
+
+CREATE TABLE plan_recuperacion_tardanza (
+    id_plan SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    id_registro_asistencia INT REFERENCES registro_asistencia(id_registro),
+    minutos_iniciales INT NOT NULL,
+    minutos_pendientes INT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_limite DATE NOT NULL,
+    ultimo_dia_aplicado DATE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    creado_el TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tipo VARCHAR(20) NOT NULL DEFAULT 'TARDANZA',
+    periodo_descuento VARCHAR(7),
+    monto_descuento DECIMAL(12,2) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE nomina_version_anterior (
+    id_version_anterior SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    periodo VARCHAR(20) NOT NULL,
+    version INT,
+    sueldo_base DECIMAL(12,2),
+    total_horas_extra DECIMAL(12,2),
+    total_minutos_tardanza INT,
+    descuento_tardanzas DECIMAL(12,2),
+    descuento_ley DECIMAL(12,2),
+    sueldo_bruto DECIMAL(12,2),
+    sueldo_neto DECIMAL(12,2),
+    tipo_pension_aplicada VARCHAR(10),
+    reemplazada_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_nomina_version_anterior UNIQUE (id_empleado, periodo)
+);
+
+CREATE TABLE historial_ajuste_nomina (
+    id_historial_ajuste SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    periodo VARCHAR(20) NOT NULL,
+    version INT NOT NULL,
+    sueldo_base DECIMAL(10,2),
+    total_horas_trabajadas DECIMAL(10,2),
+    total_horas_extra DECIMAL(10,2),
+    total_minutos_tardanza INT,
+    bonif_familiar DECIMAL(10,2),
+    bonif_turno_nocturno DECIMAL(10,2),
+    bonif_guardia DECIMAL(10,2),
+    bonif_riesgo DECIMAL(10,2),
+    descuento_tardanzas DECIMAL(10,2),
+    descuento_ley DECIMAL(10,2),
+    sueldo_bruto DECIMAL(10,2),
+    sueldo_neto DECIMAL(10,2) NOT NULL,
+    tipo_pension_aplicada VARCHAR(10),
+    reemplazado_por BIGINT,
+    reemplazado_el TIMESTAMP,
+    copiado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_historial_ajuste_nomina UNIQUE (id_empleado, periodo, version, reemplazado_el)
 );
 
 -- =========================
@@ -351,29 +448,6 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_entrada_asistencia BEFORE INSERT ON registro_asistencia
 FOR EACH ROW EXECUTE FUNCTION fn_calcular_tardanza();
-
-CREATE OR REPLACE FUNCTION fn_calcular_extras()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_h_salida_esperada TIME;
-    v_umbral INT;
-    v_minutos_reales INT;
-BEGIN
-    IF NEW.hora_salida IS NULL THEN RETURN NEW; END IF;
-    IF NEW.id_horario IS NULL THEN RETURN NEW; END IF;
-    SELECT hora_salida, umbral_extra INTO v_h_salida_esperada, v_umbral FROM horario WHERE id_horario = NEW.id_horario;
-    v_minutos_reales := EXTRACT(EPOCH FROM (NEW.hora_salida - v_h_salida_esperada)) / 60;
-    IF v_minutos_reales >= v_umbral THEN
-        NEW.minutos_extra := v_minutos_reales;
-    ELSE
-        NEW.minutos_extra := 0;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_salida_asistencia BEFORE UPDATE OF hora_salida ON registro_asistencia
-FOR EACH ROW EXECUTE FUNCTION fn_calcular_extras();
 
 CREATE OR REPLACE FUNCTION fn_timestamp_update()
 RETURNS TRIGGER AS $$

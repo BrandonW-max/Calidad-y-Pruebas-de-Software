@@ -99,6 +99,37 @@ public class NominaRepositoryImpl implements INominaRepository {
         jpaNominaRepository.deleteByPeriodo(periodo);
     }
 
+    @Override
+    public java.math.BigDecimal sumarDescuentosPlanes(Long idEmpleado, String periodo) {
+        return jpaNominaRepository.sumarDescuentosPlanes(idEmpleado, periodo);
+    }
+
+    @Override
+    public void copiarHistorialAjustes(String periodo) {
+        jpaNominaRepository.copiarHistorialAjustes(periodo);
+    }
+
+    @Override
+    public void copiarHistorialAjustesDeEmpleados(String periodo, java.util.List<Long> idsEmpleados) {
+        jpaNominaRepository.copiarHistorialAjustesDeEmpleados(periodo, idsEmpleados);
+    }
+
+    @Override
+    public void guardarVersionAnterior(String periodo) {
+        jpaNominaRepository.guardarVersionAnterior(periodo);
+    }
+
+    @Override
+    public void guardarVersionAnteriorDeEmpleados(String periodo, java.util.List<Long> idsEmpleados) {
+        jpaNominaRepository.guardarVersionAnteriorDeEmpleados(periodo, idsEmpleados);
+    }
+
+    @Override
+    public void eliminarPorPeriodoYEmpleados(String periodo, java.util.List<Long> idsEmpleados) {
+        jpaNominaRepository.deleteDetallesByPeriodoYEmpleados(periodo, idsEmpleados);
+        jpaNominaRepository.deleteByPeriodoYEmpleados(periodo, idsEmpleados);
+    }
+
     private NominaModel mapearAModel(Nomina nomina) {
         NominaModel model = new NominaModel();
         model.setIdNomina(nomina.getIdNomina());
@@ -109,6 +140,7 @@ public class NominaRepositoryImpl implements INominaRepository {
         model.setSueldoBase(nomina.getSueldoBase());
         model.setTotalHorasTrabajadas(nomina.getTotalHorasTrabajadas());
         model.setTotalHorasExtra(nomina.getTotalHorasExtra());
+        model.setTotalHorasExtraAsistencia(nomina.getTotalHorasExtraAsistencia() != null ? nomina.getTotalHorasExtraAsistencia() : java.math.BigDecimal.ZERO);
         model.setTotalMinutosTardanza(nomina.getTotalMinutosTardanza());
         model.setBonifFamiliar(nomina.getBonifFamiliar());
         model.setBonifTurnoNocturno(nomina.getBonifTurnoNocturno());
@@ -154,6 +186,7 @@ public class NominaRepositoryImpl implements INominaRepository {
         nomina.setSueldoBase(model.getSueldoBase());
         nomina.setTotalHorasTrabajadas(model.getTotalHorasTrabajadas());
         nomina.setTotalHorasExtra(model.getTotalHorasExtra());
+        nomina.setTotalHorasExtraAsistencia(model.getTotalHorasExtraAsistencia());
         nomina.setTotalMinutosTardanza(model.getTotalMinutosTardanza());
         nomina.setBonifFamiliar(model.getBonifFamiliar());
         nomina.setBonifTurnoNocturno(model.getBonifTurnoNocturno());

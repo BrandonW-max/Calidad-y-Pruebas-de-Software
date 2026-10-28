@@ -113,6 +113,9 @@ export const getEmpleadosPorHorario = (idHorario) =>
   f(`${BASE}/api/v1/horarios/${idHorario}/empleados`, { headers: h() }).then(json);
 
 // ── DEPARTAMENTOS ─────────────────────────────────────────────────────────────
+export const getCargos = (departamento = "") =>
+  f(`${BASE}/api/v1/departamentos/cargos?departamento=${encodeURIComponent(departamento)}`, { headers: h() }).then(json);
+
 export const getDepartamentos = () =>
   f(`${BASE}/api/v1/departamentos/listar`, { headers: h() }).then(json);
 
@@ -187,6 +190,9 @@ export const listarAsistenciaEmpleado = (idEmpleado) =>
 export const listarJustificacionesPendientes = () =>
   f(`${BASE}/api/v1/asistencia/justificaciones/pendientes`, { headers: h() }).then(json);
 
+export const listarPlanesRecuperacion = (estado = '') =>
+  f(`${BASE}/api/v1/asistencia/planes-recuperacion?estado=${encodeURIComponent(estado)}`, { headers: h() }).then(json);
+
 export const listarJustificacionesPorEstado = (estado) =>
   f(`${BASE}/api/v1/asistencia/justificaciones/estado/${estado}`, { headers: h() }).then(json);
 
@@ -218,14 +224,15 @@ export const revisarJustificacion = (id, decision, comentario = '') =>
 
 // ── NÓMINA ────────────────────────────────────────────────────────────────────
 // ECU-04: calcular nómina por mes y año
-export const calcularNomina = (mes, anio) => {
+export const calcularNomina = (mes, anio, { idDepartamento = null, idEmpleado = null } = {}) => {
   const mesStr = String(mes).padStart(2, '0');
   const anioStr = String(anio);
   const ultimoDia = new Date(Number(anioStr), Number(mesStr), 0).getDate();
   const fechaInicio = `${anioStr}-${mesStr}-01`;
   const fechaFin = `${anioStr}-${mesStr}-${String(ultimoDia).padStart(2, '0')}`;
   return f(`${BASE}/api/v1/nomina/calcular`, {
-    method: 'POST', headers: h(), body: JSON.stringify({ fechaInicio, fechaFin }),
+    method: 'POST', headers: h(),
+    body: JSON.stringify({ fechaInicio, fechaFin, idDepartamento, idEmpleado }),
   }).then(json);
 };
 
@@ -235,6 +242,13 @@ export const getNominasPorPeriodo = (mes, anio) =>
 
 export const getNominasPorEmpleado = (idEmpleado) =>
   f(`${BASE}/api/v1/nomina/empleado/${idEmpleado}`, { headers: h() }).then(json);
+
+// Historial de versiones de una nómina: la vigente primero, luego las anteriores
+export const getVersionesNomina = (id) =>
+  f(`${BASE}/api/v1/nomina/${id}/versiones`, { headers: h() }).then(json);
+
+export const listarHistorialAjustes = () =>
+  f(`${BASE}/api/v1/nomina/historial-ajustes`, { headers: h() }).then(json);
 
 export const enviarComprobante = (id) =>
   f(`${BASE}/api/v1/nomina/${id}/enviar`, {

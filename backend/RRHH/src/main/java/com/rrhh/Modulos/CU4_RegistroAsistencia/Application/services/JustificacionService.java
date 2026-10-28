@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -34,10 +35,10 @@ public class JustificacionService {
             throw new RuntimeException("El registro de asistencia no corresponde al empleado.");
         }
 
-        boolean tardanzaJustificable = r.getMinutosTardanza() != null && r.getMinutosTardanza() >= 60;
+        boolean tardanzaJustificable = r.getMinutosTardanza() != null && r.getMinutosTardanza() >= 10;
         boolean esInasistencia = "INASISTENCIA".equals(r.getEstado());
         if (!tardanzaJustificable && !esInasistencia) {
-            throw new RuntimeException("Solo se pueden justificar tardanzas de una hora o más e inasistencias.");
+            throw new RuntimeException("Solo se pueden justificar tardanzas de 10 minutos o más e inasistencias.");
         }
 
         Long existentes = em.createQuery(
@@ -107,6 +108,11 @@ public class JustificacionService {
         // Si se aprueba: anular la tardanza en el registro de asistencia
         // para que la nómina no descuente esos minutos
         if ("APROBADA".equals(estadoFinal) && r != null) {
+            if (r.getMinutosTardanza() != null && r.getMinutosTardanza() > 0) {
+                crearPlanRecuperacion(j.getIdEmpleado(), j.getIdRegistroAsistencia(), r.getFecha(), "TARDANZA", r.getMinutosTardanza());
+            } else if ("INASISTENCIA".equals(r.getEstado())) {
+                crearPlanRecuperacion(j.getIdEmpleado(), j.getIdRegistroAsistencia(), r.getFecha(), "INASISTENCIA", minutosJornada(j.getIdEmpleado()));
+            }
             r.setMinutosTardanza(0);
             r.setObservacion("Tardanza justificada y aprobada");
             em.merge(r);
@@ -178,5 +184,36 @@ public class JustificacionService {
                 }
             }
         }
+    }
+
+    private int minutosJornada(Long idEmpleado) {
+        List<?> filas = em.createNativeQuery("SELECT h.hora_entrada, h.hora_salida FROM asignacion_horario a "
+                + "JOIN horario h ON h.id_horario = a.id_horario "
+                + "WHERE a.id_empleado = :idEmpleado AND a.activo ORDER BY a.fecha_desde DESC LIMIT 1")
+            .setParameter("idEmpleado", idEmpleado)
+            .getResultList();
+        if (filas.isEmpty()) {
+            return 8 * 60;
+        }
+        Object[] horario = (Object[]) filas.get(0);
+        LocalTime entrada = PlanRecuperacionCalendario.aHora(horario[0]);
+        LocalTime salida = PlanRecuperacionCalendario.aHora(horario[1]);
+        long minutos = java.time.Duration.between(entrada, salida).toMinutes();
+        return (int) (minutos <= 0 ? minutos + 24 * 60 : minutos);
+    }
+
+    private void crearPlanRecuperacion(Long idEmpleado, Integer idRegistro, LocalDate fechaFalta, String tipo, int minutos) {
+        LocalDate inicio = fechaFalta.plusDays(1);
+        LocalDate limite = PlanRecuperacionCalendario.calcularFechaLimite(em, idEmpleado, inicio);
+        em.createNativeQuery("INSERT INTO plan_recuperacion_tardanza "
+                + "(id_empleado, id_registro_asistencia, minutos_iniciales, minutos_pendientes, fecha_inicio, fecha_limite, estado, tipo) "
+                + "VALUES (:idEmpleado, :idRegistro, :minutos, :minutos, :inicio, :limite, 'PENDIENTE', :tipo)")
+            .setParameter("idEmpleado", idEmpleado)
+            .setParameter("idRegistro", idRegistro)
+            .setParameter("tipo", tipo)
+            .setParameter("minutos", minutos)
+            .setParameter("inicio", inicio)
+            .setParameter("limite", limite)
+            .executeUpdate();
     }
 }

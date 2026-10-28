@@ -7,6 +7,10 @@ import {
   enviarComprobante,
   descargarComprobante,
   ajustarNomina,
+  getVersionesNomina,
+  listarHistorialAjustes,
+  getDepartamentos,
+  listarEmpleados,
 } from "../services/api";
 
 const getBonif = (n) =>
@@ -53,23 +57,60 @@ export default function CalculoNomina() {
     return () => clearTimeout(t);
   }, [error]);
   const [enviando,  setEnviando]  = useState({});
+  const [departamentos, setDepartamentos] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [filtroDepartamento, setFiltroDepartamento] = useState("");
+  const [filtroEmpleado, setFiltroEmpleado] = useState("");
+
+  useEffect(() => {
+    getDepartamentos().then(setDepartamentos).catch(() => {});
+    listarEmpleados(0, 200)
+      .then(d => setEmpleados((d?.content ?? []).filter(e => e.estado === "ACTIVO")))
+      .catch(() => {});
+  }, []);
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
   const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [previewNomina, setPreviewNomina] = useState(null);
   const [modalEstructura, setModalEstructura] = useState(null);
+  const [versionesNomina, setVersionesNomina] = useState([]);
+  const [mostrarHistorialAjustes, setMostrarHistorialAjustes] = useState(false);
+  const [historialAjustes, setHistorialAjustes] = useState(null);
+
+  const handleHistorialAjustes = async () => {
+    const abrir = !mostrarHistorialAjustes;
+    setMostrarHistorialAjustes(abrir);
+    if (abrir) {
+      setHistorialAjustes(null);
+      try {
+        setHistorialAjustes(await listarHistorialAjustes());
+      } catch {
+        setHistorialAjustes([]);
+      }
+    }
+  };
   const [datosBase, setDatosBase] = useState({
-    sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0,
+    sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0, ajusteHorasExtra: 0,
     horasNocturnas: 0, minutosLate: 0, tieneHijos: false,
     cantidadHijos: 0, tipoPension: "ONP", cantidadGuardias: 0,
   });
 
+  const cargarVersiones = async (idNomina) => {
+    try {
+      setVersionesNomina(await getVersionesNomina(idNomina));
+    } catch {
+      setVersionesNomina([]);
+    }
+  };
+
   const abrirEstructura = (n) => {
+    cargarVersiones(n.idNomina);
     setModalEstructura(n);
     setDatosBase({
       sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
       horasTrabajadas:  Math.round(Number(n.totalHorasTrabajadas ?? 0) * 10) / 10,
-      horasExtra:       Math.round(Number(n.totalHorasExtra ?? 0) * 10) / 10,
+      horasExtra:       Math.round(Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0) * 10) / 10,
+      ajusteHorasExtra: Math.round((Number(n.totalHorasExtra ?? 0) - Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0)) * 10) / 10,
       horasNocturnas:   Math.round(Number(n.totalHorasNocturnas ?? 0) * 10) / 10,
       minutosLate:      n.totalMinutosTardanza ?? 0,
       tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
@@ -150,7 +191,9 @@ export default function CalculoNomina() {
     setError("");
     setMensaje("");
     try {
-      const data = await calcularNomina(mes, anio);
+      const data = await calcularNomina(mes, anio, filtroEmpleado
+        ? { idEmpleado: Number(filtroEmpleado) }
+        : { idDepartamento: filtroDepartamento ? Number(filtroDepartamento) : null });
       if (Array.isArray(data)) {
         setResultado([...data].sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity)));
         setHistorial(h => {
@@ -242,7 +285,7 @@ export default function CalculoNomina() {
       const actualizada = await ajustarNomina(modalEstructura.idNomina, {
         sueldoBase: datosBase.sueldoBase,
         totalHorasTrabajadas: datosBase.horasTrabajadas,
-        totalHorasExtra: datosBase.horasExtra,
+        totalHorasExtra: datosBase.ajusteHorasExtra,
         totalHorasNocturnas: datosBase.horasNocturnas,
         totalMinutosTardanza: datosBase.minutosLate,
         tieneHijos: datosBase.tieneHijos,
@@ -251,11 +294,13 @@ export default function CalculoNomina() {
         tipoPensionAplicada: datosBase.tipoPension,
       });
       reemplazarNomina(actualizada);
+      cargarVersiones(actualizada.idNomina);
       setDatosBase(p => ({
         ...p,
         sueldoBase: Number(actualizada.sueldoBase ?? p.sueldoBase),
         horasTrabajadas: Number(actualizada.totalHorasTrabajadas ?? p.horasTrabajadas),
-        horasExtra: Number(actualizada.totalHorasExtra ?? p.horasExtra),
+        horasExtra: Number(actualizada.totalHorasExtraAsistencia ?? p.horasExtra),
+        ajusteHorasExtra: Math.round((Number(actualizada.totalHorasExtra ?? 0) - Number(actualizada.totalHorasExtraAsistencia ?? 0)) * 10) / 10,
         horasNocturnas: Number(actualizada.totalHorasNocturnas ?? p.horasNocturnas),
         minutosLate: actualizada.totalMinutosTardanza ?? p.minutosLate,
         tieneHijos: actualizada.tieneHijos ?? p.tieneHijos,
@@ -341,6 +386,23 @@ export default function CalculoNomina() {
                 </div>
               </div>
 
+              <div style={{ padding: "0 20px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Departamento</div>
+                  <select value={filtroDepartamento} onChange={e => setFiltroDepartamento(e.target.value)} disabled={calculando || !!filtroEmpleado} style={{ width: "100%" }}>
+                    <option value="">Todos</option>
+                    {departamentos.map(d => <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Empleado</div>
+                  <select value={filtroEmpleado} onChange={e => setFiltroEmpleado(e.target.value)} disabled={calculando} style={{ width: "100%" }}>
+                    <option value="">Todos</option>
+                    {empleados.map(e => <option key={e.idEmpleado} value={e.idEmpleado}>{e.nombres} {e.apellidos}</option>)}
+                  </select>
+                </div>
+              </div>
+
               {/* Aviso contextual según estado del período */}
               {periodoCalculado && !enVentanaRecalculo && (
                 <div style={{
@@ -391,6 +453,13 @@ export default function CalculoNomina() {
                   style={{ flex: 1, opacity: cargarBloqueado ? 0.45 : 1, cursor: cargarBloqueado ? "not-allowed" : "pointer" }}
                 >
                   {loading || verificando ? "Cargando..." : cargarBloqueado ? "📋 Sin datos aún" : "📋 Cargar Período"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleHistorialAjustes}
+                  style={{ flex: 1 }}
+                >
+                  {mostrarHistorialAjustes ? "📜 Ocultar historial de ajustes" : "📜 Historial de ajustes"}
                 </button>
               </div>
             </div>
@@ -460,6 +529,48 @@ export default function CalculoNomina() {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {mostrarHistorialAjustes && (
+              <div className="section-card asistencia-panel">
+                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+                  <h2 style={{ margin: 0, border: "none", padding: 0 }}>📜 Historial de Ajustes Manuales</h2>
+                </div>
+                <div className="table-wrapper" style={{ overflowX: "auto" }}>
+                  {historialAjustes === null ? (
+                    <p style={{ padding: 14 }}>Cargando...</p>
+                  ) : historialAjustes.length === 0 ? (
+                    <div className="empty-state"><p>No hay ajustes reemplazados todavía.</p></div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: "center" }}>Periodo</th>
+                          <th style={{ textAlign: "center" }}>Empleado</th>
+                          <th style={{ textAlign: "center" }}>Versión</th>
+                          <th style={{ textAlign: "center" }}>Horas extra</th>
+                          <th style={{ textAlign: "center" }}>Tardanza (min)</th>
+                          <th style={{ textAlign: "center" }}>Sueldo neto</th>
+                          <th style={{ textAlign: "center" }}>Reemplazado el</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historialAjustes.map(h => (
+                          <tr key={h.id}>
+                            <td style={{ textAlign: "center" }}>{h.periodo}</td>
+                            <td>{h.empleado}</td>
+                            <td style={{ textAlign: "center" }}>{h.version}</td>
+                            <td style={{ textAlign: "center" }}>{Number(h.totalHorasExtra ?? 0)} h</td>
+                            <td style={{ textAlign: "center" }}>{h.totalMinutosTardanza ?? 0}</td>
+                            <td style={{ textAlign: "center" }}>{fmtS(h.sueldoNeto)}</td>
+                            <td style={{ textAlign: "center" }}>{h.reemplazadoEl ? new Date(h.reemplazadoEl).toLocaleString("es-PE") : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             )}
@@ -610,9 +721,8 @@ export default function CalculoNomina() {
 
         const valorHora = db.sueldoBase > 0 ? db.sueldoBase / 30 / 8 : 0;
         const valorMin  = valorHora / 60;
-        const horasDobles = Math.max(0, db.horasExtra - 2);
-        const horasExtraBase = Math.max(0, Math.min(db.horasExtra, 2));
-        const montoHorasExtra = (horasExtraBase * valorHora * 1.5) + (horasDobles * valorHora * 2);
+        const horasExtraTotal = db.horasExtra + db.ajusteHorasExtra;
+        const montoHorasExtra = horasExtraTotal * valorHora * 1.5;
         const bFam    = db.tieneHijos ? db.sueldoBase * 0.10 * db.cantidadHijos : 0;
         const bNoct   = esNocturno ? db.sueldoBase * 0.35 : 0;
         const bGuard  = esClinico  ? db.cantidadGuardias * 50 : 0;
@@ -628,7 +738,8 @@ export default function CalculoNomina() {
         const resetearValores = () => setDatosBase({
           sueldoBase:       Number(n.sueldoContrato ?? n.sueldoBase ?? 0),
           horasTrabajadas:  r1(n.totalHorasTrabajadas),
-          horasExtra:       r1(n.totalHorasExtra),
+          horasExtra:       r1(n.totalHorasExtraAsistencia ?? n.totalHorasExtra),
+          ajusteHorasExtra: r1(Number(n.totalHorasExtra ?? 0) - Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0)),
           horasNocturnas:   r1(n.totalHorasNocturnas),
           minutosLate:      n.totalMinutosTardanza ?? 0,
           tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
@@ -694,7 +805,7 @@ export default function CalculoNomina() {
         return (
           <div className="modal-overlay" style={{ zIndex: 1100 }}
             onClick={e => e.target === e.currentTarget && setModalEstructura(null)}>
-            <div className="modal-box" style={{ maxWidth: 780, padding: 0, overflow: "hidden", borderRadius: 16 }}>
+            <div className="modal-box" style={{ maxWidth: 1040, padding: 0, overflow: "hidden", borderRadius: 16 }}>
 
               {/* Header */}
               <div style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", color: "#fff", padding: "18px 26px" }}>
@@ -709,7 +820,7 @@ export default function CalculoNomina() {
               </div>
 
               {/* Body: two columns */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", maxHeight: "70vh", overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 250px", maxHeight: "70vh", overflow: "hidden" }}>
 
                 {/* LEFT: Datos ingresados (editable) */}
                 <div style={{ padding: "18px 20px", borderRight: "1px solid #e5e7eb", overflowY: "auto", background: "#fff" }}>
@@ -719,13 +830,14 @@ export default function CalculoNomina() {
                   </div>
 
                   <InputField label="Sueldo Base del contrato (S/)" field="sueldoBase" step="1" disabled />
-                  {datosBase.horasTrabajadas <= 0 && datosBase.horasExtra <= 0 && (
+                  {datosBase.horasTrabajadas <= 0 && datosBase.horasExtra + datosBase.ajusteHorasExtra <= 0 && (
                     <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: "8px 10px", fontSize: 12, color: "#92400e", marginBottom: 10 }}>
                       ⚠️ Sin asistencias registradas en el período: el ajuste pagará el sueldo completo del contrato. Confirme antes de guardar.
                     </div>
                   )}
                   <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
-                  <InputField label="Horas Extra" field="horasExtra" step="0.5" />
+                  <InputField label="Horas Extra (asistencia)" field="horasExtra" step="0.5" disabled />
+                  <InputField label="Horas Extra a sumar (ajuste)" field="ajusteHorasExtra" step="0.5" />
                   <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" disabled={!esNocturno} />
                   <InputField label="Tardanzas (minutos)" field="minutosLate" step="1" parse={v => Math.max(0, parseInt(v) || 0)} />
                   <InputField label="Cantidad de Guardias" field="cantidadGuardias" step="1" parse={v => Math.max(0, parseInt(v) || 0)} disabled={!esClinico} />
@@ -769,7 +881,7 @@ export default function CalculoNomina() {
 
                   <div style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Bonificaciones</div>
                   <CalcRow label="Horas Extra"
-                    formula={`${db.horasExtra}h con 1.5x hasta 2h y 2x restante`}
+                    formula={`${db.horasExtra + db.ajusteHorasExtra}h con 1.5x`}
                     val={montoHorasExtra} />
                   <CalcRow label="Bonif. Familiar"
                     formula={db.tieneHijos && db.cantidadHijos > 0
@@ -811,6 +923,43 @@ export default function CalculoNomina() {
                     </div>
                     <div style={{ color: "#fff", fontWeight: 800, fontSize: 26, lineHeight: 1 }}>{fmt(neto)}</div>
                   </div>
+                </div>
+
+                {/* RIGHT 2: Historial de versiones de la nómina */}
+                <div style={{ padding: "18px 16px", borderLeft: "1px solid #e5e7eb", overflowY: "auto", background: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 14, background: "#7c3aed", borderRadius: 2 }} />
+                    <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c3aed" }}>Versiones</span>
+                  </div>
+
+                  {versionesNomina.length === 0 && (
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>Sin versiones registradas.</div>
+                  )}
+
+                  {versionesNomina.map(v => (
+                    <div key={v.version} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", marginBottom: 8, background: v.vigente ? "#eff6ff" : "#fff" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontWeight: 700 }}>
+                        <span>Versión {v.version}</span>
+                        {v.vigente && (
+                          <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", background: "#2563eb", color: "#fff", borderRadius: 4, padding: "2px 6px" }}>Vigente</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>
+                        {v.reemplazadoEl
+                          ? `Reemplazada el ${new Date(v.reemplazadoEl).toLocaleString("es-PE")}`
+                          : "Versión actual"}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "3px 8px", marginTop: 8, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>
+                        <span style={{ color: "#6b7280" }}>Sueldo base</span><span>{fmt(v.sueldoBase)}</span>
+                        <span style={{ color: "#6b7280" }}>Horas extra</span><span>{Number(v.totalHorasExtra || 0)} h</span>
+                        <span style={{ color: "#6b7280" }}>Tardanza</span><span>{v.totalMinutosTardanza || 0} min</span>
+                        <span style={{ color: "#6b7280" }}>Desc. tardanzas</span><span>{fmt(v.descuentoTardanzas)}</span>
+                        <span style={{ color: "#6b7280" }}>Desc. ley</span><span>{fmt(v.descuentoLey)}</span>
+                        <span style={{ color: "#6b7280" }}>Bruto</span><span>{fmt(v.sueldoBruto)}</span>
+                        <span style={{ fontWeight: 700 }}>Neto</span><span style={{ fontWeight: 700 }}>{fmt(v.sueldoNeto)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

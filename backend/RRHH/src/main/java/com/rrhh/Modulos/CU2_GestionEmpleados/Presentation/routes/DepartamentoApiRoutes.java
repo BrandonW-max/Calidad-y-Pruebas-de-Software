@@ -7,4 +7,5 @@ public class DepartamentoApiRoutes {
     public static final String BASE = "/api/v1/departamentos";
 
     public static final String LISTAR = "/listar";
+    public static final String CARGOS = "/cargos";
 }

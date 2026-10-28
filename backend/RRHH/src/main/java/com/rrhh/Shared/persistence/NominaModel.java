@@ -45,6 +45,9 @@ public class NominaModel {
     @Column(name = "total_horas_extra")
     private BigDecimal totalHorasExtra = BigDecimal.ZERO;
 
+    @Column(name = "total_horas_extra_asistencia")
+    private BigDecimal totalHorasExtraAsistencia = BigDecimal.ZERO;
+
     @Column(name = "total_minutos_tardanza")
     private Integer totalMinutosTardanza = 0;
 
