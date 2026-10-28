@@ -403,6 +403,17 @@ public class AsistenciaService {
 
     private MarcarAsistenciaResponseDTO registrarSalida(RegistroAsistenciaModel registro, LocalTime horaSalida, EmpleadoModel empleado) {
 
+        HorarioModel horario = obtenerHorarioAsignado(empleado);
+        if (horario != null && horario.getHoraEntrada() != null && horario.getHoraSalida() != null
+                && horario.getHoraSalida().isAfter(horario.getHoraEntrada())
+                && horaSalida.isBefore(horario.getHoraSalida())) {
+            return new MarcarAsistenciaResponseDTO(
+                    false,
+                    "Aun no es hora de salida. Tu horario de salida es "
+                            + horario.getHoraSalida().toString().substring(0, 5) + "."
+            );
+        }
+
         registro.setHoraSalida(horaSalida);
         registro.setTipoUltimoRegistro("SALIDA");
 

@@ -2407,11 +2407,17 @@ table tr:hover td { background: #f8fafc; }
   overflow-y: auto;
   border: 0;
   border-radius: 0;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
 }
 
 .asistencia-justificaciones .table-wrapper::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.asistencia-justificaciones .table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
 }
 
 .asistencia-justificaciones table {
