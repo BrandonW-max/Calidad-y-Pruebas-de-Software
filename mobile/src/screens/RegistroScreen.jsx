@@ -185,7 +185,7 @@ const s = StyleSheet.create({
     padding: 14, fontSize: 16, color: '#1e293b', backgroundColor: '#fff',
     marginBottom: 16,
   },
-  inputCode: { fontSize: 24, fontWeight: '700', textAlign: 'center', letterSpacing: 8 },
+  inputCode: { fontSize: 18, fontWeight: '700', textAlign: 'center', letterSpacing: 2 },
   btn:       {
     width: '100%', backgroundColor: '#2563eb', borderRadius: 12,
     padding: 16, alignItems: 'center',

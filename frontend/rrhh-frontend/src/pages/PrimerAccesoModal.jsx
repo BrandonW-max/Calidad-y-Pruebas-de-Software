@@ -178,14 +178,14 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
               Abre <strong>Google Authenticator</strong> o <strong>Authy</strong> y escanea el siguiente código:
             </p>
             {qrSrc && (
-              <div style={{ textAlign: "center", margin: "16px 0" }}>
+              <div style={{ display: "flex", justifyContent: "center", margin: "16px 0" }}>
                 <img src={qrSrc} alt="QR 2FA" style={{ width: 180, height: 180, border: "1px solid #e5e7eb", borderRadius: 8 }} />
               </div>
             )}
             <p style={{ fontSize: 13, color: "#374151", marginBottom: 16 }}>
               Una vez escaneado, haz clic en <strong>Siguiente</strong> para verificar el código.
             </p>
-            <div className="login-modal-actions">
+            <div className="login-modal-actions" style={{ justifyContent: "center" }}>
               <button type="button" className="login-modal-btn-secondary" onClick={() => { liberarQr(); setPaso(PASO.ELECCION); }} disabled={loading}>
                 Atrás
               </button>
@@ -280,7 +280,7 @@ export default function PrimerAccesoModal({ username, onDone, dosFaYaConfigurado
               <button
                 type="submit"
                 className="login-btn"
-                style={{ marginTop: 8 }}
+                style={{ display: "block", margin: "8px auto 0" }}
                 disabled={loading}
               >
                 {loading ? "Guardando..." : "💾 Guardar contraseña e ingresar"}
