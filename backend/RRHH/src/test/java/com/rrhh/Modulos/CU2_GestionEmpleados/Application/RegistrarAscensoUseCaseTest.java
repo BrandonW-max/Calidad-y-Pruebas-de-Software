@@ -48,6 +48,7 @@ class RegistrarAscensoUseCaseTest {
     @Mock RRHHProperties rrhhProperties;
     @Mock Empleado empleado;
     @Mock Contrato contrato;
+    @Mock com.rrhh.Shared.service.CambioSueldoService cambioSueldoService;
 
     private RegistrarAscensoUseCase useCase;
 
@@ -55,7 +56,7 @@ class RegistrarAscensoUseCaseTest {
     void setUp() {
         useCase = new RegistrarAscensoUseCase(
                 empleadoRepository, contratoRepository, usuarioRepository,
-                rolRepository, rolAsignacionService, auditoriaEmpleadoService, rrhhProperties);
+                rolRepository, rolAsignacionService, auditoriaEmpleadoService, rrhhProperties, cambioSueldoService);
 
         when(rrhhProperties.getSalarioMinimo()).thenReturn(SUELDO_MINIMO);
         when(empleadoRepository.findById(ID_EMPLEADO)).thenReturn(empleado);

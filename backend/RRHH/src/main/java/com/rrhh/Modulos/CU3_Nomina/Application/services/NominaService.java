@@ -66,6 +66,8 @@ public class NominaService implements INominaService {
     private final JpaNominaVersionRepository jpaNominaVersionRepository;
     private final JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository;
     private final JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository;
+    private final LiquidacionHorasExtraService liquidacionHorasExtra;
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
 
     public NominaService(
             RRHHProperties rrhhProperties,
@@ -80,8 +82,12 @@ public class NominaService implements INominaService {
             com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepository jpaFamiliaInfoRepository,
             JpaNominaVersionRepository jpaNominaVersionRepository,
             JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository,
-            JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository) {
+            JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository,
+            LiquidacionHorasExtraService liquidacionHorasExtra,
+            com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
         this.rrhhProperties = rrhhProperties;
+        this.liquidacionHorasExtra = liquidacionHorasExtra;
+        this.cambioSueldo = cambioSueldo;
         this.nominaRepository = nominaRepository;
         this.detalleNominaRepository = detalleNominaRepository;
         this.historialRepository = historialRepository;
@@ -130,8 +136,36 @@ public class NominaService implements INominaService {
             .map(EmpleadoModel::getIdEmpleado)
             .collect(Collectors.toList());
 
+        boolean sinFiltro = request.getIdEmpleado() == null && request.getIdDepartamento() == null;
+
+        // Un cambio de sueldo que rige después del inicio del período haría que el período use un sueldo que no le corresponde
+        if (!Boolean.TRUE.equals(request.getConfirmarCambiosSueldo())) {
+            List<Long> conCambio = idsEmpleados.stream()
+                .filter(id -> cambioSueldo.tieneCambioPosteriorAl(id, request.getFechaInicio()))
+                .collect(Collectors.toList());
+            if (!conCambio.isEmpty()) {
+                throw new com.rrhh.Shared.exception.CambioSueldoPendienteException(
+                    "El período " + YearMonth.from(request.getFechaInicio()) + " tiene cambios de sueldo posteriores a su inicio "
+                    + "(empleados: " + conCambio.stream().map(String::valueOf).collect(Collectors.joining(", "))
+                    + "). Confirme para calcularlo igual.");
+            }
+        }
+
+        // Una nómina pagada no se reemplaza: la corrección se hace como ajuste nuevo
+        List<String> pagadas = nominaRepository.buscarPorPeriodo(periodo).stream()
+            .filter(n -> "PAGADA".equals(n.getEstadoPago()))
+            .filter(n -> sinFiltro || idsEmpleados.contains(n.getIdEmpleado()))
+            .map(n -> String.valueOf(n.getIdEmpleado()))
+            .collect(Collectors.toList());
+        if (!pagadas.isEmpty()) {
+            throw new IllegalStateException(
+                "El período " + periodo + " tiene nóminas pagadas (empleados: "
+                + String.join(", ", pagadas) + "). No se pueden recalcular."
+            );
+        }
+
         // Sin filtro se reemplaza todo el período; con filtro solo se recalculan los empleados seleccionados
-        if (request.getIdEmpleado() == null && request.getIdDepartamento() == null) {
+        if (sinFiltro) {
             nominaRepository.copiarHistorialAjustes(periodo);
             nominaRepository.guardarVersionAnterior(periodo);
             nominaRepository.eliminarPorPeriodo(periodo);
@@ -200,18 +234,11 @@ public class NominaService implements INominaService {
                     .divide(BigDecimal.valueOf(30), 4, RoundingMode.HALF_UP)
                     .divide(BigDecimal.valueOf(HORAS_JORNADA_DIARIA), 4, RoundingMode.HALF_UP);
 
-                BigDecimal montoHorasExtra = BigDecimal.ZERO;
-                BigDecimal totalHorasExtra = BigDecimal.ZERO;
-                for (RegistroAsistenciaModel r : registros) {
-                    int minExtra = r.getMinutosExtra() != null ? r.getMinutosExtra() : 0;
-                    if (minExtra > 0) {
-                        BigDecimal horasExtraDia = BigDecimal.valueOf(minExtra)
-                            .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP);
-                        totalHorasExtra = totalHorasExtra.add(horasExtraDia);
-                        montoHorasExtra = montoHorasExtra.add(calcularMontoHorasExtra(horasExtraDia, valorHoraDiaria));
-                    }
-                }
-                montoHorasExtra = montoHorasExtra.setScale(2, RoundingMode.HALF_UP);
+                // Cada registro aporta sus horas extra una sola vez: se liquidan los nuevos y el total sale del libro
+                liquidacionHorasExtra.liquidarAsistencia(empleado.getIdEmpleado(), periodo, registros, idUsuarioRrhh);
+                BigDecimal totalHorasExtra = liquidacionHorasExtra.horasTotales(empleado.getIdEmpleado(), periodo);
+                BigDecimal horasExtraAsistencia = liquidacionHorasExtra.horasAsistencia(empleado.getIdEmpleado(), periodo);
+                BigDecimal montoHorasExtra = calcularMontoHorasExtra(totalHorasExtra, valorHoraDiaria);
 
                 BigDecimal valorMinuto = sueldoBase
                     .divide(BigDecimal.valueOf(30), 4, RoundingMode.HALF_UP)
@@ -293,7 +320,7 @@ public class NominaService implements INominaService {
                 nomina.setSueldoBase(sueldoDevengado); // devengado proporcional a días trabajados
                 nomina.setTotalHorasTrabajadas(totalHorasTrabajadas);
                 nomina.setTotalHorasExtra(totalHorasExtra);
-                nomina.setTotalHorasExtraAsistencia(totalHorasExtra);
+                nomina.setTotalHorasExtraAsistencia(horasExtraAsistencia);
                 nomina.setTotalMinutosTardanza(totalMinutosTardanza);
                 nomina.setBonifFamiliar(bonifFamiliar);
                 nomina.setBonifTurnoNocturno(bonifTurnoNocturno);
@@ -325,8 +352,10 @@ public class NominaService implements INominaService {
 
                 AjusteNominaManualModel ajusteManual = ajustesManuales.get(empleado.getIdEmpleado());
                 if (ajusteManual != null) {
-                    // El ajuste se aplica una sola vez y luego se consume
-                    resultados.add(ajustarNomina(nominaGuardada.getIdNomina(), aDtoAjuste(ajusteManual), idUsuarioRrhh, true));
+                    // Las horas extra del ajuste ya están en el libro de liquidación; aquí solo se reaplican los demás campos
+                    AjustarNominaRequestDTO ajuste = aDtoAjuste(ajusteManual);
+                    ajuste.setTotalHorasExtra(BigDecimal.ZERO);
+                    resultados.add(ajustarNomina(nominaGuardada.getIdNomina(), ajuste, idUsuarioRrhh, true));
                     jpaAjusteNominaManualRepository.delete(ajusteManual);
                 } else {
                     resultados.add(mapearAResponse(nominaGuardada, empleado, contrato.getSueldo()));
@@ -462,6 +491,10 @@ public class NominaService implements INominaService {
     private NominaResponseDTO ajustarNomina(Integer idNomina, AjustarNominaRequestDTO request, Long idUsuarioRrhh, boolean esRecalculo) {
         Nomina nomina = nominaRepository.buscarPorId(idNomina)
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Nomina no encontrada con id: " + idNomina));
+        // Una nómina pagada no se modifica: la corrección se hace en el siguiente período
+        if ("PAGADA".equals(nomina.getEstadoPago())) {
+            throw new IllegalStateException("La nómina " + idNomina + " ya está pagada y no se puede ajustar.");
+        }
 
         ContratoModel contratoActivo = jpaContratoRepository
             .findFirstByEmpleadoIdEmpleadoAndEstado(nomina.getIdEmpleado(), "ACTIVO")
@@ -507,8 +540,13 @@ public class NominaService implements INominaService {
             .filter(r -> r.getHoraEntrada() != null && r.getHoraSalida() != null)
             .count();
         BigDecimal sueldoDevengado = calcularSueldoDevengado(sueldoBase, diasTrabajados);
-        BigDecimal horasExtraAsistencia = calcularTotalHorasExtra(registrosPeriodo);
-        BigDecimal totalHorasExtra = horasExtraAsistencia.add(deltaHorasExtra);
+        // El ajuste de horas extra se registra una sola vez en el libro; después el total sale de lo liquidado
+        if (!esRecalculo && deltaHorasExtra.compareTo(BigDecimal.ZERO) > 0) {
+            liquidacionHorasExtra.registrarAjuste(nomina.getIdEmpleado(), nomina.getPeriodo(), deltaHorasExtra,
+                "Ajuste manual de RRHH", idUsuarioRrhh);
+        }
+        BigDecimal horasExtraAsistencia = liquidacionHorasExtra.horasAsistencia(nomina.getIdEmpleado(), nomina.getPeriodo());
+        BigDecimal totalHorasExtra = liquidacionHorasExtra.horasTotales(nomina.getIdEmpleado(), nomina.getPeriodo());
 
         BigDecimal valorHora = sueldoBase
             .divide(BigDecimal.valueOf(30), 4, RoundingMode.HALF_UP)
@@ -584,6 +622,7 @@ public class NominaService implements INominaService {
 
         Nomina guardada = nominaRepository.guardar(nomina);
 
+        cambioSueldo.registrar(nomina.getIdEmpleado(), LocalDate.now(), sueldoAnteriorContrato, sueldoBase, idUsuarioRrhh);
         contratoActivo.setSueldo(sueldoBase);
         contratoActivo.setTipoPension(tipoPension);
         contratoActivo.setActualizadoEl(LocalDateTime.now());
@@ -615,13 +654,6 @@ public class NominaService implements INominaService {
         return valorHora.multiply(rrhhProperties.getTasaHoraExtra1_5())
                 .multiply(totalHorasExtra)
                 .setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal calcularTotalHorasExtra(List<RegistroAsistenciaModel> registros) {
-        return registros.stream()
-            .map(r -> BigDecimal.valueOf(r.getMinutosExtra() != null ? r.getMinutosExtra() : 0)
-                .divide(BigDecimal.valueOf(MINUTOS_EN_HORA), 2, RoundingMode.HALF_UP))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private boolean esNegativo(BigDecimal valor) {

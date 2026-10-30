@@ -14,7 +14,8 @@ import java.time.YearMonth;
 public class NominaMensualService {
 
     private static final Logger log = LoggerFactory.getLogger(NominaMensualService.class);
-    private static final Long ID_USUARIO_SISTEMA = 1L;
+    @org.springframework.beans.factory.annotation.Value("${sistema.usuario-automatico:1}")
+    private Long idUsuarioSistema = 1L;
 
     private final INominaService nominaService;
     private final INominaRepository nominaRepository;
@@ -39,7 +40,7 @@ public class NominaMensualService {
             CalcularNominaRequestDTO request = new CalcularNominaRequestDTO(
                     periodo.atDay(1), periodo.atEndOfMonth(), null, null);
             try {
-                nominaService.calcularNomina(request, ID_USUARIO_SISTEMA);
+                nominaService.calcularNomina(request, idUsuarioSistema);
                 log.info("Nómina generada automáticamente para el período {}", periodo);
             } catch (RuntimeException e) {
                 log.warn("No se pudo generar la nómina del período {}: {}", periodo, e.getMessage());

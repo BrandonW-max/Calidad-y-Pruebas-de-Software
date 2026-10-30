@@ -34,6 +34,7 @@ class CambioSalarialUseCaseTest {
     @Mock private IUsuarioGestionRepository usuarioRepository;
     @Mock private AuditoriaEmpleadoService auditoriaEmpleadoService;
     @Mock private RRHHProperties rrhhProperties;
+    @Mock private com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
 
     @InjectMocks
     private CambioSalarialUseCase useCase;

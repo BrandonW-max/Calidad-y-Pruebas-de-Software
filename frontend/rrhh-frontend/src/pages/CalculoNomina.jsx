@@ -9,6 +9,7 @@ import {
   ajustarNomina,
   getVersionesNomina,
   listarHistorialAjustes,
+  listarDetalleHorasExtra,
   getDepartamentos,
   listarEmpleados,
 } from "../services/api";
@@ -40,6 +41,8 @@ export default function CalculoNomina() {
   const [calculando, setCalculando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [periodoCalculado, setPeriodoCalculado] = useState(false);
+  // Empleados con nómina PAGADA en el período: no se pueden recalcular
+  const [pagadosIds, setPagadosIds] = useState(() => new Set());
   const [verificando, setVerificando] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [mensaje,   setMensaje]   = useState("");
@@ -76,6 +79,9 @@ export default function CalculoNomina() {
   const [versionesNomina, setVersionesNomina] = useState([]);
   const [mostrarHistorialAjustes, setMostrarHistorialAjustes] = useState(false);
   const [historialAjustes, setHistorialAjustes] = useState(null);
+  const [mostrarDetalleHorasExtra, setMostrarDetalleHorasExtra] = useState(false);
+  const [detalleHorasExtra, setDetalleHorasExtra] = useState(null);
+  const fmtFechaDetalle = (f) => (f ? f.split("-").reverse().join("/") : "");
 
   const handleHistorialAjustes = async () => {
     const abrir = !mostrarHistorialAjustes;
@@ -100,6 +106,16 @@ export default function CalculoNomina() {
       setVersionesNomina(await getVersionesNomina(idNomina));
     } catch {
       setVersionesNomina([]);
+    }
+  };
+
+  const abrirDetalleHorasExtra = async () => {
+    setMostrarDetalleHorasExtra(true);
+    setDetalleHorasExtra(null);
+    try {
+      setDetalleHorasExtra(await listarDetalleHorasExtra(modalEstructura.idEmpleado, modalEstructura.periodo));
+    } catch {
+      setDetalleHorasExtra([]);
     }
   };
 
@@ -140,8 +156,14 @@ export default function CalculoNomina() {
   // En ventana de recálculo: mes actual O cierre del mes anterior
   const enVentanaRecalculo = esMesActual || esMesPrevioY1ro;
 
-  // "Calcular" bloqueado si: futuro, O ya calculado y fuera de ventana
-  const calcularBloqueado = esPeriodoFuturo() || (periodoCalculado && !enVentanaRecalculo);
+  // Fuera de la ventana solo se recalcula a un empleado concreto; el período completo queda cerrado
+  const recalculoIndividual = !!filtroEmpleado;
+
+  // "Calcular" bloqueado si: futuro, O ya calculado y fuera de ventana (salvo recálculo de un empleado)
+  // Con nóminas pagadas: si se recalcula a un empleado, solo bloquea si es él; si no, bloquea el período
+  const hayPagos = recalculoIndividual ? pagadosIds.has(Number(filtroEmpleado)) : pagadosIds.size > 0;
+  const calcularBloqueado = esPeriodoFuturo()
+    || (periodoCalculado && ((!enVentanaRecalculo && !recalculoIndividual) || hayPagos));
 
   // "Cargar" bloqueado si aún no hay nómina calculada
   const cargarBloqueado = !periodoCalculado;
@@ -170,9 +192,11 @@ export default function CalculoNomina() {
           .sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity));
         setResultado(deduped);
         setPeriodoCalculado(true);
+        setPagadosIds(new Set(deduped.filter(n => n.estadoPago === "PAGADA").map(n => Number(n.idEmpleado))));
         setMensaje(`Período ${a}-${m} ya calculado — mostrando ${deduped.length} registros.`);
       } else {
         setPeriodoCalculado(false);
+        setPagadosIds(new Set());
         setResultado(null);
       }
     } catch {
@@ -190,10 +214,19 @@ export default function CalculoNomina() {
     setCalculando(true);
     setError("");
     setMensaje("");
+    const filtro = filtroEmpleado
+      ? { idEmpleado: Number(filtroEmpleado) }
+      : { idDepartamento: filtroDepartamento ? Number(filtroDepartamento) : null };
     try {
-      const data = await calcularNomina(mes, anio, filtroEmpleado
-        ? { idEmpleado: Number(filtroEmpleado) }
-        : { idDepartamento: filtroDepartamento ? Number(filtroDepartamento) : null });
+      let data;
+      try {
+        data = await calcularNomina(mes, anio, filtro);
+      } catch (err) {
+        // Hay un cambio de sueldo posterior al inicio del período: se calcula solo si RRHH lo confirma
+        if (err.errorCode !== "CAMBIO_SUELDO_PENDIENTE") throw err;
+        if (!window.confirm(`${err.message}\n\n¿Calcular de todas formas?`)) return;
+        data = await calcularNomina(mes, anio, { ...filtro, confirmarCambiosSueldo: true });
+      }
       if (Array.isArray(data)) {
         setResultado([...data].sort((a, b) => (a.idNomina ?? Infinity) - (b.idNomina ?? Infinity)));
         setHistorial(h => {
@@ -411,7 +444,11 @@ export default function CalculoNomina() {
                   display: "flex", alignItems: "center", gap: 8, fontSize: 13,
                 }}>
                   <span style={{ fontSize: 18 }}>🔒</span>
-                  <span>Este período <strong>ya fue calculado y cerrado</strong>. Use "Cargar Período" para ver los datos.</span>
+                  {recalculoIndividual ? (
+                    <span>Este período <strong>ya fue calculado y cerrado</strong>. Puede recalcular solo al empleado seleccionado.</span>
+                  ) : (
+                    <span>Este período <strong>ya fue calculado y cerrado</strong>. Use "Cargar Período" para ver los datos, o seleccione un empleado para recalcularlo.</span>
+                  )}
                 </div>
               )}
               {esMesPrevioY1ro && (
@@ -440,7 +477,9 @@ export default function CalculoNomina() {
                   className="btn btn-success"
                   onClick={handleCalcular}
                   disabled={calculando || verificando || calcularBloqueado}
-                  title={calcularBloqueado && !esPeriodoFuturo() ? "Período cerrado. Use Cargar Período para ver los datos." : ""}
+                  title={calcularBloqueado && !esPeriodoFuturo()
+                    ? (hayPagos ? "Hay nóminas pagadas en este cálculo: no se pueden recalcular." : "Período cerrado. Seleccione un empleado para recalcularlo, o use Cargar Período.")
+                    : ""}
                   style={{ flex: 1, opacity: calcularBloqueado ? 0.45 : 1, cursor: calcularBloqueado ? "not-allowed" : "pointer" }}
                 >
                   {calculando ? "Calculando..." : calcularBloqueado ? "🔒 Cálculo bloqueado" : "⚙️ Calcular Nómina"}
@@ -748,16 +787,22 @@ export default function CalculoNomina() {
           cantidadGuardias: n.cantidadGuardias ?? 0,
         });
 
-        const InputField = ({ label, field, step = "0.01", parse, disabled }) => (
+        const InputField = ({ label, field, step = "0.01", parse, disabled, onInfo }) => (
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
-            <input
-              type="number" min="0" step={step}
-              value={db[field]}
-              onChange={e => setDatosBase(p => ({ ...p, [field]: parse ? parse(e.target.value) : Number(e.target.value) }))}
-              disabled={disabled}
-              style={{ width: "100%", padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: disabled ? "#f3f4f6" : "#fff", color: disabled ? "#9ca3af" : "#111827", boxSizing: "border-box", outline: "none" }}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type="number" min="0" step={step}
+                value={db[field]}
+                onChange={e => setDatosBase(p => ({ ...p, [field]: parse ? parse(e.target.value) : Number(e.target.value) }))}
+                disabled={disabled}
+                style={{ width: "100%", padding: onInfo ? "7px 34px 7px 10px" : "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: disabled ? "#f3f4f6" : "#fff", color: disabled ? "#9ca3af" : "#111827", boxSizing: "border-box", outline: "none" }}
+              />
+              {onInfo && (
+                <button type="button" onClick={onInfo} title="Ver desglose por horario"
+                  style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#2563eb", padding: 2 }}>ⓘ</button>
+              )}
+            </div>
           </div>
         );
 
@@ -836,7 +881,7 @@ export default function CalculoNomina() {
                     </div>
                   )}
                   <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
-                  <InputField label="Horas Extra (asistencia)" field="horasExtra" step="0.5" disabled />
+                  <InputField label="Horas Extra (asistencia)" field="horasExtra" step="0.5" disabled onInfo={abrirDetalleHorasExtra} />
                   <InputField label="Horas Extra a sumar (ajuste)" field="ajusteHorasExtra" step="0.5" />
                   <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" disabled={!esNocturno} />
                   <InputField label="Tardanzas (minutos)" field="minutosLate" step="1" parse={v => Math.max(0, parseInt(v) || 0)} />
@@ -974,6 +1019,55 @@ export default function CalculoNomina() {
           </div>
         );
       })()}
+
+      {/* ══ MODAL: DESGLOSE DE HORAS EXTRA ══ */}
+      {mostrarDetalleHorasExtra && (
+        <div className="modal-overlay" style={{ zIndex: 10500 }}
+          onClick={e => e.target === e.currentTarget && setMostrarDetalleHorasExtra(false)}>
+          <div className="modal-box" style={{ maxWidth: 680 }}>
+            <h3 style={{ marginTop: 0 }}>Horas extra por horario</h3>
+            {detalleHorasExtra === null ? (
+              <p>Cargando…</p>
+            ) : detalleHorasExtra.length === 0 ? (
+              <p>Sin horas extra liquidadas en el período.</p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                      <th style={{ padding: "6px 8px" }}>Fechas</th>
+                      <th style={{ padding: "6px 8px" }}>Entrada</th>
+                      <th style={{ padding: "6px 8px" }}>Salida</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Horas extra</th>
+                      <th style={{ padding: "6px 8px" }}>Nota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detalleHorasExtra.map((h, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                        <td style={{ padding: "6px 8px" }}>
+                          {h.tipo === "AJUSTE_MANUAL"
+                            ? "Ajuste manual"
+                            : h.fechaFin && h.fechaFin !== h.fechaInicio
+                              ? `${fmtFechaDetalle(h.fechaInicio)} – ${fmtFechaDetalle(h.fechaFin)}`
+                              : fmtFechaDetalle(h.fechaInicio)}
+                        </td>
+                        <td style={{ padding: "6px 8px" }}>{h.horaEntrada ? h.horaEntrada.slice(0, 5) : "—"}</td>
+                        <td style={{ padding: "6px 8px" }}>{h.horaSalida ? h.horaSalida.slice(0, 5) : "—"}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Number(h.horas).toFixed(2)}</td>
+                        <td style={{ padding: "6px 8px", color: "#6b7280" }}>{h.tieneCorrecciones ? "Corregido" : (h.motivo ?? "")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div style={{ marginTop: 14, textAlign: "right" }}>
+              <button className="btn btn-secondary" onClick={() => setMostrarDetalleHorasExtra(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (

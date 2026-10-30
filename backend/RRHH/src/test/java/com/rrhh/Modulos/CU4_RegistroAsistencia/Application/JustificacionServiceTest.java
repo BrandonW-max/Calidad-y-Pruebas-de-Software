@@ -39,9 +39,9 @@ class JustificacionServiceTest {
     private static final Long    ID_EMPLEADO  = 1L;
 
     private static final String MSG_TARDANZA_MINIMA =
-            "Solo se pueden justificar tardanzas de 10 minutos o más e inasistencias.";
+            "Solo se pueden justificar tardanzas e inasistencias.";
     private static final String MSG_YA_PENDIENTE =
-            "Ya existe una justificación pendiente para este registro.";
+            "Esta marcación ya tiene una justificación pendiente o aprobada.";
     private static final String MSG_PLAZO_VENCIDO =
             "El plazo de justificacion vencio. Solo puedes justificar el mismo dia o el dia siguiente.";
 
@@ -77,13 +77,13 @@ class JustificacionServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 32 — RF18: Tardanza < 10 min → no justificable
+    // Test 32 — RF18: Sin tardanza registrada → no justificable
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 32 — Tardanza de 9 min → no justificable")
-    void tardanzaMenorA10Min_NoJustificable() {
-        RegistroAsistenciaModel registro = registroConTardanza(9, LocalDate.now());
+    @DisplayName("Test 32 — Sin tardanza registrada → no justificable")
+    void sinTardanza_NoJustificable() {
+        RegistroAsistenciaModel registro = registroConTardanza(0, LocalDate.now());
         when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(registro);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -116,7 +116,7 @@ class JustificacionServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 34 — Ya existe justificación pendiente → rechazada")
+    @DisplayName("Test 34 — Ya existe justificación pendiente o aprobada → rechazada")
     void yaExisteJustificacionPendiente_Rechazada() {
         RegistroAsistenciaModel registro = registroConTardanza(90, LocalDate.now());
         when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(registro);

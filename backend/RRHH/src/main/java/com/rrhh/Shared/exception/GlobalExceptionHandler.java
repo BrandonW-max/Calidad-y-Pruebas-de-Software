@@ -125,6 +125,11 @@ public class GlobalExceptionHandler {
         return badRequest("ESTADO_INVALIDO", ex.getMessage());
     }
 
+    @ExceptionHandler(CambioSueldoPendienteException.class)
+    public ResponseEntity<Map<String, Object>> handleCambioSueldoPendiente(CambioSueldoPendienteException ex) {
+        return badRequest("CAMBIO_SUELDO_PENDIENTE", ex.getMessage());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         Map<String, Object> response = new HashMap<>();

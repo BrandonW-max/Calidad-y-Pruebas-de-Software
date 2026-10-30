@@ -35,19 +35,20 @@ public class JustificacionService {
             throw new RuntimeException("El registro de asistencia no corresponde al empleado.");
         }
 
-        boolean tardanzaJustificable = r.getMinutosTardanza() != null && r.getMinutosTardanza() >= 10;
+        boolean tardanzaJustificable = r.getMinutosTardanza() != null && r.getMinutosTardanza() > 0;
         boolean esInasistencia = "INASISTENCIA".equals(r.getEstado());
         if (!tardanzaJustificable && !esInasistencia) {
-            throw new RuntimeException("Solo se pueden justificar tardanzas de 10 minutos o más e inasistencias.");
+            throw new RuntimeException("Solo se pueden justificar tardanzas e inasistencias.");
         }
 
+        // Una marcación se justifica una sola vez: solo una rechazada permite volver a enviar
         Long existentes = em.createQuery(
-                        "SELECT COUNT(j) FROM JustificacionTardanzaModel j WHERE j.idRegistroAsistencia = :idRegistro AND j.estado = 'PENDIENTE'",
+                        "SELECT COUNT(j) FROM JustificacionTardanzaModel j WHERE j.idRegistroAsistencia = :idRegistro AND j.estado <> 'RECHAZADA'",
                         Long.class)
                 .setParameter("idRegistro", idRegistroAsistencia)
                 .getSingleResult();
         if (existentes > 0) {
-            throw new RuntimeException("Ya existe una justificación pendiente para este registro.");
+            throw new RuntimeException("Esta marcación ya tiene una justificación pendiente o aprobada.");
         }
 
         if (motivo != null && motivo.length() > 200) {

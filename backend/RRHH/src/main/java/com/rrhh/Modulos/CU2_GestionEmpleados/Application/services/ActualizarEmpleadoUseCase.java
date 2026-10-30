@@ -35,7 +35,10 @@ public class ActualizarEmpleadoUseCase {
 
     private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    public ActualizarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService) {
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
+
+    public ActualizarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService, com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
+        this.cambioSueldo = cambioSueldo;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.departamentoRepository = departamentoRepository;
@@ -138,7 +141,9 @@ public class ActualizarEmpleadoUseCase {
             }
 
             if (dto.getSueldo() != null && dto.getSueldo().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                java.math.BigDecimal sueldoAnterior = contrato.getSueldo();
                 contrato.cambiarSueldo(dto.getSueldo());
+                cambioSueldo.registrar(idEmpleado, java.time.LocalDate.now(), sueldoAnterior, dto.getSueldo(), null);
                 cambiosContrato += ", sueldo=" + dto.getSueldo();
             }
 

@@ -57,6 +57,8 @@ class AsistenciaServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(asistenciaService, "em", em);
+        // Por defecto la salida se reclama sin que otra marcación la haya registrado
+        when(registroRepository.reclamarSalida(any(), any())).thenReturn(1);
 
         empleado = new EmpleadoModel();
         empleado.setIdEmpleado(1L);
@@ -86,9 +88,9 @@ class AsistenciaServiceTest {
     @DisplayName("Test 21 — Entrada 08:05 dentro de tolerancia → PUNTUAL, tardanza=0")
     void entradaDentroDeTolerancia_Puntual() {
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("CORRECCION"))).thenReturn(Optional.empty());
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.empty());
         when(registroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -108,9 +110,9 @@ class AsistenciaServiceTest {
     @DisplayName("Test 22 — Entrada 08:20 fuera de tolerancia → TARDANZA, tardanza=20")
     void entradaFueraDeTolerancia_Tardanza() {
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("CORRECCION"))).thenReturn(Optional.empty());
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.empty());
         when(registroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -139,9 +141,9 @@ class AsistenciaServiceTest {
         registroExistente.setHoraEntrada(LocalTime.of(8, 0));
 
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("CORRECCION"))).thenReturn(Optional.empty());
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.of(registroExistente));
         when(registroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -165,9 +167,9 @@ class AsistenciaServiceTest {
         registroExistente.setHoraEntrada(LocalTime.of(8, 0));
 
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("CORRECCION"))).thenReturn(Optional.empty());
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.of(registroExistente));
         when(registroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -236,7 +238,7 @@ class AsistenciaServiceTest {
         registroCompleto.setHoraSalida(LocalTime.of(17, 0));
 
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.of(registroCompleto));
 
         MarcarAsistenciaRequestDTO req = new MarcarAsistenciaRequestDTO();
@@ -288,9 +290,9 @@ class AsistenciaServiceTest {
     @DisplayName("Test 31 — registrarManual válido → almacenado correctamente")
     void registrarManual_Valido_Guardado() {
         when(empleadoRepository.findById(ID_EMPLEADO.longValue())).thenReturn(Optional.of(empleado));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("CORRECCION"))).thenReturn(Optional.empty());
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.empty());
         when(registroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -330,7 +332,7 @@ class AsistenciaServiceTest {
 
         RegistroAsistenciaModel existente = new RegistroAsistenciaModel();
         existente.setHoraEntrada(LocalTime.of(8, 0));
-        when(registroRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+        when(registroRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                 eq(ID_EMPLEADO), any(), eq("ORIGINAL"))).thenReturn(Optional.of(existente));
 
         MarcarAsistenciaManualRequestDTO req = new MarcarAsistenciaManualRequestDTO();

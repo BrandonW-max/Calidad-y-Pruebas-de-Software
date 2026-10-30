@@ -224,7 +224,7 @@ export const revisarJustificacion = (id, decision, comentario = '') =>
 
 // ── NÓMINA ────────────────────────────────────────────────────────────────────
 // ECU-04: calcular nómina por mes y año
-export const calcularNomina = (mes, anio, { idDepartamento = null, idEmpleado = null } = {}) => {
+export const calcularNomina = (mes, anio, { idDepartamento = null, idEmpleado = null, confirmarCambiosSueldo = false } = {}) => {
   const mesStr = String(mes).padStart(2, '0');
   const anioStr = String(anio);
   const ultimoDia = new Date(Number(anioStr), Number(mesStr), 0).getDate();
@@ -232,7 +232,7 @@ export const calcularNomina = (mes, anio, { idDepartamento = null, idEmpleado = 
   const fechaFin = `${anioStr}-${mesStr}-${String(ultimoDia).padStart(2, '0')}`;
   return f(`${BASE}/api/v1/nomina/calcular`, {
     method: 'POST', headers: h(),
-    body: JSON.stringify({ fechaInicio, fechaFin, idDepartamento, idEmpleado }),
+    body: JSON.stringify({ fechaInicio, fechaFin, idDepartamento, idEmpleado, confirmarCambiosSueldo }),
   }).then(json);
 };
 
@@ -249,6 +249,9 @@ export const getVersionesNomina = (id) =>
 
 export const listarHistorialAjustes = () =>
   f(`${BASE}/api/v1/nomina/historial-ajustes`, { headers: h() }).then(json);
+
+export const listarDetalleHorasExtra = (idEmpleado, periodo) =>
+  f(`${BASE}/api/v1/nomina/horas-extra-detalle?idEmpleado=${encodeURIComponent(idEmpleado)}&periodo=${encodeURIComponent(periodo)}`, { headers: h() }).then(json);
 
 export const enviarComprobante = (id) =>
   f(`${BASE}/api/v1/nomina/${id}/enviar`, {

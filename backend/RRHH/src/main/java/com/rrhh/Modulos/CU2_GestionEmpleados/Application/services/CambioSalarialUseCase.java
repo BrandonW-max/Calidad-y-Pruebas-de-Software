@@ -30,7 +30,10 @@ public class CambioSalarialUseCase {
 
     private final RRHHProperties rrhhProperties;
 
-    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties) {
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
+
+    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties, com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
+        this.cambioSueldo = cambioSueldo;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.usuarioRepository = usuarioRepository;
@@ -78,6 +81,9 @@ public class CambioSalarialUseCase {
         }
 
         contrato.cambiarSueldo(sueldoNuevo);
+        cambioSueldo.registrar(idEmpleado,
+                dto.getFechaCambio() != null ? dto.getFechaCambio() : java.time.LocalDate.now(),
+                sueldoAnterior, sueldoNuevo, null);
 
         Contrato contratoActualizado =
                 contratoRepository.save(contrato);

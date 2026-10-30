@@ -88,7 +88,7 @@ public class AsistenciaService {
         LocalTime horaActual = LocalTime.now();
 
         Optional<RegistroAsistenciaModel> registroOptional =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                registroAsistenciaRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                         request.getIdEmpleado(), fechaActual, "ORIGINAL");
 
         if (registroOptional.isEmpty()) {
@@ -211,7 +211,7 @@ public class AsistenciaService {
         }
 
         Optional<RegistroAsistenciaModel> registroOptional =
-                registroAsistenciaRepository.findByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
+                registroAsistenciaRepository.findConBloqueoByEmpleado_IdEmpleadoAndFechaAndTipoRegistro(
                         request.getIdEmpleado(), fecha, "ORIGINAL");
 
         RegistroAsistenciaModel registro;
@@ -256,6 +256,12 @@ public class AsistenciaService {
                 registro.setObservacion("Registro manual - Entrada puntual. Motivo: " + motivo);
             }
         } else {
+            // Reclama la salida antes de calcular la recuperación: si otra marcación ya la registró, no se toca nada
+            if (registro.getIdRegistro() != null && registroAsistenciaRepository.reclamarSalida(
+                    registro.getIdRegistro(), request.getFechaHora().toLocalTime()) == 0) {
+                return new MarcarAsistenciaResponseDTO(false,
+                        "Ya existe una salida registrada hoy para este empleado. Use la opcion de correccion para modificarla.");
+            }
             registro.setHoraSalida(request.getFechaHora().toLocalTime());
             registro.setTipoUltimoRegistro("SALIDA");
 
@@ -410,6 +416,11 @@ public class AsistenciaService {
             );
         }
 
+        // Reclama la salida antes de calcular la recuperación: si otra marcación ya la registró, no se toca nada
+        if (registroAsistenciaRepository.reclamarSalida(registro.getIdRegistro(), horaSalida) == 0) {
+            return new MarcarAsistenciaResponseDTO(false,
+                    "Registro duplicado. El empleado ya tiene entrada y salida registradas hoy.");
+        }
         registro.setHoraSalida(horaSalida);
         registro.setTipoUltimoRegistro("SALIDA");
 
@@ -473,26 +484,36 @@ public class AsistenciaService {
                 + "WHERE id_empleado = :idEmpleado AND estado = 'PENDIENTE' "
                 + "AND :fecha BETWEEN fecha_inicio AND fecha_limite "
                 + "AND (ultimo_dia_aplicado IS NULL OR ultimo_dia_aplicado <> :fecha) "
-                + "ORDER BY fecha_inicio")
+                + "ORDER BY fecha_inicio, id_plan FOR UPDATE")
             .setParameter("idEmpleado", idEmpleado)
             .setParameter("fecha", fecha)
             .getResultList();
-        if (planes.isEmpty()) {
-            return 0;
+        // Los minutos cubren primero el plan más antiguo; lo que sobra pasa al siguiente
+        int restante = minutosDespuesDeSalida;
+        int recuperadoTotal = 0;
+        for (Object o : planes) {
+            if (restante <= 0) {
+                break;
+            }
+            Object[] plan = (Object[]) o;
+            int idPlan = ((Number) plan[0]).intValue();
+            int pendientes = ((Number) plan[1]).intValue();
+            int recuperable = PlanRecuperacionCalendario.minutosRecuperables((String) plan[2], restante);
+            int recuperado = Math.min(pendientes, recuperable);
+            if (recuperado == 0) {
+                continue;
+            }
+            int saldo = pendientes - recuperado;
+            em.createNativeQuery("UPDATE plan_recuperacion_tardanza SET minutos_pendientes = :saldo, "
+                    + "ultimo_dia_aplicado = :fecha, estado = :estado WHERE id_plan = :idPlan")
+                .setParameter("saldo", saldo)
+                .setParameter("fecha", fecha)
+                .setParameter("estado", saldo == 0 ? "CUMPLIDO" : "PENDIENTE")
+                .setParameter("idPlan", idPlan)
+                .executeUpdate();
+            restante -= recuperado;
+            recuperadoTotal += recuperado;
         }
-        Object[] plan = (Object[]) planes.get(0);
-        int idPlan = ((Number) plan[0]).intValue();
-        int pendientes = ((Number) plan[1]).intValue();
-        int recuperable = PlanRecuperacionCalendario.minutosRecuperables((String) plan[2], minutosDespuesDeSalida);
-        int recuperado = Math.min(pendientes, recuperable);
-        int saldo = pendientes - recuperado;
-        em.createNativeQuery("UPDATE plan_recuperacion_tardanza SET minutos_pendientes = :saldo, "
-                + "ultimo_dia_aplicado = :fecha, estado = :estado WHERE id_plan = :idPlan")
-            .setParameter("saldo", saldo)
-            .setParameter("fecha", fecha)
-            .setParameter("estado", saldo == 0 ? "CUMPLIDO" : "PENDIENTE")
-            .setParameter("idPlan", idPlan)
-            .executeUpdate();
-        return recuperado;
+        return recuperadoTotal;
     }
 }

@@ -64,6 +64,8 @@ class NominaServiceTest {
     @Mock private JpaNominaVersionRepository jpaNominaVersionRepository;
     @Mock private JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository;
     @Mock private com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository;
+    @Mock private com.rrhh.Modulos.CU3_Nomina.Application.services.LiquidacionHorasExtraService liquidacionHorasExtra;
+    @Mock private com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
 
     @InjectMocks
     private NominaService nominaService;
@@ -95,6 +97,8 @@ class NominaServiceTest {
         when(rrhhProperties.getTasaHoraExtra1_5()).thenReturn(new BigDecimal("1.5"));
         when(rrhhProperties.getTasaHoraExtra2_0()).thenReturn(new BigDecimal("2.0"));
         when(rrhhProperties.getUmbralHorasDobles()).thenReturn(2);
+        when(liquidacionHorasExtra.horasTotales(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(liquidacionHorasExtra.horasAsistencia(any(), any())).thenReturn(BigDecimal.ZERO);
     }
 
     // -----------------------------------------------------------------------
@@ -427,6 +431,130 @@ class NominaServiceTest {
         List<NominaResponseDTO> resultado = nominaService.calcularNomina(req, ID_USUARIO_RRHH);
 
         return resultado.get(0).getBonifTurnoNocturno();
+    }
+
+    // -----------------------------------------------------------------------
+    // Riesgo: recalcular un período con nómina ya PAGADA no debe borrarla
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Recalcular un período con nómina PAGADA lanza excepción y no elimina nada")
+    void recalculo_NominaPagada_NoSeBorra() {
+        LocalDate inicio = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate fin = inicio.plusDays(27);
+        String periodo = java.time.YearMonth.from(inicio).toString();
+
+        Nomina pagada = nominaConId(77);
+        pagada.setPeriodo(periodo);
+        pagada.setEstadoPago("PAGADA");
+        pagada.setIdEmpleado(6L);
+        when(nominaRepository.buscarPorPeriodo(periodo)).thenReturn(List.of(pagada));
+
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(6L);
+        empleado.setNombres("Pagado");
+        empleado.setApellidos("Prueba");
+        empleado.setEstado("ACTIVO");
+
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setSueldo(SUELDO_VALIDO);
+        contrato.setTipoPension("ONP");
+        contrato.setEstado("ACTIVO");
+        contrato.setFechaInicio(inicio.minusMonths(1));
+        empleado.setContratos(List.of(contrato));
+
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+        when(jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+            .thenReturn(List.of(contrato));
+        when(jpaRegistroAsistenciaRepository.findByEmpleadoIdEmpleadoInAndFechaBetween(anyList(), any(), any()))
+            .thenReturn(List.of());
+        when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(anyList())).thenReturn(List.of());
+        when(nominaFactory.crearNominaBase()).thenReturn(new Nomina());
+        when(nominaRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
+        assertThrows(RuntimeException.class, () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+        verify(nominaRepository, never()).eliminarPorPeriodo(anyString());
+        verify(nominaRepository, never()).guardarVersionAnterior(anyString());
+    }
+
+    @Test
+    @DisplayName("Ajustar una nómina PAGADA lanza excepción y no la modifica")
+    void ajuste_NominaPagada_LanzaExcepcion() {
+        Nomina pagada = nominaConId(ID_NOMINA);
+        pagada.setIdEmpleado(6L);
+        pagada.setPeriodo("2026-05");
+        pagada.setEstadoPago("PAGADA");
+        when(nominaRepository.buscarPorId(ID_NOMINA)).thenReturn(Optional.of(pagada));
+
+        AjustarNominaRequestDTO req = new AjustarNominaRequestDTO();
+        req.setTotalHorasExtra(new BigDecimal("2"));
+        req.setTipoPensionAplicada("ONP");
+
+        assertThrows(IllegalStateException.class, () -> nominaService.ajustarNomina(ID_NOMINA, req, ID_USUARIO_RRHH));
+        verify(nominaRepository, never()).guardar(any());
+        verify(jpaAjusteNominaManualRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cambio de sueldo posterior al inicio del período: no calcula sin confirmación")
+    void cambioSueldoPosterior_SinConfirmacion_Bloquea() {
+        LocalDate inicio = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate fin = inicio.plusDays(27);
+        when(cambioSueldo.tieneCambioPosteriorAl(eq(6L), any())).thenReturn(true);
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(6L);
+        empleado.setNombres("Cambio");
+        empleado.setApellidos("Sueldo");
+        empleado.setEstado("ACTIVO");
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setSueldo(SUELDO_VALIDO);
+        contrato.setTipoPension("ONP");
+        contrato.setEstado("ACTIVO");
+        contrato.setFechaInicio(inicio.minusMonths(1));
+        empleado.setContratos(List.of(contrato));
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+        when(jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+            .thenReturn(List.of(contrato));
+
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
+        assertThrows(com.rrhh.Shared.exception.CambioSueldoPendienteException.class,
+                () -> nominaService.calcularNomina(req, ID_USUARIO_RRHH));
+        verify(nominaRepository, never()).eliminarPorPeriodo(anyString());
+    }
+
+    @Test
+    @DisplayName("Cambio de sueldo posterior al inicio del período: con confirmación sí calcula")
+    void cambioSueldoPosterior_ConConfirmacion_Calcula() {
+        LocalDate inicio = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate fin = inicio.plusDays(27);
+        when(cambioSueldo.tieneCambioPosteriorAl(eq(6L), any())).thenReturn(true);
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(6L);
+        empleado.setNombres("Cambio");
+        empleado.setApellidos("Sueldo");
+        empleado.setEstado("ACTIVO");
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setSueldo(SUELDO_VALIDO);
+        contrato.setTipoPension("ONP");
+        contrato.setEstado("ACTIVO");
+        contrato.setFechaInicio(inicio.minusMonths(1));
+        empleado.setContratos(List.of(contrato));
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+        when(jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+            .thenReturn(List.of(contrato));
+        when(jpaRegistroAsistenciaRepository.findByEmpleadoIdEmpleadoInAndFechaBetween(anyList(), any(), any()))
+            .thenReturn(List.of());
+        when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(anyList())).thenReturn(List.of());
+        when(nominaFactory.crearNominaBase()).thenReturn(new Nomina());
+        when(nominaRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
+        req.setConfirmarCambiosSueldo(true);
+        assertEquals(1, nominaService.calcularNomina(req, ID_USUARIO_RRHH).size());
     }
 
     // -----------------------------------------------------------------------

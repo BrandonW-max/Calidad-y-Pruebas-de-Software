@@ -106,6 +106,29 @@ function VistaEmpleado() {
   const [justifFile,   setJustifFile]   = useState(null);
   const [evidenciaPreview, setEvidenciaPreview] = useState("");
   const [justifSaving, setJustifSaving] = useState(false);
+  // Fecha local (no UTC): de noche en Lima, UTC ya marca el día siguiente
+  const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const [fechaJustif, setFechaJustif] = useState(hoyISO);
+  const [idRegistroElegido, setIdRegistroElegido] = useState(null);
+  // Marcaciones de una fecha que sí se pueden justificar: tardanza, o inasistencia,
+  // y que no tengan ya una justificación pendiente o aprobada
+  const justificadas = new Set(
+    justificaciones.filter(j => j.estado !== "RECHAZADA").map(j => j.idRegistroAsistencia)
+  );
+  const justificablesDe = (fecha) => historial.filter(r =>
+    r.fecha === fecha && (r.minutosTardanza > 0 || r.estado === "INASISTENCIA") && !justificadas.has(r.idRegistro)
+  );
+  const opcionesJustif = justificablesDe(fechaJustif);
+  const textoMarcacion = (r) => {
+    const hora = (h) => (h ? String(h).slice(0, 5) : "—");
+    const incidencia = r.estado === "INASISTENCIA" ? "Inasistencia" : `Tardanza ${r.minutosTardanza} min`;
+    return `Entrada ${hora(r.horaEntrada)} · Salida ${hora(r.horaSalida)} · ${incidencia}`;
+  };
+  // Si solo hay una marcación justificable, queda preseleccionada; si hay varias, el empleado elige
+  useEffect(() => {
+    const opciones = justificablesDe(fechaJustif);
+    setIdRegistroElegido(opciones.length === 1 ? opciones[0].idRegistro : null);
+  }, [fechaJustif, historial, justificaciones]);
 
   const cerrarModalJustif = () => {
     setModalJustificar({ open: false, justificacion: null });
@@ -230,7 +253,7 @@ function VistaEmpleado() {
   };
 
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 10 || r.estado === "INASISTENCIA"
+    r.minutosTardanza > 0 || r.estado === "INASISTENCIA"
   );
 
   return (
@@ -351,7 +374,7 @@ function VistaEmpleado() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 10 minutos o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes tardanza o inasistencia" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -403,7 +426,7 @@ function VistaEmpleado() {
                       </tr>
                     ) : justificaciones.map((j) => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>
@@ -463,10 +486,11 @@ function VistaEmpleado() {
             <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
-              const fechaSel = fd.get("fechaIncidencia");
-              const registro = historial.find(r => r.fecha === fechaSel);
-              if (!registro?.idRegistro) {
-                setError("No se encontró registro de asistencia para esa fecha. Verifica tu historial.");
+              const registro = opcionesJustif.find(r => r.idRegistro === idRegistroElegido);
+              if (!registro) {
+                setError(opcionesJustif.length === 0
+                  ? "No hay marcaciones justificables en esa fecha."
+                  : "Seleccione la marcación que desea justificar.");
                 return;
               }
               setJustifSaving(true); setMensaje(""); setError("");
@@ -485,6 +509,7 @@ function VistaEmpleado() {
                 });
                 setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
                 setEvidenciaPreview("");
+                setFechaJustif(hoyISO());
                 e.target.reset();
                 setTabActiva("justificaciones");
                 cargarJustificaciones();
@@ -492,14 +517,34 @@ function VistaEmpleado() {
                 setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
               } finally { setJustifSaving(false); }
             }}
-            onReset={() => setEvidenciaPreview("")}>
+            onReset={() => { setEvidenciaPreview(""); setFechaJustif(hoyISO()); }}>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Fecha de la incidencia *</label>
                   <input type="date" name="fechaIncidencia"
-                    max={new Date().toISOString().split("T")[0]}
-                    defaultValue={new Date().toISOString().split("T")[0]} required />
+                    max={hoyISO()} value={fechaJustif}
+                    onChange={e => setFechaJustif(e.target.value)} required />
                 </div>
+                {opcionesJustif.length === 0 && fechaJustif && (
+                  <div className="form-group form-full">
+                    <div className="alert alert-info">No hay marcaciones justificables en esa fecha: sin tardanza, sin inasistencia, o ya justificadas.</div>
+                  </div>
+                )}
+                {opcionesJustif.length > 1 && (
+                  <div className="form-group form-full">
+                    <label>Marcación a justificar *</label>
+                    {opcionesJustif.map(r => (
+                      <label key={r.idRegistro}
+                        style={{ display: "block", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 6, cursor: "pointer" }}>
+                        <input type="radio" name="registroJustif" value={r.idRegistro}
+                          checked={idRegistroElegido === r.idRegistro}
+                          onChange={() => setIdRegistroElegido(r.idRegistro)}
+                          style={{ marginRight: 8 }} />
+                        {textoMarcacion(r)}
+                      </label>
+                    ))}
+                  </div>
+                )}
                 <div className="form-group form-full">
                   <label>Motivo de la justificación *</label>
                   <textarea name="motivo" rows={4}
@@ -528,7 +573,7 @@ function VistaEmpleado() {
         ) : (
           <div className="section-card">
             <div className="alert alert-info">
-              📋 Para justificar necesitas al menos 10 minutos de tardanza o una inasistencia en tu historial.
+              📋 Para justificar necesitas al menos una tardanza o una inasistencia en tu historial.
             </div>
           </div>
         ))}
@@ -1628,7 +1673,7 @@ function VistaGerencia() {
   const horaStr  = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   const fechaCorta = hora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 10 || r.estado === "INASISTENCIA"
+    r.minutosTardanza > 0 || r.estado === "INASISTENCIA"
   );
 
   const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADA: "badge-success", RECHAZADA: "badge-danger" }[estado] ?? "badge-gray");
@@ -1724,7 +1769,7 @@ function VistaGerencia() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 10 minutos o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes tardanza o inasistencia" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -1762,7 +1807,7 @@ function VistaGerencia() {
                       <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No tienes justificaciones pendientes</p></div></td></tr>
                     ) : justificaciones.map(j => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>{j.evidenciaUrl ? <span>📎 1 archivo</span> : <span style={{ color: "var(--text-3)" }}>-</span>}</td>
@@ -1830,7 +1875,7 @@ function VistaGerencia() {
             </div>
           ) : (
             <div className="section-card">
-              <div className="alert alert-info">📋 Para justificar necesitas al menos 10 minutos de tardanza en tu registro de hoy.</div>
+              <div className="alert alert-info">📋 Para justificar necesitas al menos una tardanza en tu registro de hoy.</div>
             </div>
           )
         )}

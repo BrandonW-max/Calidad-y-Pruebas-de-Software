@@ -468,3 +468,39 @@ CREATE TABLE dispositivo_empleado (
     registrado_el  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (id_empleado)
 );
+
+-- Libro de horas extra liquidadas: cada registro de asistencia aporta sus minutos una vez.
+-- Los cambios posteriores se guardan como CORRECCION (diferencia) y los ajustes manuales como AJUSTE_MANUAL.
+CREATE TABLE horas_extra_liquidada (
+    id_liquidacion SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    periodo VARCHAR(7) NOT NULL,
+    id_registro INT REFERENCES registro_asistencia(id_registro),
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('ASISTENCIA', 'CORRECCION', 'AJUSTE_MANUAL')),
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    hora_entrada TIME,
+    hora_salida TIME,
+    minutos INT NOT NULL,
+    motivo VARCHAR(255),
+    liquidado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    liquidado_por BIGINT REFERENCES usuario(id_usuario),
+    CHECK ((tipo = 'AJUSTE_MANUAL') = (id_registro IS NULL))
+);
+
+CREATE INDEX ix_horas_extra_empleado_periodo ON horas_extra_liquidada(id_empleado, periodo);
+CREATE INDEX ix_horas_extra_registro ON horas_extra_liquidada(id_registro);
+
+-- Historial de cambios de sueldo con la fecha desde la que rigen.
+-- La nómina la usa para no calcular períodos anteriores con un sueldo que todavía no les correspondía.
+CREATE TABLE cambio_sueldo (
+    id_cambio SERIAL PRIMARY KEY,
+    id_empleado BIGINT NOT NULL REFERENCES empleado(id_empleado),
+    fecha_efectiva DATE NOT NULL,
+    sueldo_anterior DECIMAL(10,2),
+    sueldo_nuevo DECIMAL(10,2) NOT NULL,
+    registrado_por BIGINT REFERENCES usuario(id_usuario),
+    registrado_el TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_cambio_sueldo_empleado_fecha ON cambio_sueldo(id_empleado, fecha_efectiva);

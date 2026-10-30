@@ -47,13 +47,14 @@ class ActualizarEmpleadoUseCaseTest {
     @Mock Contrato contrato;
     @Mock UsuarioGestion usuario;
     @Mock Rol rol;
+    @Mock com.rrhh.Shared.service.CambioSueldoService cambioSueldoService;
 
     private ActualizarEmpleadoUseCase useCase;
 
     @BeforeEach
     void setUp() {
         useCase = new ActualizarEmpleadoUseCase(empleadoRepository, contratoRepository, departamentoRepository,
-                usuarioRepository, rolRepository, rolAsignacionService, auditoriaEmpleadoService);
+                usuarioRepository, rolRepository, rolAsignacionService, auditoriaEmpleadoService, cambioSueldoService);
 
         when(empleadoRepository.findById(ID_EMPLEADO)).thenReturn(empleado);
         when(empleado.puedeSerEditado()).thenReturn(true);

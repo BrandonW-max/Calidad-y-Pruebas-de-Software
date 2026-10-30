@@ -39,7 +39,10 @@ public class RegistrarAscensoUseCase {
 
     private final RRHHProperties rrhhProperties;
 
-    public RegistrarAscensoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties) {
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
+
+    public RegistrarAscensoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties, com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
+        this.cambioSueldo = cambioSueldo;
         this.rrhhProperties = rrhhProperties;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
@@ -109,6 +112,9 @@ public class RegistrarAscensoUseCase {
         if (dto.getNuevoSueldo() != null
                 && (sueldoAnterior == null || sueldoAnterior.compareTo(dto.getNuevoSueldo()) != 0)) {
             contrato.cambiarSueldo(dto.getNuevoSueldo());
+            cambioSueldo.registrar(idEmpleado,
+                    dto.getFechaAscenso() != null ? dto.getFechaAscenso() : java.time.LocalDate.now(),
+                    sueldoAnterior, dto.getNuevoSueldo(), null);
         }
 
         Contrato contratoActualizado =
