@@ -1525,7 +1525,7 @@ INSERT INTO nomina (
     bonif_familiar, bonif_turno_nocturno, bonif_guardia, bonif_riesgo, bonif_cargo,
     descuento_tardanzas, descuento_ley, asignacion_familiar,
     sueldo_bruto, sueldo_neto,
-    cantidad_hijos, tiene_hijos, cantidad_guardias, total_horas_nocturnas,
+    cantidad_hijos, tiene_hijos, cantidad_guardias,
     tipo_pension_aplicada, estado_pago, version,
     id_empleado, calculado_por
 )
@@ -1539,7 +1539,7 @@ SELECT
     ROUND(cb.bruto * 0.13, 2),
     0.00, cb.bruto,
     ROUND(cb.bruto - cb.desc_tardanzas - ROUND(cb.bruto * 0.13, 2), 2),
-    0, false, cb.dias_lab, 0.00,
+    0, false, cb.dias_lab,
     'ONP', 'PAGADA', 1,
     cb.id_empleado,
     (SELECT u.id_usuario FROM usuario u
@@ -1551,3 +1551,10 @@ WHERE NOT EXISTS (
     SELECT 1 FROM nomina n
     WHERE n.id_empleado = cb.id_empleado AND n.periodo = cb.periodo
 );
+
+-- Cuenta propia del sistema: firma los cálculos automáticos de nómina (cierre de mes y mensual).
+-- No inicia sesión (inactiva, bloqueada, contraseña que no es un hash válido) y no pertenece a ninguna persona.
+INSERT INTO usuario(nombre_usuario, correo_inst, contrasenia, intentos_fallidos, cuenta_bloqueada, fecha_bloqueo, dosfa_activo, dosfa_secret, activo, id_empleado, id_rol, creado_el, actualizado_el)
+SELECT 'sistema.automatico', 'sistema.automatico@hospitalsangabriel.com', '!', 0, true, NULL, false, NULL, false, NULL, r.id_rol, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM rol r WHERE r.nombre_rol = 'EMPLEADO'
+  AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.nombre_usuario = 'sistema.automatico');

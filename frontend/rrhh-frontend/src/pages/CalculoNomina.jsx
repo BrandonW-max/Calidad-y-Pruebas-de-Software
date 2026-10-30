@@ -10,6 +10,7 @@ import {
   getVersionesNomina,
   listarHistorialAjustes,
   listarDetalleHorasExtra,
+  obtenerUmbralHorasDobles,
   getDepartamentos,
   listarEmpleados,
 } from "../services/api";
@@ -81,6 +82,8 @@ export default function CalculoNomina() {
   const [historialAjustes, setHistorialAjustes] = useState(null);
   const [mostrarDetalleHorasExtra, setMostrarDetalleHorasExtra] = useState(false);
   const [detalleHorasExtra, setDetalleHorasExtra] = useState(null);
+  const [umbralHorasDobles, setUmbralHorasDobles] = useState(null);
+  const [horasExtraError, setHorasExtraError] = useState(false);
   const fmtFechaDetalle = (f) => (f ? f.split("-").reverse().join("/") : "");
 
   const handleHistorialAjustes = async () => {
@@ -97,8 +100,8 @@ export default function CalculoNomina() {
   };
   const [datosBase, setDatosBase] = useState({
     sueldoBase: 0, horasTrabajadas: 0, horasExtra: 0, ajusteHorasExtra: 0,
-    horasNocturnas: 0, minutosLate: 0, tieneHijos: false,
-    cantidadHijos: 0, tipoPension: "ONP", cantidadGuardias: 0,
+    minutosLate: 0,
+    tipoPension: "ONP", cantidadGuardias: 0,
   });
 
   const cargarVersiones = async (idNomina) => {
@@ -116,10 +119,11 @@ export default function CalculoNomina() {
       setDetalleHorasExtra(await listarDetalleHorasExtra(modalEstructura.idEmpleado, modalEstructura.periodo));
     } catch {
       setDetalleHorasExtra([]);
+      falloHorasExtra("No se pudo cargar el detalle de horas extra por turno.");
     }
   };
 
-  const abrirEstructura = (n) => {
+  const abrirEstructura = async (n) => {
     cargarVersiones(n.idNomina);
     setModalEstructura(n);
     setDatosBase({
@@ -127,13 +131,34 @@ export default function CalculoNomina() {
       horasTrabajadas:  Math.round(Number(n.totalHorasTrabajadas ?? 0) * 10) / 10,
       horasExtra:       Math.round(Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0) * 10) / 10,
       ajusteHorasExtra: Math.round((Number(n.totalHorasExtra ?? 0) - Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0)) * 10) / 10,
-      horasNocturnas:   Math.round(Number(n.totalHorasNocturnas ?? 0) * 10) / 10,
       minutosLate:      n.totalMinutosTardanza ?? 0,
-      tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
-      cantidadHijos:    n.cantidadHijos ?? 0,
       tipoPension:      n.tipoPensionAplicada ?? "ONP",
       cantidadGuardias: n.cantidadGuardias ?? 0,
     });
+    // El detalle por turno alimenta la vista previa de horas extra
+    setDetalleHorasExtra(null);
+    setUmbralHorasDobles(null);
+    setHorasExtraError(false);
+    const [detalle, umbral] = await Promise.allSettled([
+      listarDetalleHorasExtra(n.idEmpleado, n.periodo),
+      obtenerUmbralHorasDobles(),
+    ]);
+    setDetalleHorasExtra(detalle.status === "fulfilled" ? detalle.value : []);
+    if (umbral.status === "fulfilled") setUmbralHorasDobles(umbral.value.umbralHorasDobles);
+    const fallosDetalle = detalle.status === "rejected";
+    const fallosUmbral = umbral.status === "rejected";
+    if (fallosDetalle && fallosUmbral) {
+      falloHorasExtra("No se pudo cargar el detalle de horas extra por turno ni el umbral de horas dobles. Revise la conexión con el servidor y vuelva a abrir el formulario.");
+    } else if (fallosDetalle) {
+      falloHorasExtra("No se pudo cargar el detalle de horas extra por turno. Cierre y vuelva a abrir el formulario.");
+    } else if (fallosUmbral) {
+      falloHorasExtra("No se pudo cargar el umbral de horas dobles. Cierre y vuelva a abrir el formulario.");
+    }
+  };
+
+  const falloHorasExtra = (message) => {
+    setHorasExtraError(true);
+    setErrorModal({ open: true, message });
   };
 
   const periodo = `${anio}-${mes}`;
@@ -319,25 +344,22 @@ export default function CalculoNomina() {
         sueldoBase: datosBase.sueldoBase,
         totalHorasTrabajadas: datosBase.horasTrabajadas,
         totalHorasExtra: datosBase.ajusteHorasExtra,
-        totalHorasNocturnas: datosBase.horasNocturnas,
         totalMinutosTardanza: datosBase.minutosLate,
-        tieneHijos: datosBase.tieneHijos,
-        cantidadHijos: datosBase.cantidadHijos,
         cantidadGuardias: datosBase.cantidadGuardias,
         tipoPensionAplicada: datosBase.tipoPension,
       });
       reemplazarNomina(actualizada);
       cargarVersiones(actualizada.idNomina);
+      listarDetalleHorasExtra(modalEstructura.idEmpleado, modalEstructura.periodo)
+        .then(setDetalleHorasExtra)
+        .catch(() => falloHorasExtra("No se pudo actualizar el detalle de horas extra por turno."));
       setDatosBase(p => ({
         ...p,
         sueldoBase: Number(actualizada.sueldoBase ?? p.sueldoBase),
         horasTrabajadas: Number(actualizada.totalHorasTrabajadas ?? p.horasTrabajadas),
         horasExtra: Number(actualizada.totalHorasExtraAsistencia ?? p.horasExtra),
         ajusteHorasExtra: Math.round((Number(actualizada.totalHorasExtra ?? 0) - Number(actualizada.totalHorasExtraAsistencia ?? 0)) * 10) / 10,
-        horasNocturnas: Number(actualizada.totalHorasNocturnas ?? p.horasNocturnas),
         minutosLate: actualizada.totalMinutosTardanza ?? p.minutosLate,
-        tieneHijos: actualizada.tieneHijos ?? p.tieneHijos,
-        cantidadHijos: actualizada.cantidadHijos ?? p.cantidadHijos,
         cantidadGuardias: actualizada.cantidadGuardias ?? p.cantidadGuardias,
         tipoPension: actualizada.tipoPensionAplicada ?? p.tipoPension,
       }));
@@ -760,14 +782,32 @@ export default function CalculoNomina() {
 
         const valorHora = db.sueldoBase > 0 ? db.sueldoBase / 30 / 8 : 0;
         const valorMin  = valorHora / 60;
+        // Igual que el backend (RNF46): cada turno y cada ajuste paga 1.5x hasta el umbral de horas dobles y 2.0x después
+        const horasExtraListas = detalleHorasExtra !== null && umbralHorasDobles !== null;
+        const horasExtraNoDisponibles = horasExtraError;
         const horasExtraTotal = db.horasExtra + db.ajusteHorasExtra;
-        const montoHorasExtra = horasExtraTotal * valorHora * 1.5;
-        const bFam    = db.tieneHijos ? db.sueldoBase * 0.10 * db.cantidadHijos : 0;
-        const bNoct   = esNocturno ? db.sueldoBase * 0.35 : 0;
+        const horasAjusteGuardadas = (detalleHorasExtra ?? [])
+          .filter(h => h.tipo === "AJUSTE_MANUAL")
+          .reduce((s, h) => s + Number(h.horas || 0), 0);
+        // Horas de ajuste escritas en el formulario y aún no guardadas: son un bloque nuevo, como en el backend
+        const horasAjusteNuevas = Math.max(0, Math.round((db.ajusteHorasExtra - horasAjusteGuardadas) * 100) / 100);
+        const bloquesHorasExtra = [
+          ...(detalleHorasExtra ?? []).map(h => Number(h.horas || 0)),
+          horasAjusteNuevas,
+        ].filter(h => h > 0);
+        const montoHorasExtra = !horasExtraListas || horasExtraNoDisponibles ? 0 : bloquesHorasExtra.reduce(
+          (s, h) => s + valorHora * (Math.min(h, umbralHorasDobles) * 1.5 + Math.max(0, h - umbralHorasDobles) * 2.0),
+          0);
+        // La asignación familiar la calcula el backend desde la familia del empleado (no es editable aquí)
+        const bFam    = Number(n.bonifFamiliar ?? 0);
+        // Igual que el backend: nocturno, riesgo y cargo sobre el sueldo devengado del período; el cargo viene calculado
+        const sueldoDevengado = Number(n.sueldoBase ?? 0);
+        const bNoct   = esNocturno ? sueldoDevengado * 0.15 : 0;
         const bGuard  = esClinico  ? db.cantidadGuardias * 50 : 0;
-        const bRiesgo = esClinico  ? db.sueldoBase * 0.10 : 0;
+        const bRiesgo = esClinico  ? sueldoDevengado * 0.10 : 0;
+        const bCargo  = Number(n.bonifCargo ?? 0);
         const descTard = valorMin * db.minutosLate;
-        const bruto   = db.sueldoBase + montoHorasExtra + bFam + bNoct + bGuard + bRiesgo;
+        const bruto   = sueldoDevengado + montoHorasExtra + bFam + bNoct + bGuard + bRiesgo + bCargo;
         const tasa    = db.tipoPension === "AFP" ? 0.12 : 0.13;
         const descLey = bruto * tasa;
         const neto    = Math.max(0, bruto - descTard - descLey);
@@ -779,10 +819,7 @@ export default function CalculoNomina() {
           horasTrabajadas:  r1(n.totalHorasTrabajadas),
           horasExtra:       r1(n.totalHorasExtraAsistencia ?? n.totalHorasExtra),
           ajusteHorasExtra: r1(Number(n.totalHorasExtra ?? 0) - Number(n.totalHorasExtraAsistencia ?? n.totalHorasExtra ?? 0)),
-          horasNocturnas:   r1(n.totalHorasNocturnas),
           minutosLate:      n.totalMinutosTardanza ?? 0,
-          tieneHijos:       n.tieneHijos ?? (Number(n.cantidadHijos) > 0),
-          cantidadHijos:    n.cantidadHijos ?? 0,
           tipoPension:      n.tipoPensionAplicada ?? "ONP",
           cantidadGuardias: n.cantidadGuardias ?? 0,
         });
@@ -883,26 +920,8 @@ export default function CalculoNomina() {
                   <InputField label="Horas Trabajadas" field="horasTrabajadas" step="0.5" />
                   <InputField label="Horas Extra (asistencia)" field="horasExtra" step="0.5" disabled onInfo={abrirDetalleHorasExtra} />
                   <InputField label="Horas Extra a sumar (ajuste)" field="ajusteHorasExtra" step="0.5" />
-                  <InputField label="Horas Nocturnas" field="horasNocturnas" step="0.5" disabled={!esNocturno} />
                   <InputField label="Tardanzas (minutos)" field="minutosLate" step="1" parse={v => Math.max(0, parseInt(v) || 0)} />
                   <InputField label="Cantidad de Guardias" field="cantidadGuardias" step="1" parse={v => Math.max(0, parseInt(v) || 0)} disabled={!esClinico} />
-
-                  <ToggleGroup label="¿Tiene Hijos?" field="tieneHijos"
-                    options={[
-                      { val: true,  label: "Sí" },
-                      { val: false, label: "No" },
-                    ]}
-                  />
-
-                  <div style={{ marginBottom: 10 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>Cantidad de Hijos</label>
-                    <input type="number" min="0" step="1"
-                      value={db.cantidadHijos}
-                      disabled={!db.tieneHijos}
-                      onChange={e => setDatosBase(p => ({ ...p, cantidadHijos: Math.max(0, parseInt(e.target.value) || 0) }))}
-                      style={{ width: "100%", padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: !db.tieneHijos ? "#f3f4f6" : "#fff", color: !db.tieneHijos ? "#9ca3af" : "#111827", boxSizing: "border-box" }}
-                    />
-                  </div>
 
                   <ToggleGroup label="Tipo de Pensión" field="tipoPension"
                     options={[
@@ -926,22 +945,29 @@ export default function CalculoNomina() {
 
                   <div style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Bonificaciones</div>
                   <CalcRow label="Horas Extra"
-                    formula={`${db.horasExtra + db.ajusteHorasExtra}h con 1.5x`}
+                    formula={horasExtraNoDisponibles
+                      ? "No disponible: error al cargar el detalle por turno"
+                      : !horasExtraListas
+                      ? "Cargando detalle por turno…"
+                      : `${horasExtraTotal}h por turno: 1.5x hasta ${umbralHorasDobles}h y 2.0x después`}
                     val={montoHorasExtra} />
                   <CalcRow label="Bonif. Familiar"
-                    formula={db.tieneHijos && db.cantidadHijos > 0
-                      ? `10% × ${fmt(db.sueldoBase)} × ${db.cantidadHijos} hijo(s)`
-                      : "No aplica (sin hijos declarados)"}
+                    formula={Number(n.cantidadHijos) > 0
+                      ? `10% de la RMV, una sola vez (${n.cantidadHijos} hijo(s) elegible(s))`
+                      : "No aplica (sin hijos elegibles validados)"}
                     val={bFam} />
                   {esNocturno
-                    ? <CalcRow label="Bonif. Nocturna" formula={`35% × ${fmt(db.sueldoBase)} (turno nocturno)`} val={bNoct} />
+                    ? <CalcRow label="Bonif. Nocturna" formula={`15% × ${fmt(sueldoDevengado)} devengado (turno nocturno)`} val={bNoct} />
                     : <CalcRow label="Bonif. Nocturna" formula="Solo para empleados con turno nocturno (≥ 19:00)" tipo="blocked" />}
                   {esClinico
                     ? <CalcRow label="Bonif. Guardia" formula={`${db.cantidadGuardias} guardia(s) × S/ 50.00`} val={bGuard} />
                     : <CalcRow label="Bonif. Guardia" formula="Solo para departamentos clínicos" tipo="blocked" />}
                   {esClinico
-                    ? <CalcRow label="Bonif. Riesgo" formula={`10% × ${fmt(db.sueldoBase)}`} val={bRiesgo} />
+                    ? <CalcRow label="Bonif. Riesgo" formula={`10% × ${fmt(sueldoDevengado)} devengado`} val={bRiesgo} />
                     : <CalcRow label="Bonif. Riesgo" formula="Solo para departamentos clínicos" tipo="blocked" />}
+                  {bCargo > 0
+                    ? <CalcRow label="Bonif. Cargo" formula="20% × sueldo devengado (roles RRHH y GERENCIA)" val={bCargo} />
+                    : <CalcRow label="Bonif. Cargo" formula="Solo para roles RRHH y GERENCIA" tipo="blocked" />}
 
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 11px", background: "#dcfce7", borderRadius: 8, margin: "8px 0 12px", fontWeight: 700, fontSize: 12 }}>
                     <span style={{ color: "#15803d" }}>Total Bruto</span>

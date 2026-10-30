@@ -66,9 +66,9 @@ public class SolicitudService implements ISolicitudService {
             );
         }
 
-        validarDiasLaborables(request.getFechaInicio(), request.getFechaFin());
+        validarFechasSolicitud(request.getFechaInicio(), request.getFechaFin());
 
-        int diasSolicitados = calcularDiasLaborables(request.getFechaInicio(), request.getFechaFin());
+        int diasSolicitados = calcularDiasSolicitados(request.getFechaInicio(), request.getFechaFin());
 
         UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
@@ -296,18 +296,15 @@ public class SolicitudService implements ISolicitudService {
         }
     }
 
-    /** Inicio y fin deben ser días laborables; los fines de semana intermedios se permiten y no cuentan para el saldo. */
-    private void validarDiasLaborables(LocalDate inicio, LocalDate fin) {
+    /** RNF77: el personal de turnos rotativos puede pedir fines de semana; solo se rechazan los feriados del rango. */
+    private void validarFechasSolicitud(LocalDate inicio, LocalDate fin) {
         List<LocalDate> feriados = em.createQuery(
                 "SELECT f.fecha FROM FeriadoModel f", LocalDate.class).getResultList();
 
-        for (LocalDate extremo : List.of(inicio, fin)) {
-            DayOfWeek dia = extremo.getDayOfWeek();
-            if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY || feriados.contains(extremo)) {
-                throw new IllegalArgumentException(
-                    "Las fechas seleccionadas incluyen fines de semana o feriados."
-                );
-            }
+        boolean incluyeFeriado = feriados.stream()
+                .anyMatch(f -> !f.isBefore(inicio) && !f.isAfter(fin));
+        if (incluyeFeriado) {
+            throw new IllegalArgumentException("El rango de fechas incluye un feriado nacional.");
         }
     }
 
@@ -321,20 +318,9 @@ public class SolicitudService implements ISolicitudService {
         }
     }
 
-    private int calcularDiasLaborables(LocalDate inicio, LocalDate fin) {
-        List<LocalDate> feriados = em.createQuery(
-                "SELECT f.fecha FROM FeriadoModel f", LocalDate.class).getResultList();
-
-        int dias = 0;
-        LocalDate fecha = inicio;
-        while (!fecha.isAfter(fin)) {
-            DayOfWeek dia = fecha.getDayOfWeek();
-            if (dia != DayOfWeek.SATURDAY && dia != DayOfWeek.SUNDAY && !feriados.contains(fecha)) {
-                dias++;
-            }
-            fecha = fecha.plusDays(1);
-        }
-        return dias;
+    /** Días solicitados: todos los días del rango (fines de semana incluidos), ya validado que no haya feriados. */
+    private int calcularDiasSolicitados(LocalDate inicio, LocalDate fin) {
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
     }
 
     private SolicitudResponseDTO mapearAResponse(Solicitud solicitud, EmpleadoModel empleado) {

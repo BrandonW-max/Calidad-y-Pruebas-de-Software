@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,6 +29,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -92,14 +94,19 @@ class SolicitudServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 44 — RF25: fechas incluyen fin de semana → excepción
+    // Test 44 — RF25 / RNF77: fechas con fin de semana → permitidas
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("Test 44 — Fechas incluyen sábado → IllegalArgumentException")
-    void registrar_FechasConFinDeSemana_LanzaExcepcion() {
+    @DisplayName("Test 44 — Fechas con sábado y domingo → permitidas (RNF77)")
+    void registrar_FechasConFinDeSemana_Permitido() {
         when(jpaUsuarioRepository.findById(ID_USUARIO))
                 .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        Solicitud creada = new Solicitud();
+        creada.setEstado("PENDIENTE");
+        creada.setIdEmpleado(1L);
+        when(solicitudFactory.crearSolicitudPermiso(anyString(), anyString())).thenReturn(creada);
+        when(solicitudRepository.guardar(any())).thenReturn(creada);
 
         // 2026-03-14 es sábado
         RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
@@ -108,10 +115,10 @@ class SolicitudServiceTest {
         req.setFechaFin(LocalDate.of(2026, 3, 14));
         req.setMotivo("Motivo");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> solicitudService.registrarSolicitud(req, ID_USUARIO));
+        SolicitudResponseDTO resultado = solicitudService.registrarSolicitud(req, ID_USUARIO);
 
-        assertEquals("Las fechas seleccionadas incluyen fines de semana o feriados.", ex.getMessage());
+        assertEquals("PENDIENTE", resultado.getEstado());
+        assertEquals(3, resultado.getDiasSolicitados());
     }
 
     // -----------------------------------------------------------------------
@@ -328,7 +335,7 @@ class SolicitudServiceTest {
     }
 
     @Test
-    @DisplayName("registrar con fin de semana intermedio (vie-lun) → permitido; saldo cuenta solo laborables (2)")
+    @DisplayName("registrar con fin de semana intermedio (vie-lun) → permitido; cuenta todos los días (4)")
     void registrar_FinDeSemanaIntermedio_Permitido() {
         when(jpaUsuarioRepository.findById(ID_USUARIO))
                 .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
@@ -347,7 +354,7 @@ class SolicitudServiceTest {
         SolicitudResponseDTO resultado = solicitudService.registrarSolicitud(req, ID_USUARIO);
 
         assertEquals("PENDIENTE", resultado.getEstado());
-        assertEquals(2, resultado.getDiasSolicitados());
+        assertEquals(4, resultado.getDiasSolicitados());
     }
 
     @Test
@@ -428,6 +435,38 @@ class SolicitudServiceTest {
         req.setMotivo("Cita médica");
 
         assertEquals("PENDIENTE", solicitudService.registrarSolicitud(req, ID_USUARIO).getEstado());
+    }
+
+    @Test
+    @DisplayName("RNF114: clonar una solicitud revisada la deja en PENDIENTE y limpia revisión y decisión")
+    void clonar_SolicitudRevisada_ReiniciaPendienteYLimpiaRevision() {
+        Solicitud original = solicitudExistente("APROBADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
+        original.setIdSolicitud(ID_SOLICITUD);
+        original.setRespuesta("Aprobado");
+        original.setObservacionRrhh("Revisado por RRHH");
+        original.setRevisadoPor(5L);
+        original.setAprobadoPor(6L);
+        original.setFechaRevision(LocalDateTime.now().minusDays(3));
+        original.setFechaDecision(LocalDateTime.now().minusDays(2));
+        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(original));
+        when(jpaUsuarioRepository.findById(ID_USUARIO))
+                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
+        when(solicitudRepository.buscarPorEmpleado(1L)).thenReturn(List.of());
+        when(solicitudRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO);
+
+        ArgumentCaptor<Solicitud> captor = ArgumentCaptor.forClass(Solicitud.class);
+        verify(solicitudRepository).guardar(captor.capture());
+        Solicitud clon = captor.getValue();
+        assertEquals("PENDIENTE", clon.getEstado());
+        assertNull(clon.getIdSolicitud());
+        assertNull(clon.getRespuesta());
+        assertNull(clon.getObservacionRrhh());
+        assertNull(clon.getRevisadoPor());
+        assertNull(clon.getAprobadoPor());
+        assertNull(clon.getFechaRevision());
+        assertNull(clon.getFechaDecision());
     }
 
     @Test

@@ -41,7 +41,6 @@ public class Nomina implements Prototype<Nomina> {
     private Integer cantidadHijos;
     private Boolean tieneHijos;
     private Integer cantidadGuardias;
-    private BigDecimal totalHorasNocturnas;
     private String tipoPensionAplicada;
 
     private String estadoPago;
@@ -67,7 +66,7 @@ public class Nomina implements Prototype<Nomina> {
                   BigDecimal asignacionFamiliar, BigDecimal sueldoBruto,
                   BigDecimal sueldoNeto,
                   Integer cantidadHijos, Boolean tieneHijos, Integer cantidadGuardias,
-                  BigDecimal totalHorasNocturnas, String tipoPensionAplicada,
+                  String tipoPensionAplicada,
                   String estadoPago, Integer version,
                   Integer nominaAnteriorId, Long idEmpleado, Long calculadoPor,
                   Boolean esEmpleadoClinico, Boolean tieneHorarioNocturno,
@@ -95,7 +94,6 @@ public class Nomina implements Prototype<Nomina> {
         this.cantidadHijos = cantidadHijos;
         this.tieneHijos = tieneHijos;
         this.cantidadGuardias = cantidadGuardias;
-        this.totalHorasNocturnas = totalHorasNocturnas;
         this.tipoPensionAplicada = tipoPensionAplicada;
         this.estadoPago = estadoPago;
         this.version = version;
@@ -175,8 +173,6 @@ public class Nomina implements Prototype<Nomina> {
     public Integer getCantidadGuardias() { return cantidadGuardias; }
     public void setCantidadGuardias(Integer cantidadGuardias) { this.cantidadGuardias = cantidadGuardias; }
 
-    public BigDecimal getTotalHorasNocturnas() { return totalHorasNocturnas; }
-    public void setTotalHorasNocturnas(BigDecimal totalHorasNocturnas) { this.totalHorasNocturnas = totalHorasNocturnas; }
 
     public String getTipoPensionAplicada() { return tipoPensionAplicada; }
     public void setTipoPensionAplicada(String tipoPensionAplicada) { this.tipoPensionAplicada = tipoPensionAplicada; }

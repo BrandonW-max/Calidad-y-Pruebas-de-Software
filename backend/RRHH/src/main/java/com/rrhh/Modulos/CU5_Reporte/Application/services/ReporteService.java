@@ -251,7 +251,7 @@ public class ReporteService implements IReporteService {
 
         List<HistorialAuditoriaModel> cambios = em.createQuery(
                 "SELECT h FROM HistorialAuditoriaModel h WHERE h.tablaAfectada = 'EMPLEADO' " +
-                "AND h.accion IN ('ASCENSO_EMPLEADO', 'ACTUALIZACION_EMPLEADO') " +
+                "AND h.accion IN ('ASCENSO_EMPLEADO', 'CAMBIO_SALARIAL', 'ACTUALIZACION_EMPLEADO') " +
                 "AND (:id = 0L OR h.idRegistroAfectado = :id)", HistorialAuditoriaModel.class)
             .setParameter("id", id)
             .getResultList();
@@ -267,7 +267,11 @@ public class ReporteService implements IReporteService {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("fecha", h.getFechaDeCambio() != null ? h.getFechaDeCambio().toLocalDate() : null);
             fila.put("empleado", nombres.getOrDefault(h.getIdRegistroAfectado(), ""));
-            fila.put("tipo", "ASCENSO_EMPLEADO".equals(h.getAccion()) ? "Ascenso / cambio de sueldo" : "Actualización de datos");
+            fila.put("tipo", switch (h.getAccion()) {
+                case "ASCENSO_EMPLEADO" -> "Ascenso / cambio de sueldo";
+                case "CAMBIO_SALARIAL" -> "Cambio salarial";
+                default -> "Actualización de datos";
+            });
             fila.put("detalle", h.getValorNuevo());
             datos.add(fila);
         }

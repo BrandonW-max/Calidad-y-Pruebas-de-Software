@@ -17,7 +17,11 @@ import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaFamiliaInfoRepos
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionRepository;
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaAjusteNominaManualRepository;
 import com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaRegistroAsistenciaRepository;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 import com.rrhh.Shared.config.RRHHProperties;
+import com.rrhh.Shared.persistence.FamiliaInfoModel;
+import com.rrhh.Shared.persistence.RolModel;
+import com.rrhh.Shared.persistence.UsuarioModel;
 import com.rrhh.Shared.exception.RecursoNoEncontradoException;
 import com.rrhh.Shared.persistence.ContratoModel;
 import com.rrhh.Shared.persistence.EmpleadoModel;
@@ -61,6 +65,7 @@ class NominaServiceTest {
     @Mock private JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository;
     @Mock private JpaContratoRepository jpaContratoRepository;
     @Mock private JpaFamiliaInfoRepository jpaFamiliaInfoRepository;
+    @Mock private JpaUsuarioRepository jpaUsuarioRepository;
     @Mock private JpaNominaVersionRepository jpaNominaVersionRepository;
     @Mock private JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository;
     @Mock private com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository;
@@ -90,9 +95,10 @@ class NominaServiceTest {
         when(rrhhProperties.getTasaDescuentoLey()).thenReturn(new BigDecimal("0.13"));
         when(rrhhProperties.getTasaDescuentoAfp()).thenReturn(new BigDecimal("0.10"));
         when(rrhhProperties.getBonifFamiliar()).thenReturn(new BigDecimal("0.10"));
-        when(rrhhProperties.getBonifNocturno()).thenReturn(new BigDecimal("0.35"));
+        when(rrhhProperties.getBonifNocturno()).thenReturn(new BigDecimal("0.15"));
         when(rrhhProperties.getBonifGuardia()).thenReturn(new BigDecimal("15.00"));
         when(rrhhProperties.getBonifRiesgo()).thenReturn(new BigDecimal("0.05"));
+        when(rrhhProperties.getBonifCargo()).thenReturn(new BigDecimal("0.20"));
         when(rrhhProperties.getRmv()).thenReturn(new BigDecimal("1130.00"));
         when(rrhhProperties.getTasaHoraExtra1_5()).thenReturn(new BigDecimal("1.5"));
         when(rrhhProperties.getTasaHoraExtra2_0()).thenReturn(new BigDecimal("2.0"));
@@ -555,6 +561,96 @@ class NominaServiceTest {
         CalcularNominaRequestDTO req = new CalcularNominaRequestDTO(inicio, fin, null, null);
         req.setConfirmarCambiosSueldo(true);
         assertEquals(1, nominaService.calcularNomina(req, ID_USUARIO_RRHH).size());
+    }
+
+    @Test
+    @DisplayName("RNF46: horas extra por turno, 1.5x hasta el umbral y 2.0x sobre el umbral de cada turno")
+    void horasExtraPorTurno_DoblanSoloSobreElUmbralDeCadaTurno() {
+        Nomina sinExtras = calcularNominaDeEmpleado(List.of(), null, List.of());
+        Nomina conExtras = calcularNominaDeEmpleado(List.of(new BigDecimal("10.00"), new BigDecimal("3.00")), null, List.of());
+
+        // Valor hora 2500/30/8 = 10.4167. Turno 1: 2h×1.5 + 8h×2.0 = 19h. Turno 2: 2h×1.5 + 1h×2.0 = 5h. Total 24h = 250.00
+        assertEquals(0, new BigDecimal("250.00").compareTo(conExtras.getSueldoBruto().subtract(sinExtras.getSueldoBruto())));
+    }
+
+    @Test
+    @DisplayName("RNF101: bonificación por cargo solo para roles RRHH y GERENCIA")
+    void bonifCargo_SoloRolesRrhhYGerencia() {
+        assertTrue(calcularNominaDeEmpleado(List.of(), "RRHH", List.of()).getBonifCargo().signum() > 0);
+        assertTrue(calcularNominaDeEmpleado(List.of(), "GERENCIA", List.of()).getBonifCargo().signum() > 0);
+        assertEquals(0, calcularNominaDeEmpleado(List.of(), "EMPLEADO", List.of()).getBonifCargo().signum());
+        assertEquals(0, calcularNominaDeEmpleado(List.of(), null, List.of()).getBonifCargo().signum());
+    }
+
+    @Test
+    @DisplayName("Asignación familiar: 10% de la RMV una sola vez aunque haya varios hijos")
+    void asignacionFamiliar_UnaSolaVezAunqueHayVariosHijos() {
+        Nomina nomina = calcularNominaDeEmpleado(List.of(), null, List.of(hijoElegible(), hijoElegible()));
+
+        assertEquals(2, nomina.getCantidadHijos());
+        assertEquals(0, new BigDecimal("113.00").compareTo(nomina.getBonifFamiliar()));
+    }
+
+    private FamiliaInfoModel hijoElegible() {
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(6L);
+        FamiliaInfoModel hijo = new FamiliaInfoModel();
+        hijo.setEmpleado(empleado);
+        hijo.setParentesco("HIJO");
+        hijo.setElegibleAsignacionFamiliar(true);
+        hijo.setValidado(true);
+        return hijo;
+    }
+
+    // Corre calcularNomina para un empleado con sueldo 2500 y devuelve la nómina guardada
+    private Nomina calcularNominaDeEmpleado(List<BigDecimal> horasPorTurno, String nombreRol, List<FamiliaInfoModel> familia) {
+        LocalDate inicio = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate fin = inicio.plusDays(27);
+        when(cambioSueldo.tieneCambioPosteriorAl(eq(6L), any())).thenReturn(false);
+        EmpleadoModel empleado = new EmpleadoModel();
+        empleado.setIdEmpleado(6L);
+        empleado.setNombres("Horas");
+        empleado.setApellidos("Extra");
+        empleado.setEstado("ACTIVO");
+        ContratoModel contrato = new ContratoModel();
+        contrato.setEmpleado(empleado);
+        contrato.setSueldo(SUELDO_VALIDO);
+        contrato.setTipoPension("ONP");
+        contrato.setEstado("ACTIVO");
+        contrato.setFechaInicio(inicio.minusMonths(1));
+        empleado.setContratos(List.of(contrato));
+        when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(empleado));
+        when(jpaContratoRepository.findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+            .thenReturn(List.of(contrato));
+        when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(anyList())).thenReturn(familia);
+        // Un día trabajado para que el sueldo devengado sea mayor a cero
+        RegistroAsistenciaModel registro = new RegistroAsistenciaModel();
+        registro.setEmpleado(empleado);
+        registro.setFecha(inicio.plusDays(1));
+        registro.setHoraEntrada(LocalTime.of(8, 0));
+        registro.setHoraSalida(LocalTime.of(16, 0));
+        registro.setTipoRegistro("ORIGINAL");
+        registro.setMinutosTardanza(0);
+        registro.setMinutosExtra(0);
+        when(jpaRegistroAsistenciaRepository.findByEmpleadoIdEmpleadoInAndFechaBetween(anyList(), any(), any()))
+            .thenReturn(List.of(registro));
+        if (nombreRol != null) {
+            RolModel rol = new RolModel();
+            rol.setNombreRol(nombreRol);
+            UsuarioModel usuario = new UsuarioModel();
+            usuario.setEmpleado(empleado);
+            usuario.setRol(rol);
+            when(jpaUsuarioRepository.findByEmpleadoIdEmpleadoIn(anyCollection())).thenReturn(List.of(usuario));
+        }
+        when(liquidacionHorasExtra.horasPorTurno(eq(6L), any())).thenReturn(horasPorTurno);
+        when(nominaFactory.crearNominaBase()).thenAnswer(inv -> new Nomina());
+        when(nominaRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        nominaService.calcularNomina(new CalcularNominaRequestDTO(inicio, fin, null, null), ID_USUARIO_RRHH);
+
+        ArgumentCaptor<Nomina> captor = ArgumentCaptor.forClass(Nomina.class);
+        verify(nominaRepository, atLeastOnce()).guardar(captor.capture());
+        return captor.getValue();
     }
 
     // -----------------------------------------------------------------------

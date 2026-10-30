@@ -250,6 +250,9 @@ export const getVersionesNomina = (id) =>
 export const listarHistorialAjustes = () =>
   f(`${BASE}/api/v1/nomina/historial-ajustes`, { headers: h() }).then(json);
 
+export const obtenerUmbralHorasDobles = () =>
+  f(`${BASE}/api/v1/nomina/horas-extra-umbral`, { headers: h() }).then(json);
+
 export const listarDetalleHorasExtra = (idEmpleado, periodo) =>
   f(`${BASE}/api/v1/nomina/horas-extra-detalle?idEmpleado=${encodeURIComponent(idEmpleado)}&periodo=${encodeURIComponent(periodo)}`, { headers: h() }).then(json);
 

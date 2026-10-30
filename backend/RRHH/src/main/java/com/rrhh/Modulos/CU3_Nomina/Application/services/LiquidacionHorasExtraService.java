@@ -63,6 +63,21 @@ public class LiquidacionHorasExtraService {
                 minutos, motivo, idUsuario);
     }
 
+    // Horas de cada turno (y de cada ajuste) del período: el umbral de horas dobles se aplica turno por turno
+    public List<BigDecimal> horasPorTurno(Long idEmpleado, String periodo) {
+        List<?> filas = em.createNativeQuery(
+                "SELECT COALESCE(id_registro::text, 'A' || id_liquidacion), SUM(minutos) FROM horas_extra_liquidada "
+                + "WHERE id_empleado = :idEmpleado AND periodo = :periodo GROUP BY 1")
+            .setParameter("idEmpleado", idEmpleado)
+            .setParameter("periodo", periodo)
+            .getResultList();
+        List<BigDecimal> resultado = new ArrayList<>();
+        for (Object o : filas) {
+            resultado.add(horas(((Number) ((Object[]) o)[1]).intValue()));
+        }
+        return resultado;
+    }
+
     public BigDecimal horasTotales(Long idEmpleado, String periodo) {
         return horas(sumarMinutos(idEmpleado, periodo, false));
     }

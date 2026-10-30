@@ -34,6 +34,6 @@ class JacksonEnterosTest {
     @Test
     void cantidadDecimalEnCampoEnteroSeRechaza() {
         assertThrows(InvalidFormatException.class, () ->
-                mapper.readValue("{\"cantidadHijos\": 2.5}", AjustarNominaRequestDTO.class));
+                mapper.readValue("{\"cantidadGuardias\": 2.5}", AjustarNominaRequestDTO.class));
     }
 }

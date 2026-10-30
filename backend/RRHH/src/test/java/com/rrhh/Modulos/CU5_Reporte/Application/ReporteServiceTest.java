@@ -138,4 +138,50 @@ class ReporteServiceTest {
 
         assertEquals(MSG_TIPO_SIN_FACTORY, ex.getMessage());
     }
+
+    @Test
+    @DisplayName("RF10: el historial laboral incluye los cambios salariales (CAMBIO_SALARIAL) con su tipo")
+    void historialLaboral_IncluyeCambioSalarial() throws Exception {
+        com.rrhh.Shared.persistence.HistorialAuditoriaModel cambio = new com.rrhh.Shared.persistence.HistorialAuditoriaModel();
+        cambio.setTablaAfectada("EMPLEADO");
+        cambio.setIdRegistroAfectado(7L);
+        cambio.setAccion("CAMBIO_SALARIAL");
+        cambio.setValorNuevo("sueldo=3500.00 | Motivo: Reajuste anual");
+        cambio.setFechaDeCambio(java.time.LocalDateTime.of(2026, 6, 1, 9, 0));
+
+        jakarta.persistence.TypedQuery<com.rrhh.Shared.persistence.HistorialAuditoriaModel> qHistorial =
+                mock(jakarta.persistence.TypedQuery.class, RETURNS_SELF);
+        when(qHistorial.getResultList()).thenReturn(List.of(cambio));
+        jakarta.persistence.TypedQuery<com.rrhh.Shared.persistence.EmpleadoModel> qEmpleados =
+                mock(jakarta.persistence.TypedQuery.class, RETURNS_SELF);
+        when(qEmpleados.getResultList()).thenReturn(List.of());
+        jakarta.persistence.TypedQuery<com.rrhh.Shared.persistence.SancionModel> qSanciones =
+                mock(jakarta.persistence.TypedQuery.class, RETURNS_SELF);
+        when(qSanciones.getResultList()).thenReturn(List.of());
+
+        doReturn(qEmpleados).when(em).createQuery(anyString(), eq(com.rrhh.Shared.persistence.EmpleadoModel.class));
+        doReturn(qHistorial).when(em).createQuery(anyString(), eq(com.rrhh.Shared.persistence.HistorialAuditoriaModel.class));
+        doReturn(qSanciones).when(em).createQuery(anyString(), eq(com.rrhh.Shared.persistence.SancionModel.class));
+
+        com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado reporte =
+                new com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado();
+        reporte.setIdReporte(1);
+        when(reporteFactory.crearReporteBase()).thenReturn(reporte);
+        when(reporteGeneradoRepository.guardar(any())).thenReturn(reporte);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroHistorialLaboralDTO filtro =
+                new com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroHistorialLaboralDTO();
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.ReporteResponseDTO resultado =
+                reporteService.generarReporteHistorialLaboral(filtro, ID_USUARIO);
+
+        org.mockito.ArgumentCaptor<String> consulta = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(em).createQuery(consulta.capture(), eq(com.rrhh.Shared.persistence.HistorialAuditoriaModel.class));
+        assertTrue(consulta.getValue().contains("'CAMBIO_SALARIAL'"));
+
+        assertEquals(1, resultado.getTotalRegistros());
+        Map<String, Object> fila = resultado.getDatos().get(0);
+        assertEquals("Cambio salarial", fila.get("tipo"));
+        assertEquals("sueldo=3500.00 | Motivo: Reajuste anual", fila.get("detalle"));
+    }
 }

@@ -34,17 +34,8 @@ public class AjusteNominaManualModel {
     @Column(name = "total_horas_extra")
     private BigDecimal totalHorasExtra;
 
-    @Column(name = "total_horas_nocturnas")
-    private BigDecimal totalHorasNocturnas;
-
     @Column(name = "total_minutos_tardanza")
     private Integer totalMinutosTardanza;
-
-    @Column(name = "tiene_hijos")
-    private Boolean tieneHijos;
-
-    @Column(name = "cantidad_hijos")
-    private Integer cantidadHijos;
 
     @Column(name = "cantidad_guardias")
     private Integer cantidadGuardias;

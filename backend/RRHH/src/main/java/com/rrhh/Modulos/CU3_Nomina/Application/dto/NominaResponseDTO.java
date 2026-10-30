@@ -38,7 +38,6 @@ public class NominaResponseDTO {
     private Integer cantidadHijos;
     private Boolean tieneHijos;
     private Integer cantidadGuardias;
-    private BigDecimal totalHorasNocturnas;
     private String tipoPensionAplicada;
 
     private List<DetalleNominaResponseDTO> detalles;
@@ -125,8 +124,6 @@ public class NominaResponseDTO {
     public Integer getCantidadGuardias() { return cantidadGuardias; }
     public void setCantidadGuardias(Integer cantidadGuardias) { this.cantidadGuardias = cantidadGuardias; }
 
-    public BigDecimal getTotalHorasNocturnas() { return totalHorasNocturnas; }
-    public void setTotalHorasNocturnas(BigDecimal totalHorasNocturnas) { this.totalHorasNocturnas = totalHorasNocturnas; }
 
     public String getTipoPensionAplicada() { return tipoPensionAplicada; }
     public void setTipoPensionAplicada(String tipoPensionAplicada) { this.tipoPensionAplicada = tipoPensionAplicada; }
