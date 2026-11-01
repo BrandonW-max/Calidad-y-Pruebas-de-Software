@@ -38,6 +38,16 @@ public class ReporteService implements IReporteService {
         "HISTORIAL_LABORAL", "historialLaboralExportFactory"
     );
 
+    // Nombres legibles de los campos que guarda la auditoría de actualización de datos
+    private static final Map<String, String> ETIQUETAS_CAMPOS = Map.of(
+        "fechaNac", "Fecha de nacimiento",
+        "sexo", "Sexo",
+        "estadoCivil", "Estado civil",
+        "direccion", "Dirección",
+        "correo", "Correo",
+        "telefono", "Teléfono"
+    );
+
     private final IReporteGeneradoRepository reporteGeneradoRepository;
     private final JpaReporteEmpleadoRepository jpaEmpleadoRepository;
     private final JpaReporteAsistenciaRepository jpaAsistenciaRepository;
@@ -176,11 +186,26 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("NOMINA", nominas);
 
+        // Sueldo del contrato activo de cada empleado, en una sola consulta (evita N+1)
+        List<Long> idsEmpleados = nominas.stream()
+            .filter(n -> n.getEmpleado() != null)
+            .map(n -> n.getEmpleado().getIdEmpleado())
+            .distinct()
+            .toList();
+        Map<Long, java.math.BigDecimal> sueldoContratoPorEmpleado = idsEmpleados.isEmpty() ? Map.of() :
+            em.createQuery("SELECT c FROM ContratoModel c WHERE c.empleado.idEmpleado IN :ids AND c.estado = 'ACTIVO'",
+                    ContratoModel.class)
+                .setParameter("ids", idsEmpleados)
+                .getResultList().stream()
+                .collect(Collectors.toMap(c -> c.getEmpleado().getIdEmpleado(), ContratoModel::getSueldo, (a, b) -> a));
+
         List<Map<String, Object>> datos = nominas.stream().map(n -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("empleado", n.getEmpleado() != null ?
                 n.getEmpleado().getNombres() + " " + n.getEmpleado().getApellidos() : "");
             fila.put("periodo", n.getPeriodo());
+            fila.put("sueldoContrato", n.getEmpleado() != null
+                ? sueldoContratoPorEmpleado.get(n.getEmpleado().getIdEmpleado()) : null);
             fila.put("sueldoBase", n.getSueldoBase());
             fila.put("horasExtra", n.getTotalHorasExtra());
             fila.put("bonificaciones", sumaBonificaciones(n));
@@ -272,7 +297,9 @@ public class ReporteService implements IReporteService {
                 case "CAMBIO_SALARIAL" -> "Cambio salarial";
                 default -> "Actualización de datos";
             });
-            fila.put("detalle", h.getValorNuevo());
+            fila.put("detalle", "ACTUALIZACION_EMPLEADO".equals(h.getAccion())
+                ? formatearDetalleActualizacion(h.getValorNuevo())
+                : h.getValorNuevo());
             datos.add(fila);
         }
 
@@ -299,6 +326,20 @@ public class ReporteService implements IReporteService {
     // ================================
     // METODOS PRIVADOS
     // ================================
+
+    // Convierte "fechaNac=1990-05-15, sexo=M" en "Fecha de nacimiento: 1990-05-15\nSexo: M"
+    private String formatearDetalleActualizacion(String valorNuevo) {
+        if (valorNuevo == null || valorNuevo.isBlank()) return "";
+        return java.util.Arrays.stream(valorNuevo.split(", "))
+            .map(par -> {
+                int igual = par.indexOf('=');
+                if (igual < 0) return par.trim();
+                String campo = par.substring(0, igual).trim();
+                String valor = par.substring(igual + 1).trim();
+                return ETIQUETAS_CAMPOS.getOrDefault(campo, campo) + ": " + ("null".equals(valor) ? "—" : valor);
+            })
+            .collect(Collectors.joining("\n"));
+    }
 
     private void validarFiltroEmpleado(FiltroEmpleadoDTO filtro) {
         if (filtro == null) {

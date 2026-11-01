@@ -1,6 +1,7 @@
 package com.rrhh.Shared.export.pdf.implementations;
 
 import com.rrhh.Shared.export.pdf.interfaces.PDFExporter;
+import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -66,7 +67,7 @@ public class GenericPDFExporter implements PDFExporter {
             for (Map<String, Object> row : datos) {
                 for (String key : keys) {
                     String valor = formatValue(row.get(key));
-                    PdfPCell cell = new PdfPCell(new Phrase(valor, FONT_CELL));
+                    PdfPCell cell = new PdfPCell(crearFrase(valor));
                     cell.setPadding(3);
                     table.addCell(cell);
                 }
@@ -79,6 +80,17 @@ public class GenericPDFExporter implements PDFExporter {
         }
 
         return baos.toByteArray();
+    }
+
+    // Cada salto de línea del valor se dibuja como una línea nueva dentro de la celda
+    private Phrase crearFrase(String valor) {
+        Phrase frase = new Phrase();
+        String[] lineas = valor.split("\n", -1);
+        for (int i = 0; i < lineas.length; i++) {
+            if (i > 0) frase.add(Chunk.NEWLINE);
+            frase.add(new Chunk(lineas[i], FONT_CELL));
+        }
+        return frase;
     }
 
     private String formatValue(Object value) {
