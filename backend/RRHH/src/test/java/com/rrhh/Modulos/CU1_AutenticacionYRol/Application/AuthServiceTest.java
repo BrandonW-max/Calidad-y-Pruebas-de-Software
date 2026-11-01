@@ -2,6 +2,8 @@ package com.rrhh.Modulos.CU1_AutenticacionYRol.Application;
 
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.AuthResponseDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.LoginRequestDTO;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.TwoFactorRequestDTO;
+import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.dto.TwoFactorResponseDTO;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.services.AuthService;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.entities.Usuario;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Domain.repository.IHistorialRepository;
@@ -22,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -321,5 +324,105 @@ class AuthServiceTest {
         assertTrue(resultado.isSuccess());
         assertEquals("Contrasenia establecida correctamente", resultado.getMessage());
         verify(usuarioRepository).save(usuarioConDni);
+    }
+
+    // ========================================================================
+    // 2FA: código incorrecto, bloqueo temporal y precondición (PI1-08, PI1-09, RNF2)
+    // ========================================================================
+    @Test
+    @DisplayName("2FA: código incorrecto responde 'Codigo 2FA invalido' y registra el fallo")
+    void verify2FA_CodigoIncorrecto_RespondeInvalidoYRegistraFallo() {
+        usuarioConDni.setSecret2FA("SECRETO");
+        TwoFactorRequestDTO dto = new TwoFactorRequestDTO();
+        dto.setUsername(USERNAME);
+        dto.setCode("12345");
+
+        when(usuarioRepository.findByNombreUsuarioOrCorreoInst(USERNAME, USERNAME)).thenReturn(usuarioConDni);
+        when(twoFactorService.verificarCodigo("SECRETO", 12345)).thenReturn(false);
+
+        TwoFactorResponseDTO resultado = authService.verify2FA(dto);
+
+        assertFalse(resultado.isSuccess());
+        assertEquals("Codigo 2FA invalido", resultado.getMessage());
+        assertEquals(1, usuarioConDni.getIntentosFalla2fa());
+        assertNull(usuarioConDni.getBloqueo2faHasta());
+        verify(usuarioRepository).save(usuarioConDni);
+    }
+
+    @Test
+    @DisplayName("2FA: el tercer código incorrecto bloquea la verificación por 5 minutos")
+    void verify2FA_TercerFallo_BloqueaVerificacionPor5Minutos() {
+        usuarioConDni.setSecret2FA("SECRETO");
+        usuarioConDni.setIntentosFalla2fa(2);
+        TwoFactorRequestDTO dto = new TwoFactorRequestDTO();
+        dto.setUsername(USERNAME);
+        dto.setCode("1234567");
+
+        when(usuarioRepository.findByNombreUsuarioOrCorreoInst(USERNAME, USERNAME)).thenReturn(usuarioConDni);
+        when(twoFactorService.verificarCodigo(anyString(), anyInt())).thenReturn(false);
+
+        TwoFactorResponseDTO resultado = authService.verify2FA(dto);
+
+        assertFalse(resultado.isSuccess());
+        assertEquals("Cuenta bloqueada temporalmente por 5 minutos", resultado.getMessage());
+        assertEquals(3, usuarioConDni.getIntentosFalla2fa());
+        assertNotNull(usuarioConDni.getBloqueo2faHasta());
+        assertTrue(usuarioConDni.getBloqueo2faHasta().isAfter(LocalDateTime.now().plusMinutes(4)));
+    }
+
+    @Test
+    @DisplayName("2FA: mientras dure el bloqueo no se valida el código")
+    void verify2FA_Bloqueado_NoValidaElCodigo() {
+        usuarioConDni.setSecret2FA("SECRETO");
+        usuarioConDni.setIntentosFalla2fa(3);
+        usuarioConDni.setBloqueo2faHasta(LocalDateTime.now().plusMinutes(3));
+        TwoFactorRequestDTO dto = new TwoFactorRequestDTO();
+        dto.setUsername(USERNAME);
+        dto.setCode("12345");
+
+        when(usuarioRepository.findByNombreUsuarioOrCorreoInst(USERNAME, USERNAME)).thenReturn(usuarioConDni);
+
+        TwoFactorResponseDTO resultado = authService.verify2FA(dto);
+
+        assertFalse(resultado.isSuccess());
+        assertEquals("Acceso bloqueado temporalmente (5 minutos)", resultado.getMessage());
+        verify(twoFactorService, never()).verificarCodigo(anyString(), anyInt());
+    }
+
+    @Test
+    @DisplayName("2FA: vencido el bloqueo de 5 minutos se vuelve a permitir el intento")
+    void verify2FA_BloqueoVencido_PermiteIntentarDeNuevo() {
+        usuarioConDni.setSecret2FA("SECRETO");
+        usuarioConDni.setIntentosFalla2fa(3);
+        usuarioConDni.setBloqueo2faHasta(LocalDateTime.now().minusMinutes(1));
+        TwoFactorRequestDTO dto = new TwoFactorRequestDTO();
+        dto.setUsername(USERNAME);
+        dto.setCode("12345");
+
+        when(usuarioRepository.findByNombreUsuarioOrCorreoInst(USERNAME, USERNAME)).thenReturn(usuarioConDni);
+        when(twoFactorService.verificarCodigo("SECRETO", 12345)).thenReturn(false);
+
+        TwoFactorResponseDTO resultado = authService.verify2FA(dto);
+
+        assertEquals("Codigo 2FA invalido", resultado.getMessage());
+        assertEquals(1, usuarioConDni.getIntentosFalla2fa());
+        assertNull(usuarioConDni.getBloqueo2faHasta());
+        verify(twoFactorService).verificarCodigo("SECRETO", 12345);
+    }
+
+    @Test
+    @DisplayName("2FA: usuario sin 2FA activado no puede verificar un código")
+    void verify2FA_SinSecreto_RespondeQueNoTieneDosFA() {
+        TwoFactorRequestDTO dto = new TwoFactorRequestDTO();
+        dto.setUsername(USERNAME);
+        dto.setCode("12345");
+
+        when(usuarioRepository.findByNombreUsuarioOrCorreoInst(USERNAME, USERNAME)).thenReturn(usuarioConDni);
+
+        TwoFactorResponseDTO resultado = authService.verify2FA(dto);
+
+        assertFalse(resultado.isSuccess());
+        assertEquals("El usuario no tiene 2FA activado", resultado.getMessage());
+        verify(twoFactorService, never()).verificarCodigo(anyString(), anyInt());
     }
 }

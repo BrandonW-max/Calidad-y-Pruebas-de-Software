@@ -9,6 +9,9 @@ import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteEmpleado
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteNominaRepository;
 import com.rrhh.Modulos.CU5_Reporte.Infrastructure.interfaces.JpaReporteSolicitudRepository;
 import com.rrhh.Shared.export.ExportAbstractFactory;
+import com.rrhh.Shared.export.csv.interfaces.CSVExporter;
+import com.rrhh.Shared.export.excel.interfaces.ExcelExporter;
+import com.rrhh.Shared.export.pdf.interfaces.PDFExporter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityManager;
@@ -183,5 +186,63 @@ class ReporteServiceTest {
         Map<String, Object> fila = resultado.getDatos().get(0);
         assertEquals("Cambio salarial", fila.get("tipo"));
         assertEquals("sueldo=3500.00 | Motivo: Reajuste anual", fila.get("detalle"));
+    }
+
+    // -----------------------------------------------------------------------
+    // PI5-01, PI5-02, PI5-03 — generación de archivos por tipo y formato
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("PI5-01 — ASISTENCIA en PDF usa el exportador PDF de la fábrica de asistencia")
+    void exportar_AsistenciaPdf_UsaExportadorPdf() {
+        ExportAbstractFactory factory = mock(ExportAbstractFactory.class);
+        PDFExporter pdf = mock(PDFExporter.class);
+        byte[] esperado = {1, 2, 3};
+        when(factory.createPDFExporter()).thenReturn(pdf);
+        when(factory.getHeaders()).thenReturn(new String[]{"Nombre"});
+        when(factory.getKeys()).thenReturn(new String[]{"nombre"});
+        when(pdf.export(anyString(), anyList(), any(), any())).thenReturn(esperado);
+        ReflectionTestUtils.setField(reporteService, "exportFactories", Map.of("registroAsistenciaExportFactory", factory));
+
+        byte[] resultado = reporteService.exportarReporte("ASISTENCIA", "PDF", List.of());
+
+        assertArrayEquals(esperado, resultado);
+        verify(pdf).export(eq("Reporte de ASISTENCIA"), anyList(), any(), any());
+    }
+
+    @Test
+    @DisplayName("PI5-02 — NOMINA en EXCEL usa el exportador Excel de la fábrica de nómina")
+    void exportar_NominaExcel_UsaExportadorExcel() {
+        ExportAbstractFactory factory = mock(ExportAbstractFactory.class);
+        ExcelExporter excel = mock(ExcelExporter.class);
+        byte[] esperado = {4, 5, 6};
+        when(factory.createExcelExporter()).thenReturn(excel);
+        when(factory.getHeaders()).thenReturn(new String[]{"Empleado"});
+        when(factory.getKeys()).thenReturn(new String[]{"empleado"});
+        when(excel.export(anyString(), anyList(), any(), any())).thenReturn(esperado);
+        ReflectionTestUtils.setField(reporteService, "exportFactories", Map.of("nominaExportFactory", factory));
+
+        byte[] resultado = reporteService.exportarReporte("NOMINA", "EXCEL", List.of());
+
+        assertArrayEquals(esperado, resultado);
+        verify(excel).export(eq("Reporte de NOMINA"), anyList(), any(), any());
+    }
+
+    @Test
+    @DisplayName("PI5-03 — SOLICITUDES en PDF usa el exportador PDF de la fábrica de solicitudes")
+    void exportar_SolicitudesPdf_UsaExportadorPdf() {
+        ExportAbstractFactory factory = mock(ExportAbstractFactory.class);
+        PDFExporter pdf = mock(PDFExporter.class);
+        byte[] esperado = {7, 8, 9};
+        when(factory.createPDFExporter()).thenReturn(pdf);
+        when(factory.getHeaders()).thenReturn(new String[]{"Tipo"});
+        when(factory.getKeys()).thenReturn(new String[]{"tipo"});
+        when(pdf.export(anyString(), anyList(), any(), any())).thenReturn(esperado);
+        ReflectionTestUtils.setField(reporteService, "exportFactories", Map.of("solicitudExportFactory", factory));
+
+        byte[] resultado = reporteService.exportarReporte("SOLICITUDES", "pdf", List.of());
+
+        assertArrayEquals(esperado, resultado);
+        verify(pdf).export(eq("Reporte de SOLICITUDES"), anyList(), any(), any());
     }
 }

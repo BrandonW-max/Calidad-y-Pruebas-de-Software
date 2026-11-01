@@ -3,3 +3,4 @@
 backend/RRHH/.env
 backend/RRHH/uploads/
 uploads/
+.claude/
