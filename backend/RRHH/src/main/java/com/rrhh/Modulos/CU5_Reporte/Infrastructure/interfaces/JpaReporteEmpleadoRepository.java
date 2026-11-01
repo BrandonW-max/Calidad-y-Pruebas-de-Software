@@ -18,7 +18,8 @@ public interface JpaReporteEmpleadoRepository extends JpaRepository<EmpleadoMode
            "(:cargo IS NULL OR c.cargo = :cargo) AND " +
            "(:tipoContrato IS NULL OR c.tipoContrato = :tipoContrato) AND " +
            "(:idEmpleado IS NULL OR e.idEmpleado = :idEmpleado) AND " +
-           "e.creadoEl >= :fechaInicio AND e.creadoEl <= :fechaFin")
+           "e.creadoEl >= :fechaInicio AND e.creadoEl <= :fechaFin " +
+           "ORDER BY e.idEmpleado")
     List<EmpleadoModel> buscarConFiltros(
         @Param("estado") String estado,
         @Param("area") String area,
