@@ -358,21 +358,6 @@ class SolicitudServiceTest {
     }
 
     @Test
-    @DisplayName("clonar solicitud de otro empleado → AccessDeniedException")
-    void clonar_SolicitudDeOtroEmpleado_Denegado() {
-        Solicitud ajena = solicitudExistente("RECHAZADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
-        ajena.setIdSolicitud(ID_SOLICITUD);
-        ajena.setIdEmpleado(2L);
-        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(ajena));
-        when(jpaUsuarioRepository.findById(ID_USUARIO))
-                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
-
-        assertThrows(org.springframework.security.access.AccessDeniedException.class,
-                () -> solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO));
-        verify(solicitudRepository, never()).guardar(any());
-    }
-
-    @Test
     @DisplayName("validarPropiedad: el dueño pasa; otro empleado → AccessDeniedException")
     void validarPropiedad_DuenoYAjeno() {
         when(jpaUsuarioRepository.findById(ID_USUARIO))
@@ -437,52 +422,4 @@ class SolicitudServiceTest {
         assertEquals("PENDIENTE", solicitudService.registrarSolicitud(req, ID_USUARIO).getEstado());
     }
 
-    @Test
-    @DisplayName("RNF114: clonar una solicitud revisada la deja en PENDIENTE y limpia revisión y decisión")
-    void clonar_SolicitudRevisada_ReiniciaPendienteYLimpiaRevision() {
-        Solicitud original = solicitudExistente("APROBADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
-        original.setIdSolicitud(ID_SOLICITUD);
-        original.setRespuesta("Aprobado");
-        original.setObservacionRrhh("Revisado por RRHH");
-        original.setRevisadoPor(5L);
-        original.setAprobadoPor(6L);
-        original.setFechaRevision(LocalDateTime.now().minusDays(3));
-        original.setFechaDecision(LocalDateTime.now().minusDays(2));
-        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(original));
-        when(jpaUsuarioRepository.findById(ID_USUARIO))
-                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
-        when(solicitudRepository.buscarPorEmpleado(1L)).thenReturn(List.of());
-        when(solicitudRepository.guardar(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO);
-
-        ArgumentCaptor<Solicitud> captor = ArgumentCaptor.forClass(Solicitud.class);
-        verify(solicitudRepository).guardar(captor.capture());
-        Solicitud clon = captor.getValue();
-        assertEquals("PENDIENTE", clon.getEstado());
-        assertNull(clon.getIdSolicitud());
-        assertNull(clon.getRespuesta());
-        assertNull(clon.getObservacionRrhh());
-        assertNull(clon.getRevisadoPor());
-        assertNull(clon.getAprobadoPor());
-        assertNull(clon.getFechaRevision());
-        assertNull(clon.getFechaDecision());
-    }
-
-    @Test
-    @DisplayName("clonar una solicitud con fechas ya ocupadas por otra APROBADA → IllegalStateException")
-    void clonar_SolapaConSolicitudAprobada_LanzaExcepcion() {
-        Solicitud original = solicitudExistente("RECHAZADA", LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
-        original.setIdSolicitud(ID_SOLICITUD);
-        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(original));
-        when(jpaUsuarioRepository.findById(ID_USUARIO))
-                .thenReturn(Optional.of(usuarioConEmpleado("ACTIVO")));
-        when(solicitudRepository.buscarPorEmpleado(1L))
-                .thenReturn(List.of(solicitudExistente("APROBADA",
-                        LocalDate.of(2026, 3, 11), LocalDate.of(2026, 3, 13))));
-
-        assertThrows(IllegalStateException.class,
-                () -> solicitudService.clonarSolicitud(ID_SOLICITUD, ID_USUARIO));
-        verify(solicitudRepository, never()).guardar(any());
-    }
 }

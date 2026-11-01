@@ -27,8 +27,6 @@ import java.util.stream.Collectors;
 @Service
 public class SolicitudService implements ISolicitudService {
 
-    private static final int DIAS_VACACIONES_ANUALES = 30;
-
     @PersistenceContext
     private EntityManager em;
 
@@ -78,15 +76,6 @@ public class SolicitudService implements ISolicitudService {
 
         if (!"ACTIVO".equals(empleado.getEstado())) {
             throw new IllegalStateException("El empleado no esta activo en el sistema.");
-        }
-
-        if ("VACACIONES".equals(request.getTipoSolicitud())) {
-            int saldoDisponible = empleado.getSaldoVacaciones() != null ? empleado.getSaldoVacaciones() : DIAS_VACACIONES_ANUALES;
-            if (diasSolicitados > saldoDisponible) {
-                throw new IllegalStateException(
-                    "No cuenta con dias disponibles de vacaciones. Saldo disponible: " + saldoDisponible + " dias."
-                );
-            }
         }
 
         validarSinSolapamiento(idEmpleado, request.getFechaInicio(), request.getFechaFin());
@@ -166,16 +155,6 @@ public class SolicitudService implements ISolicitudService {
         if (request.isAprobado()) {
             solicitud.setEstado("APROBADA");
             solicitud.setRespuesta("Solicitud aprobada por Gerencia. Estado: APROBADA.");
-
-            // RNF86: Descontar saldo de vacaciones
-            if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
-                jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).ifPresent(emp -> {
-                    int saldoActual = emp.getSaldoVacaciones() != null ? emp.getSaldoVacaciones() : DIAS_VACACIONES_ANUALES;
-                    int dias = solicitud.getDiasSolicitados() != null ? solicitud.getDiasSolicitados() : 0;
-                    emp.setSaldoVacaciones(Math.max(0, saldoActual - dias));
-                    jpaEmpleadoRepository.save(emp);
-                });
-            }
         } else {
             if (request.getRespuesta() == null || request.getRespuesta().isBlank()) {
                 throw new IllegalArgumentException("Ingrese el motivo del rechazo.");
@@ -233,39 +212,6 @@ public class SolicitudService implements ISolicitudService {
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
         EmpleadoModel empleado = jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).orElse(null);
         return mapearAResponse(solicitud, empleado);
-    }
-
-    @Override
-    @Transactional
-    public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idUsuario) {
-        Solicitud original = solicitudRepository.buscarPorId(idSolicitud)
-            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
-
-        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
-            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
-        EmpleadoModel empleado = usuario.getEmpleado();
-        if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
-        Long idEmpleado = empleado.getIdEmpleado();
-
-        validarPropiedad(idUsuario, original.getIdEmpleado());
-        validarSinSolapamiento(idEmpleado, original.getFechaInicio(), original.getFechaFin());
-
-        Solicitud clon = original.clonePrototype();
-
-        clon.setIdSolicitud(null);
-        clon.setEstado("PENDIENTE");
-        clon.setRespuesta(null);
-        clon.setObservacionRrhh(null);
-        clon.setFechaRevision(null);
-        clon.setFechaDecision(null);
-        clon.setRevisadoPor(null);
-        clon.setAprobadoPor(null);
-        clon.setIdEmpleado(idEmpleado);
-        clon.setCreadoEl(LocalDateTime.now());
-        clon.setActualizadoEl(LocalDateTime.now());
-
-        Solicitud guardada = solicitudRepository.guardar(clon);
-        return mapearAResponse(guardada, empleado);
     }
 
     public List<SolicitudResponseDTO> listarNotificacionesPorEmpleado(Long idEmpleado) {

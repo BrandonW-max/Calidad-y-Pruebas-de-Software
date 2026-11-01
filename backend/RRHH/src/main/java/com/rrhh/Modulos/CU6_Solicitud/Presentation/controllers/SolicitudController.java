@@ -96,19 +96,6 @@ public class SolicitudController {
         }
     }
 
-    @PostMapping(SolicitudApiRoutes.CLONAR)
-    @PreAuthorize("hasRole('EMPLEADO')")
-    public ResponseEntity<?> clonar(
-            @PathVariable Integer id,
-            @AuthenticationPrincipal AuthenticatedUser user) {
-        try {
-            SolicitudResponseDTO response = solicitudService.clonarSolicitud(id, user.getIdUsuario());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
     @GetMapping(SolicitudApiRoutes.NOTIFICACIONES)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<List<SolicitudResponseDTO>> listarNotificaciones(
