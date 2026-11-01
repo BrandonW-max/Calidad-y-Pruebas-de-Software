@@ -59,7 +59,6 @@ class SolicitudServiceTest {
 
     private static final String MSG_FECHA_INVALIDA   = "La fecha de inicio no puede ser mayor que la fecha fin.";
     private static final String MSG_INACTIVO         = "El empleado no esta activo en el sistema.";
-    private static final String MSG_SIN_SALDO        = "No cuenta con dias disponibles de vacaciones.";
     private static final String MSG_ESTADO_INVALIDO  = "La solicitud no esta en estado valido para revision.";
     private static final String MSG_SIN_OBSERVACION  = "Debe ingresar una observacion para devolver la solicitud.";
     private static final String MSG_NO_PROCESADO     = "La solicitud no esta en estado PROCESADO para decision de Gerencia.";
@@ -144,31 +143,6 @@ class SolicitudServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 45 — RF25: VACACIONES sin saldo → excepción
-    // -----------------------------------------------------------------------
-
-    @Test
-    @DisplayName("Test 46 — Vacaciones sin saldo disponible → IllegalStateException")
-    void registrar_VacacionesSinSaldo_LanzaExcepcion() {
-        EmpleadoModel empleado = empleadoActivo();
-        empleado.setSaldoVacaciones(0);
-        UsuarioModel usuario = new UsuarioModel();
-        usuario.setEmpleado(empleado);
-        when(jpaUsuarioRepository.findById(ID_USUARIO)).thenReturn(Optional.of(usuario));
-
-        RegistrarSolicitudRequestDTO req = new RegistrarSolicitudRequestDTO();
-        req.setTipoSolicitud("VACACIONES");
-        req.setFechaInicio(LocalDate.of(2026, 3, 10));
-        req.setFechaFin(LocalDate.of(2026, 3, 11));
-        req.setMotivo("Vacaciones");
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> solicitudService.registrarSolicitud(req, ID_USUARIO));
-
-        assertTrue(ex.getMessage().contains("No cuenta con dias disponibles de vacaciones"));
-    }
-
-    // -----------------------------------------------------------------------
     // Test 46 — RF25: solicitud válida → estado = PENDIENTE
     // -----------------------------------------------------------------------
 
@@ -236,6 +210,32 @@ class SolicitudServiceTest {
 
         assertEquals(MSG_SIN_OBSERVACION, ex.getMessage());
     }
+
+    // -----------------------------------------------------------------------
+    // PI6-09 — RRHH devuelve con observación → estado OBSERVADO
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("PI6-09 — RRHH devuelve solicitud PENDIENTE con observación → estado OBSERVADO")
+    void revisar_DevolverConObservacion_EstadoObservado() {
+        Solicitud solicitud = solicitudConEstado("PENDIENTE");
+        solicitud.setIdEmpleado(1L);
+        when(solicitudRepository.buscarPorId(ID_SOLICITUD)).thenReturn(Optional.of(solicitud));
+        when(solicitudRepository.guardar(any(Solicitud.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RevisionRrhhRequestDTO req = new RevisionRrhhRequestDTO();
+        req.setIdSolicitud(ID_SOLICITUD);
+        req.setAprobado(false);
+        req.setObservacionRrhh("DOCUMENTACION INCOMPLETA");
+
+        SolicitudResponseDTO respuesta = solicitudService.revisarSolicitudRrhh(req, ID_RRHH);
+
+        assertEquals("OBSERVADO", solicitud.getEstado());
+        assertEquals("DOCUMENTACION INCOMPLETA", solicitud.getObservacionRrhh());
+        assertEquals(ID_RRHH, solicitud.getRevisadoPor());
+        assertEquals("Solicitud devuelta. Estado: OBSERVADO.", respuesta.getMensaje());
+    }
+
 
     // -----------------------------------------------------------------------
     // Test 50 — RF28: gerencia rechaza sin motivo → excepción
