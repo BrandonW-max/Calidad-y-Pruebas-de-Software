@@ -102,7 +102,7 @@ export default function NominaEmpleado() {
                   <tr>
                     <th style={{ textAlign: "center" }}>#</th>
                     <th style={{ textAlign: "center" }}>Período</th>
-                    <th style={{ textAlign: "center" }}>Sueldo Base</th>
+                    <th style={{ textAlign: "center" }}>Sueldo Devengado</th>
                     <th style={{ textAlign: "center" }}>Bonificaciones</th>
                     <th style={{ textAlign: "center" }}>Descuentos</th>
                     <th style={{ textAlign: "center" }}>Sueldo Neto</th>

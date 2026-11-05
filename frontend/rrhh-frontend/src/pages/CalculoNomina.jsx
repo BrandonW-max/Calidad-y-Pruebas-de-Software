@@ -379,7 +379,7 @@ export default function CalculoNomina() {
     : [];
 
   const totalNeto  = resultList.reduce((sum, n) => sum + Number(n.sueldoNeto ?? 0), 0);
-  const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoContrato ?? n.sueldoBruto ?? n.sueldoBase ?? 0), 0);
+  const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoBruto ?? n.sueldoBase ?? 0), 0);
 
   return (
     <div className="dashboard">
@@ -537,7 +537,7 @@ export default function CalculoNomina() {
                     <thead>
                       <tr>
                         <th style={{ textAlign: "center" }}>Empleado</th>
-                        <th style={{ textAlign: "center" }}>Sueldo Base</th>
+                        <th style={{ textAlign: "center" }}>Sueldo Devengado</th>
                         <th style={{ textAlign: "center" }}>Bonificaciones</th>
                         <th style={{ textAlign: "center" }}>Descuentos</th>
                         <th style={{ textAlign: "center" }}>Sueldo Neto</th>
@@ -552,7 +552,7 @@ export default function CalculoNomina() {
                           <td style={{ textAlign: "center" }}>
                             <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
                           </td>
-                          <td style={{ textAlign: "center" }}>{fmtS(n.sueldoContrato ?? n.sueldoBase ?? n.sueldo)}</td>
+                          <td style={{ textAlign: "center" }}>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
                           <td style={{ textAlign: "center", color: "var(--success)" }}>{fmtS(getBonif(n))}</td>
                           <td style={{ textAlign: "center", color: "#ef4444" }}>{fmtS(getDesc(n))}</td>
                           <td style={{ textAlign: "center", fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
@@ -699,7 +699,7 @@ export default function CalculoNomina() {
       {/* ── MODAL VISTA PREVIA NÓMINA ── */}
       {previewNomina && (() => {
         const n = previewNomina;
-        const base  = Number(n.sueldoContrato ?? n.sueldoBase ?? n.sueldo ?? 0);
+        const base  = Number(n.sueldoBase ?? n.sueldo ?? 0);
         const bonifs = [
           { label: "Bonif. Familiar",       val: n.bonifFamiliar },
           { label: "Bonif. Turno Nocturno", val: n.bonifTurnoNocturno },
@@ -728,9 +728,15 @@ export default function CalculoNomina() {
               </div>
               <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-                  <span style={{ fontWeight: 600 }}>Sueldo Base</span>
+                  <span style={{ fontWeight: 600 }}>Sueldo Devengado</span>
                   <strong>{fmtS(base)}</strong>
                 </div>
+                {n.sueldoContrato != null && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-2)", marginTop: -8 }}>
+                    <span>Sueldo del contrato (referencia)</span>
+                    <span>{fmtS(n.sueldoContrato)}</span>
+                  </div>
+                )}
                 <div>
                   <div style={{ fontWeight: 700, color: "#16a34a", marginBottom: 8, fontSize: 13 }}>+ Bonificaciones</div>
                   {bonifs.filter(r => Number(r.val)).map(r => (
@@ -902,7 +908,7 @@ export default function CalculoNomina() {
               </div>
 
               {/* Body: two columns */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 250px", maxHeight: "70vh", overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 250px", gridTemplateRows: "minmax(0, 1fr)", height: "70vh", overflow: "hidden" }}>
 
                 {/* LEFT: Datos ingresados (editable) */}
                 <div style={{ padding: "18px 20px", borderRight: "1px solid #e5e7eb", overflowY: "auto", background: "#fff" }}>

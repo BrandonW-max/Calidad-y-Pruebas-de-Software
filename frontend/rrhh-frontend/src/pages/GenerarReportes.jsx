@@ -19,6 +19,23 @@ const FORMATOS = [
   { v: "CSV",   l: "CSV" },
 ];
 
+// Nombres legibles de las columnas; las que no estén aquí se muestran con su clave
+const ETIQUETAS_COLUMNAS = {
+  fecha: "Fecha",
+  empleado: "Empleado",
+  tipo: "Tipo",
+  detalle: "Detalle",
+  periodo: "Periodo",
+  sueldoContrato: "Sueldo Contrato",
+  sueldoBase: "Sueldo Devengado",
+  horasExtra: "Horas Extra",
+  bonificaciones: "Bonificaciones",
+  descuentos: "Descuentos",
+  sueldoBruto: "Sueldo Bruto",
+  sueldoNeto: "Sueldo Neto",
+  estado: "Estado",
+};
+
 const MESES = [
   { v: "01", l: "Enero" }, { v: "02", l: "Febrero" }, { v: "03", l: "Marzo" },
   { v: "04", l: "Abril" }, { v: "05", l: "Mayo" },    { v: "06", l: "Junio" },
@@ -210,10 +227,10 @@ export default function GenerarReportes() {
     const keys = Object.keys(resultado[0]);
     return (
       <table>
-        <thead><tr>{keys.map(k => <th key={k}>{k}</th>)}</tr></thead>
+        <thead><tr>{keys.map(k => <th key={k} style={{ textAlign: "center", ...(k === "fecha" ? { whiteSpace: "nowrap", minWidth: 120 } : {}) }}>{ETIQUETAS_COLUMNAS[k] ?? k}</th>)}</tr></thead>
         <tbody>
           {resultado.slice(0, 50).map((row, i) => (
-            <tr key={i}>{keys.map(k => <td key={k} style={{ fontSize: "12px" }}>{row[k] != null ? String(row[k]) : "—"}</td>)}</tr>
+            <tr key={i}>{keys.map(k => <td key={k} style={{ fontSize: "12px", textAlign: "center", whiteSpace: k === "fecha" ? "nowrap" : "pre-line", ...(k === "fecha" ? { minWidth: 120 } : {}) }}>{row[k] != null ? String(row[k]) : "—"}</td>)}</tr>
           ))}
         </tbody>
       </table>

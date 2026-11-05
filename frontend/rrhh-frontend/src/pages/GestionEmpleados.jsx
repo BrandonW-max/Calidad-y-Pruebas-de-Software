@@ -127,6 +127,8 @@ export default function GestionEmpleados() {
 
   useEffect(() => {
     const close = (e) => {
+      // El menú se renderiza con portal fuera de la tabla: sus clics no deben cerrarlo
+      if (e.target.closest?.(".action-drop-menu")) return;
       if (dropRef.current && !dropRef.current.contains(e.target)) setOpenDrop(null);
     };
     document.addEventListener("mousedown", close);
