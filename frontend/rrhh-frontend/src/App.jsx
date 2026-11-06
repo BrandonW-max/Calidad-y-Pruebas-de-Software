@@ -368,7 +368,14 @@ function App() {
       getMe()
         .then(data => {
           saveSession(null, data.rol, data.username, data.idEmpleado ?? null);
-          navigate(DASH[data.rol] ?? '/', { replace: true });
+          // Solo redirigir al dashboard si el usuario NO está en una ruta de sección
+          // (ej. /rrhh/*, /empleado/*, /gerencia/*). Si está en una de esas rutas,
+          // ProtectedRoute se encarga de mostrar 403 cuando el rol no coincida.
+          const enRutaDeSeccion = ['/rrhh', '/empleado', '/gerencia']
+            .some(p => location.pathname.startsWith(p));
+          if (!enRutaDeSeccion) {
+            navigate(DASH[data.rol] ?? '/', { replace: true });
+          }
         })
         .catch(() => {});
     }

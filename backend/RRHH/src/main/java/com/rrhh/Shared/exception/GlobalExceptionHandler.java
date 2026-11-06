@@ -12,10 +12,13 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -108,6 +111,32 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ArchivoInvalidoException.class)
     public ResponseEntity<Map<String, Object>> handleArchivoInvalido(ArchivoInvalidoException ex) {
         return badRequest("ARCHIVO_INVALIDO", ex.getMessage());
+    }
+
+    // #9: IOException al leer bytes del multipart (archivo corrupto o subida interrumpida) → 400
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Map<String, Object>> handleIO(IOException ex) {
+        log.warn("Error al procesar archivo subido", ex);
+        return badRequest("ARCHIVO_INVALIDO", "No se pudo procesar el archivo. Verifique que el archivo sea válido e intente nuevamente.");
+    }
+
+    // #10: duplicado de documento/correo → ocultar nombre de restricción SQL
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Violacion de integridad de datos", ex);
+        String msg = "Ya existe un registro con los mismos datos únicos (documento o correo electrónico).";
+        return badRequest("DATO_DUPLICADO", msg);
+    }
+
+    // Errores internos de JDBC/JPA (tabla inexistente, conexión caída, etc.) → no exponer SQL
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<Map<String, Object>> handleJpaSystem(JpaSystemException ex) {
+        log.error("Error interno de base de datos", ex);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "ERROR_BASE_DE_DATOS");
+        response.put("message", "Ocurrió un error interno. Intente nuevamente o contacte al administrador.");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
