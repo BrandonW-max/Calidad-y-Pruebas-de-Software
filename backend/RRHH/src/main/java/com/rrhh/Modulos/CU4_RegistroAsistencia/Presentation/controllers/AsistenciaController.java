@@ -212,6 +212,17 @@ public class AsistenciaController {
         return ResponseEntity.ok(justificaciones);
     }
 
+    @GetMapping(AsistenciaApiRoutes.JUSTIFICACIONES_POR_ESTADO)
+    @PreAuthorize("hasRole('RRHH')")
+    public ResponseEntity<?> listarPorEstado(@PathVariable String estado) {
+        if (!"APROBADA".equals(estado) && !"RECHAZADA".equals(estado)) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "Estado invalido. Use APROBADA o RECHAZADA."));
+        }
+        List<JustificacionResponseDTO> justificaciones = justificacionService.listarPorEstado(estado)
+                .stream().map(JustificacionResponseDTO::from).toList();
+        return ResponseEntity.ok(justificaciones);
+    }
+
     @GetMapping(AsistenciaApiRoutes.JUSTIFICACIONES_POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH')")
     public ResponseEntity<List<JustificacionResponseDTO>> listarPorEmpleado(

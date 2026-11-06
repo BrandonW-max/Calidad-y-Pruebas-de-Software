@@ -11,8 +11,9 @@ public class GenericCSVExporter implements CSVExporter {
 
     @Override
     public byte[] export(String titulo, List<Map<String, Object>> datos, String[] headers, String[] keys) {
-        if (datos == null || datos.isEmpty()) {
-            return new byte[0];
+        // Sin filas se genera igual el archivo con el encabezado, para que siempre tenga contenido
+        if (datos == null) {
+            datos = List.of();
         }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

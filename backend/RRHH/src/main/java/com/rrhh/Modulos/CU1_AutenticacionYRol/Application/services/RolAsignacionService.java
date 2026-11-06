@@ -15,6 +15,14 @@ public class RolAsignacionService {
                 ? ""
                 : cargo.trim().toUpperCase();
 
+        // Un cargo de RRHH (por ejemplo "Administrador RRHH") es personal de RRHH, aunque tenga una palabra de gerencia
+        if (
+                (departamento.contains("RECURSOS HUMANOS") || departamento.contains("RRHH")) &&
+                cargoEmpleado.contains("RRHH")
+        ) {
+            return "RRHH";
+        }
+
         if (
                 cargoEmpleado.contains("DIRECTOR") ||
                 cargoEmpleado.contains("DIRECTORA") ||

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
@@ -66,18 +67,23 @@ export default function GestionEmpleados() {
   // Forms
   const [form,        setForm]        = useState(FORM_VACIO);
   const [sancionForm, setSancionForm] = useState({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
-  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
-  const [cambioForm,  setCambioForm]  = useState({ idEmpleado: "", nuevoSueldo: "" });
+  const [ascensoForm, setAscensoForm] = useState({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaAscenso: "" });
+  const [cambioForm,  setCambioForm]  = useState({ idEmpleado: "", nuevoSueldo: "", fechaCambio: "" });
 
   // Modals
   const [modalNuevo,      setModalNuevo]      = useState(false);
   const [modalEditar,     setModalEditar]     = useState(null);
   const [modalDesactivar, setModalDesactivar] = useState({ open: false, id: null, motivo: "" });
-  const [modalReactivar,  setModalReactivar]  = useState({ open: false, id: null });
   const [modalSancion,    setModalSancion]    = useState({ open: false, id: null });
   const [modalAscenso,    setModalAscenso]    = useState({ open: false, id: null });
   const [modalCambio,     setModalCambio]     = useState({ open: false, id: null });
   const [, setShowFechas]      = useState(false);
+
+  // Error modal (one error at a time, advances on each retry)
+  const [errorModal,   setErrorModal]   = useState({ open: false, message: "" });
+  const [fieldErrors,  setFieldErrors]  = useState({});
+  const [lastErrKeys,  setLastErrKeys]  = useState([]);
+  const [errPos,       setErrPos]       = useState(0);
 
   // Dropdown per row
   const [openDrop, setOpenDrop] = useState(null);
@@ -96,6 +102,19 @@ export default function GestionEmpleados() {
   const HORARIO_VACIO = { idHorario: "", fechaDesde: "", fechaHasta: "", esTemporal: false };
   const [horarioForm,   setHorarioForm]   = useState(HORARIO_VACIO);
 
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
     getHorarios().then(setHorarios).catch(() => {});
@@ -108,6 +127,8 @@ export default function GestionEmpleados() {
 
   useEffect(() => {
     const close = (e) => {
+      // El menú se renderiza con portal fuera de la tabla: sus clics no deben cerrarlo
+      if (e.target.closest?.(".action-drop-menu")) return;
       if (dropRef.current && !dropRef.current.contains(e.target)) setOpenDrop(null);
     };
     document.addEventListener("mousedown", close);
@@ -160,6 +181,33 @@ export default function GestionEmpleados() {
 
   const cargarEmpleados = () => setFetchKey(k => k + 1);
 
+  const showFormError = (errorsObj, singleMsg) => {
+    if (errorsObj && Object.keys(errorsObj).length > 0) {
+      const entries = Object.entries(errorsObj);
+      const keys = entries.map(([k]) => k).sort().join(",");
+      const prevKeys = [...lastErrKeys].sort().join(",");
+      const pos = keys === prevKeys ? (errPos + 1) % entries.length : 0;
+      setFieldErrors(Object.fromEntries(entries));
+      setLastErrKeys(entries.map(([k]) => k));
+      setErrPos(pos);
+      setErrorModal({ open: true, message: entries[pos][1] });
+    } else {
+      setErrorModal({ open: true, message: singleMsg || "Error al procesar la solicitud." });
+    }
+  };
+
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+
+  const limpiarErroresCampos = () => {
+    setFieldErrors({});
+    setLastErrKeys([]);
+    setErrPos(0);
+  };
+
+  const cerrarModalSancion = () => { setModalSancion({ open: false, id: null }); limpiarErroresCampos(); };
+  const cerrarModalAscenso = () => { setModalAscenso({ open: false, id: null }); limpiarErroresCampos(); };
+  const cerrarModalCambio  = () => { setModalCambio({ open: false, id: null }); limpiarErroresCampos(); };
+
   const handleBuscar = () => {
     if (page !== 0) setPage(0);
     else setFetchKey(k => k + 1);
@@ -173,7 +221,6 @@ export default function GestionEmpleados() {
 
   const handleRegistrar = async (e) => {
     e.preventDefault();
-    setMensaje("");
     try {
       const data = await registrarEmpleado({
         ...form,
@@ -188,27 +235,29 @@ export default function GestionEmpleados() {
         contrasenia: form.numeroDi,
       });
       if (!data?.success) {
-        setMensajeOk(false);
-        setMensaje(data?.message || "No se pudo registrar el empleado.");
+        setErrorModal({ open: true, message: data?.message || "No se pudo registrar el empleado." });
         return;
       }
+      setFieldErrors({});
+      setLastErrKeys([]);
+      setErrPos(0);
       setMensajeOk(true);
       setMensaje("Empleado registrado correctamente");
       setForm(FORM_VACIO);
       setModalNuevo(false);
       cargarEmpleados();
     } catch (err) {
-      setMensajeOk(false);
-      const msg = err?.errors
-        ? Object.entries(err.errors).map(([k, v]) => `${k}: ${v}`).join(" | ")
-        : err?.message || "Error al registrar empleado. Verifique los datos.";
-      setMensaje(msg);
+      showFormError(err?.errors, err?.message || "Error al registrar empleado. Verifique los datos.");
     }
   };
 
   const handleGuardarEdicion = async (e) => {
     e.preventDefault();
     if (!modalEditar) return;
+    if (modalEditar.idDpto && !modalEditar.cargo) {
+      showFormError(null, "Seleccione un cargo del departamento.");
+      return;
+    }
     try {
       await actualizarEmpleado(modalEditar.idEmpleado, {
         cargo: modalEditar.cargo,
@@ -222,8 +271,8 @@ export default function GestionEmpleados() {
       setMensaje("Datos del empleado actualizados correctamente");
       setModalEditar(null);
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al actualizar el empleado.");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al actualizar el empleado.");
     }
   };
 
@@ -240,65 +289,79 @@ export default function GestionEmpleados() {
     }
   };
 
-  const confirmarReactivar = async () => {
+  const confirmarReactivar = async (id) => {
     try {
-      await reactivarEmpleado(modalReactivar.id, "Reactivación manual");
+      await reactivarEmpleado(id, "Reactivación manual");
+      setMensajeOk(true);
       setMensaje("Empleado reactivado correctamente");
-      setModalReactivar({ open: false, id: null });
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al reactivar el empleado");
-      setModalReactivar({ open: false, id: null });
+    } catch (err) {
+      setMensajeOk(false);
+      setMensaje(err.message || "Error al reactivar el empleado");
     }
   };
 
   const handleSancion = async (e) => {
     e.preventDefault();
     try {
-      await registrarSancion(sancionForm.idEmpleado, {
+      const data = await registrarSancion(sancionForm.idEmpleado, {
         tipoSancion: sancionForm.tipoSancion,
         diasSuspension: parseInt(sancionForm.diasSuspension),
         justificacion: sancionForm.justificacion,
       });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Sanción registrada correctamente");
       setSancionForm({ idEmpleado: "", tipoSancion: "", diasSuspension: 0, justificacion: "" });
-      setModalSancion({ open: false, id: null });
-    } catch {
-      setMensaje("Error al registrar la sanción");
+      cerrarModalSancion();
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar la sanción.");
     }
   };
 
   const handleAscenso = async (e) => {
     e.preventDefault();
     try {
-      await registrarAscenso(ascensoForm.idEmpleado, { nuevoCargo: ascensoForm.nuevoCargo });
+      const data = await registrarAscenso(ascensoForm.idEmpleado, {
+        nuevoCargo: ascensoForm.nuevoCargo,
+        fechaAscenso: ascensoForm.fechaAscenso,
+        nuevoSueldo: ascensoForm.nuevoSueldo ? parseFloat(ascensoForm.nuevoSueldo) : null,
+      });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Ascenso registrado correctamente");
-      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "" });
-      setModalAscenso({ open: false, id: null });
+      setAscensoForm({ idEmpleado: "", nuevoCargo: "", nuevoSueldo: "", fechaAscenso: "" });
+      cerrarModalAscenso();
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al registrar el ascenso");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar el ascenso.");
     }
   };
 
   const handleCambioSalarial = async (e) => {
     e.preventDefault();
     try {
-      await cambioSalarial(cambioForm.idEmpleado, { nuevoSueldo: parseFloat(cambioForm.nuevoSueldo) });
+      const data = await cambioSalarial(cambioForm.idEmpleado, { nuevoSueldo: parseFloat(cambioForm.nuevoSueldo), fechaCambio: cambioForm.fechaCambio });
+      if (data?.success === false) { showFormError(null, data.message); return; }
       setMensaje("Cambio salarial registrado correctamente");
-      setCambioForm({ idEmpleado: "", nuevoSueldo: "" });
-      setModalCambio({ open: false, id: null });
+      setCambioForm({ idEmpleado: "", nuevoSueldo: "", fechaCambio: "" });
+      cerrarModalCambio();
       cargarEmpleados();
-    } catch {
-      setMensaje("Error al registrar el cambio salarial");
+    } catch (err) {
+      showFormError(err?.errors, err?.message || "Error al registrar el cambio salarial.");
     }
   };
 
   const openDropMenu = (id, e) => {
     if (openDrop === id) { setOpenDrop(null); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDropPos({ top: rect.bottom + 4, left: rect.right });
-    setOpenDrop(id);
+    const boton = e.currentTarget;
+    boton.scrollIntoView({ block: "nearest" });
+    requestAnimationFrame(() => {
+      const rect = boton.getBoundingClientRect();
+      const alturaMenu = 220;
+      const abajo = rect.bottom + 4;
+      const top = abajo + alturaMenu > window.innerHeight ? rect.top - alturaMenu - 4 : abajo;
+      setDropPos({ top, left: rect.right });
+      setOpenDrop(id);
+    });
   };
 
   // eslint-disable-next-line no-unused-vars
@@ -343,6 +406,16 @@ export default function GestionEmpleados() {
 
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
+  // Editar: los cargos dependen del departamento elegido; si el cargo actual no está en el catálogo, se conserva como opción
+  const deptEditar = departamentos.find(d => String(d.idDpto) === String(modalEditar?.idDpto))?.nombre;
+  const cargosEditar = [...(DEPT_CARGOS[deptEditar] ?? [])];
+  if (modalEditar?.cargo && !cargosEditar.includes(modalEditar.cargo)) cargosEditar.unshift(modalEditar.cargo);
+
+  // Ascenso: el cargo nuevo debe pertenecer al departamento actual del empleado
+  const empAscenso = empleados.find(e => e.idEmpleado === modalAscenso.id);
+  const ascensoSinDepartamento = !!empAscenso && !empAscenso.departamento;
+  const cargosAscenso = (DEPT_CARGOS[empAscenso?.departamento] ?? []).filter(c => c !== empAscenso?.cargo);
+  const ascensoSinCargos = !!empAscenso && !ascensoSinDepartamento && cargosAscenso.length === 0;
 
   return (
     <div className="dashboard">
@@ -498,7 +571,7 @@ export default function GestionEmpleados() {
                               onClick={(e) => openDropMenu(emp.idEmpleado, e)}>
                               ⋯
                             </button>
-                            {openDrop === emp.idEmpleado && (
+                            {openDrop === emp.idEmpleado && createPortal(
                               <div className="action-drop-menu" style={{
                                 position: "fixed",
                                 top: dropPos.top,
@@ -512,17 +585,21 @@ export default function GestionEmpleados() {
                                   </div>
                                 ) : (
                                   <div className="action-drop-item drop-green"
-                                    onClick={() => { setModalReactivar({ open: true, id: emp.idEmpleado }); setOpenDrop(null); }}>
+                                    onClick={() => { setOpenDrop(null); confirmarReactivar(emp.idEmpleado); }}>
                                     ✅ Reactivar empleado
                                   </div>
                                 )}
                                 <div className="action-drop-item drop-yellow"
-                                  onClick={() => { setModalSancion({ open: true, id: emp.idEmpleado }); setSancionForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
+                                  onClick={() => { limpiarErroresCampos(); setModalSancion({ open: true, id: emp.idEmpleado }); setSancionForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
                                   ⚠️ Registrar sanción
                                 </div>
                                 <div className="action-drop-item drop-green"
-                                  onClick={() => { setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm(f => ({ ...f, idEmpleado: emp.idEmpleado })); setOpenDrop(null); }}>
+                                  onClick={() => { limpiarErroresCampos(); setModalAscenso({ open: true, id: emp.idEmpleado }); setAscensoForm({ idEmpleado: emp.idEmpleado, nuevoCargo: "", nuevoSueldo: "", fechaAscenso: new Date().toLocaleDateString('sv-SE') }); setOpenDrop(null); }}>
                                   ↑ Registrar ascenso
+                                </div>
+                                <div className="action-drop-item drop-blue"
+                                  onClick={() => { limpiarErroresCampos(); setModalCambio({ open: true, id: emp.idEmpleado }); setCambioForm(f => ({ ...f, idEmpleado: emp.idEmpleado, fechaCambio: new Date().toLocaleDateString('sv-SE') })); setOpenDrop(null); }}>
+                                  💲 Cambiar sueldo
                                 </div>
                                 <div className="action-drop-item drop-gray"
                                   onClick={async () => {
@@ -541,7 +618,8 @@ export default function GestionEmpleados() {
                                   }}>
                                   🕐 Ver historial
                                 </div>
-                              </div>
+                              </div>,
+                              document.body
                             )}
                           </div>
                         </div>
@@ -595,7 +673,7 @@ export default function GestionEmpleados() {
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
               <div><h3>➕ Registrar Nuevo Empleado</h3></div>
-              <button className="modal-close" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>×</button>
+              <button className="modal-close" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); setFieldErrors({}); setLastErrKeys([]); setErrPos(0); }}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-info">
@@ -605,30 +683,36 @@ export default function GestionEmpleados() {
                 <div className="form-grid">
                   <div className="form-group">
                     <label>Tipo Documento *</label>
-                    <select value={form.docIdentidad} onChange={e => setForm({ ...form, docIdentidad: e.target.value })}>
+                    <select value={form.docIdentidad} onChange={e => setForm({ ...form, docIdentidad: e.target.value })}
+                      style={fieldErrors.docIdentidad ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="DNI">DNI</option>
                       <option value="CE">Carnet de Extranjería</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Número Documento *</label>
-                    <input value={form.numeroDi} onChange={e => setForm({ ...form, numeroDi: e.target.value })} placeholder="Ej: 12345678" required />
+                    <input value={form.numeroDi} onChange={e => setForm({ ...form, numeroDi: e.target.value })} placeholder="Ej: 12345678" required
+                      style={fieldErrors.numeroDi ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Nombres *</label>
-                    <input value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })} placeholder="Nombres completos" required />
+                    <input value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })} placeholder="Nombres completos" required
+                      style={fieldErrors.nombres ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Apellidos *</label>
-                    <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })} placeholder="Apellidos completos" required />
+                    <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })} placeholder="Apellidos completos" required
+                      style={fieldErrors.apellidos ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Fecha de Nacimiento *</label>
-                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} required />
+                    <input type="date" value={form.fechaNac} onChange={e => setForm({ ...form, fechaNac: e.target.value })} required
+                      style={fieldErrors.fechaNac ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Sexo *</label>
-                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })} required>
+                    <select value={form.sexo} onChange={e => setForm({ ...form, sexo: e.target.value })} required
+                      style={fieldErrors.sexo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione</option>
                       <option value="M">Masculino</option>
                       <option value="F">Femenino</option>
@@ -636,7 +720,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Estado Civil</label>
-                    <select value={form.estadoCivil} onChange={e => setForm({ ...form, estadoCivil: e.target.value })}>
+                    <select value={form.estadoCivil} onChange={e => setForm({ ...form, estadoCivil: e.target.value })}
+                      style={fieldErrors.estadoCivil ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione</option>
                       <option value="SOLTERO">Soltero/a</option>
                       <option value="CASADO">Casado/a</option>
@@ -647,22 +732,26 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Correo Personal</label>
-                    <input type="email" value={form.correo} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="correo@ejemplo.com" />
+                    <input type="email" value={form.correo} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="correo@ejemplo.com"
+                      style={fieldErrors.correo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                     <small style={{ color: "var(--text-3)", fontSize: "11px" }}>
                       El correo institucional se genera automáticamente al registrar.
                     </small>
                   </div>
                   <div className="form-group">
                     <label>Teléfono</label>
-                    <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999" />
+                    <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="999 999 999"
+                      style={fieldErrors.telefono ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Dirección *</label>
-                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required />
+                    <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Av. / Jr. / Calle, número, distrito" required
+                      style={fieldErrors.direccion ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
                   <div className="form-group">
                     <label>Departamento *</label>
-                    <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required>
+                    <select value={form.idDpto} onChange={e => setForm({ ...form, idDpto: e.target.value, cargo: "" })} required
+                      style={fieldErrors.idDpto ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione departamento</option>
                       {departamentos.map(d => (
                         <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
@@ -671,7 +760,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Cargo *</label>
-                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required>
+                    <select value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} required
+                      style={fieldErrors.cargo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}>
                       <option value="">Seleccione cargo</option>
                       {(form.idDpto
                         ? DEPT_CARGOS[departamentos.find(d => d.idDpto === parseInt(form.idDpto))?.nombre] ?? []
@@ -687,6 +777,7 @@ export default function GestionEmpleados() {
                         setForm({ ...form, tipoContrato: e.target.value, fechaInicio: "", fechaFin: "" });
                         setShowFechas(!!e.target.value);
                       }}
+                      style={fieldErrors.tipoContrato ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}}
                     >
                       <option value="">Seleccione</option>
                       <option value="PLAZO FIJO">Plazo fijo</option>
@@ -699,7 +790,8 @@ export default function GestionEmpleados() {
                     <input type="number" step="0.01" min="0" placeholder="0.00"
                       value={form.sueldo}
                       onChange={e => setForm({ ...form, sueldo: e.target.value })}
-                      required />
+                      required
+                      style={fieldErrors.sueldo ? { borderColor: "#ef4444", boxShadow: "0 0 0 1px #ef4444" } : {}} />
                   </div>
 
                   {form.tipoContrato && (
@@ -733,7 +825,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); }}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => { setModalNuevo(false); setForm(FORM_VACIO); setShowFechas(false); setFieldErrors({}); setLastErrKeys([]); setErrPos(0); }}>Cancelar</button>
               <button className="btn btn-success" type="submit" form="form-nuevo">✅ Registrar Empleado</button>
             </div>
           </div>
@@ -753,8 +845,21 @@ export default function GestionEmpleados() {
               <form id="form-editar" onSubmit={handleGuardarEdicion}>
                 <div className="form-grid">
                   <div className="form-group">
+                    <label>Departamento</label>
+                    <select value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value, cargo: "" })}>
+                      <option value="">Seleccione departamento</option>
+                      {departamentos.map(d => (
+                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
                     <label>Cargo</label>
-                    <input value={modalEditar.cargo ?? ""} onChange={e => setModalEditar({ ...modalEditar, cargo: e.target.value })} />
+                    <select value={modalEditar.cargo ?? ""} disabled={!modalEditar.idDpto}
+                      onChange={e => setModalEditar({ ...modalEditar, cargo: e.target.value })}>
+                      <option value="">{modalEditar.idDpto ? "Seleccione cargo" : "Seleccione primero un departamento"}</option>
+                      {cargosEditar.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Tipo de Contrato</label>
@@ -770,15 +875,6 @@ export default function GestionEmpleados() {
                     <input type="number" step="0.01" min="0" placeholder="0.00"
                       value={modalEditar.sueldo ?? ""}
                       onChange={e => setModalEditar({ ...modalEditar, sueldo: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Departamento</label>
-                    <select value={modalEditar.idDpto ?? ""} onChange={e => setModalEditar({ ...modalEditar, idDpto: e.target.value })}>
-                      <option value="">Seleccione departamento</option>
-                      {departamentos.map(d => (
-                        <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>
-                      ))}
-                    </select>
                   </div>
                   <div className="form-group">
                     <label>Correo Electrónico</label>
@@ -828,32 +924,13 @@ export default function GestionEmpleados() {
         </div>
       )}
 
-      {/* ══ MODAL: REACTIVAR ══ */}
-      {modalReactivar.open && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-header">
-              <div><h3>✅ Reactivar Empleado</h3></div>
-              <button className="modal-close" onClick={() => setModalReactivar({ open: false, id: null })}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: "14px", color: "#475569" }}>¿Confirma la reactivación? El empleado recuperará acceso al sistema.</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalReactivar({ open: false, id: null })}>Cancelar</button>
-              <button className="btn btn-success" onClick={confirmarReactivar}>Confirmar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ══ MODAL: SANCIÓN ══ */}
       {modalSancion.open && (
         <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>⚠️ Registrar Sanción</h3><p>Empleado #{modalSancion.id}</p></div>
-              <button className="modal-close" onClick={() => setModalSancion({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalSancion()}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning">⚠️ La justificación es obligatoria.</div>
@@ -871,7 +948,8 @@ export default function GestionEmpleados() {
                   </div>
                   <div className="form-group">
                     <label>Días de Suspensión</label>
-                    <input type="number" min="0" value={sancionForm.diasSuspension}
+                    <input type="number" step="1" min={sancionForm.tipoSancion === "SUSPENSION" ? 1 : 0}
+                      value={sancionForm.diasSuspension}
                       onChange={e => setSancionForm({ ...sancionForm, diasSuspension: e.target.value })} />
                   </div>
                   <div className="form-group form-full">
@@ -884,7 +962,7 @@ export default function GestionEmpleados() {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalSancion({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalSancion()}>Cancelar</button>
               <button className="btn btn-danger" type="submit" form="form-sancion">🚫 Registrar Sanción</button>
             </div>
           </div>
@@ -897,21 +975,50 @@ export default function GestionEmpleados() {
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>↑ Registrar Ascenso</h3><p>Empleado #{modalAscenso.id}</p></div>
-              <button className="modal-close" onClick={() => setModalAscenso({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalAscenso()}>×</button>
             </div>
             <div className="modal-body">
               <form id="form-ascenso" onSubmit={handleAscenso}>
                 <div className="form-group">
-                  <label>Nuevo Cargo</label>
-                  <input value={ascensoForm.nuevoCargo}
-                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoCargo: e.target.value })}
-                    placeholder="Ej: Jefe de Área, Especialista..." />
+                  <label>Departamento actual</label>
+                  <input value={empAscenso?.departamento ?? "Sin departamento"} disabled />
+                </div>
+                {ascensoSinDepartamento && (
+                  <div style={{ color: "#b91c1c", fontSize: 12, marginBottom: 10 }}>
+                    El empleado no tiene departamento asignado. Asígnele uno en Editar antes de registrar el ascenso.
+                  </div>
+                )}
+                {ascensoSinCargos && (
+                  <div style={{ color: "#b91c1c", fontSize: 12, marginBottom: 10 }}>
+                    No hay otros cargos definidos para {empAscenso.departamento}.
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Nuevo Cargo *</label>
+                  <select value={ascensoForm.nuevoCargo} required
+                    disabled={ascensoSinDepartamento || ascensoSinCargos}
+                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoCargo: e.target.value })}>
+                    <option value="">Seleccione cargo</option>
+                    {cargosAscenso.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Fecha de ascenso *</label>
+                  <input type="date" required value={ascensoForm.fechaAscenso}
+                    onChange={e => setAscensoForm({ ...ascensoForm, fechaAscenso: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Nuevo Sueldo (S/)</label>
+                  <input type="number" step="0.01" min="0" value={ascensoForm.nuevoSueldo}
+                    onChange={e => setAscensoForm({ ...ascensoForm, nuevoSueldo: e.target.value })}
+                    placeholder={empAscenso ? `Actual: S/ ${Number(empAscenso.sueldo ?? 0).toFixed(2)}. Vacío = sin cambio` : "Vacío = sin cambio"} />
                 </div>
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalAscenso({ open: false, id: null })}>Cancelar</button>
-              <button className="btn btn-primary" type="submit" form="form-ascenso">↑ Registrar Ascenso</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalAscenso()}>Cancelar</button>
+              <button className="btn btn-primary" type="submit" form="form-ascenso"
+                disabled={ascensoSinDepartamento || ascensoSinCargos}>↑ Registrar Ascenso</button>
             </div>
           </div>
         </div>
@@ -923,7 +1030,7 @@ export default function GestionEmpleados() {
           <div className="modal-box">
             <div className="modal-header">
               <div><h3>💲 Cambio Salarial</h3><p>Empleado #{modalCambio.id}</p></div>
-              <button className="modal-close" onClick={() => setModalCambio({ open: false, id: null })}>×</button>
+              <button className="modal-close" onClick={() => cerrarModalCambio()}>×</button>
             </div>
             <div className="modal-body">
               <form id="form-cambio" onSubmit={handleCambioSalarial}>
@@ -933,10 +1040,15 @@ export default function GestionEmpleados() {
                     onChange={e => setCambioForm({ ...cambioForm, nuevoSueldo: e.target.value })}
                     placeholder="0.00" required />
                 </div>
+                <div className="form-group">
+                  <label>Fecha del cambio *</label>
+                  <input type="date" value={cambioForm.fechaCambio}
+                    onChange={e => setCambioForm({ ...cambioForm, fechaCambio: e.target.value })} required />
+                </div>
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalCambio({ open: false, id: null })}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => cerrarModalCambio()}>Cancelar</button>
               <button className="btn btn-primary" type="submit" form="form-cambio">💾 Guardar Cambio</button>
             </div>
           </div>
@@ -1066,6 +1178,24 @@ export default function GestionEmpleados() {
               <button className="btn btn-success" type="submit" form="form-horario">
                 📅 Asignar turno
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR DE VALIDACIÓN (CU2) ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

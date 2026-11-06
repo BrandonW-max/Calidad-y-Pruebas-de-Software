@@ -4,6 +4,8 @@ import com.rrhh.Shared.persistence.UsuarioModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface JpaUsuarioRepository extends JpaRepository<UsuarioModel, Long> {
@@ -24,6 +26,7 @@ public interface JpaUsuarioRepository extends JpaRepository<UsuarioModel, Long> 
     boolean existsByCorreoInst(String correoInst);
 
     Optional<UsuarioModel> findByEmpleadoIdEmpleado(Long idEmpleado);
+    List<UsuarioModel> findByEmpleadoIdEmpleadoIn(Collection<Long> idsEmpleado);
     Optional<UsuarioModel> findByCorreoInst(String correoInst);
     @Query("""
         SELECT u

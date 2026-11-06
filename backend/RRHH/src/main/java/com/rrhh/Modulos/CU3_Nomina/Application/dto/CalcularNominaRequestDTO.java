@@ -5,12 +5,14 @@ import java.time.LocalDate;
 
 public class CalcularNominaRequestDTO {
 
-    @NotNull(message = "La fecha de inicio es obligatoria")
+    @NotNull(message = "Error: campo requerido")
     private LocalDate fechaInicio;
-    @NotNull(message = "La fecha de fin es obligatoria")
+    @NotNull(message = "Error: campo requerido")
     private LocalDate fechaFin;
     private Long idEmpleado;
     private Integer idDepartamento;
+    // RRHH confirma que el período se calcula aunque tenga un cambio de sueldo posterior a su inicio
+    private Boolean confirmarCambiosSueldo;
 
     public CalcularNominaRequestDTO() {}
 
@@ -33,4 +35,7 @@ public class CalcularNominaRequestDTO {
 
     public Integer getIdDepartamento() { return idDepartamento; }
     public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
+
+    public Boolean getConfirmarCambiosSueldo() { return confirmarCambiosSueldo; }
+    public void setConfirmarCambiosSueldo(Boolean confirmarCambiosSueldo) { this.confirmarCambiosSueldo = confirmarCambiosSueldo; }
 }

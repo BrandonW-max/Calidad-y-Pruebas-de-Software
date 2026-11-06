@@ -19,4 +19,12 @@ public final class TurnoUtils {
         long minutos = Duration.between(horaEntrada, horaSalida).toMinutes();
         return minutos < 0 ? minutos + MINUTOS_POR_DIA : minutos;
     }
+
+    // Desde 10 minutos extra cuenta una hora completa; cada hora adicional se redondea hacia arriba
+    public static int redondearHorasExtra(int minutos) {
+        if (minutos < 10) {
+            return 0;
+        }
+        return ((minutos + 59) / 60) * 60;
+    }
 }

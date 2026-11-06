@@ -2,10 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import "../styles/TwoFA.css";
 import { verify2FA, saveSession } from "../services/api";
 
+const MAX_INTENTOS = 3;
+
 export default function TwoFA({ open, username, onClose, onSuccess }) {
   const [code,     setCode]     = useState(["", "", "", "", "", ""]);
   const [time,     setTime]     = useState(300);
-  const [intentos, setIntentos] = useState(5);
+  const [intentos, setIntentos] = useState(MAX_INTENTOS);
+  const [bloqueado, setBloqueado] = useState(false);
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
 
@@ -62,14 +65,15 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
         onSuccess(data.rol, data.idEmpleado ?? null, data.requiereCambioPassword ?? false);
         onClose();
       } else {
-        const nuevosIntentos = intentos - 1;
-        setIntentos(nuevosIntentos);
-        setError(data.message || "El token de sesión es incorrecto");
+        const mensaje = data.message || "Codigo 2FA invalido";
+        setError(mensaje);
         setCode(["", "", "", "", "", ""]);
-        inputRefs.current[0]?.focus();
-        if (nuevosIntentos <= 0) {
-          setError("Cuenta bloqueada por exceso de intentos. Intente en 5 minutos.");
+        if (/bloquead/i.test(mensaje)) {
+          setBloqueado(true);
           setTimeout(onClose, 3000);
+        } else {
+          setIntentos(prev => prev - 1);
+          inputRefs.current[0]?.focus();
         }
       }
     } catch {
@@ -83,7 +87,6 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
     setCode(["", "", "", "", "", ""]);
     setError("");
     setTime(300);
-    setIntentos(5);
     inputRefs.current[0]?.focus();
   };
 
@@ -121,7 +124,7 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
           ))}
         </div>
 
-        {intentos < 5 && (
+        {intentos < MAX_INTENTOS && !bloqueado && (
           <p className="twofa-attempts">Intentos restantes: <span>{intentos}</span></p>
         )}
 
@@ -129,7 +132,7 @@ export default function TwoFA({ open, username, onClose, onSuccess }) {
 
         <button
           onClick={verify}
-          disabled={code.some(c => c === "") || loading}
+          disabled={code.some(c => c === "") || loading || bloqueado}
           className="twofa-button"
         >
           {loading ? "Verificando..." : "🔒 Verificar código"}

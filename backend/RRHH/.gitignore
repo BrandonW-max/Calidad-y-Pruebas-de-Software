@@ -32,5 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
-### Credenciales ###
+### Credenciales y subidas ###
 .env
+uploads/
+
+### SonarQube ###
+.sonar/
+

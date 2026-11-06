@@ -49,42 +49,24 @@ public class RegistrarSancionUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeSerSancionado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede registrar sanción a un empleado desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getJustificacion() == null || dto.getJustificacion().isBlank()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Debe ingresar una justificación para la sanción",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("La justificación es obligatoria");
         }
 
         String estadoAnterior = empleado.getEstado();
         boolean esSuspension = "SUSPENSION".equals(dto.getTipoSancion());
         int dias = dto.getDiasSuspension();
+
+        if (esSuspension && dias <= 0) {
+            throw new IllegalArgumentException("Los dias de suspension deben ser mayor a cero");
+        }
 
         Sancion sancion = new Sancion();
 

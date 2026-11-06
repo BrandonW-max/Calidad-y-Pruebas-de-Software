@@ -1,6 +1,7 @@
 package com.rrhh.Shared.export.pdf.implementations;
 
 import com.rrhh.Shared.export.pdf.interfaces.PDFExporter;
+import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -27,9 +28,7 @@ public class GenericPDFExporter implements PDFExporter {
 
     @Override
     public byte[] export(String titulo, List<Map<String, Object>> datos, String[] headers, String[] keys) {
-        if (datos == null || datos.isEmpty()) {
-            return new byte[0];
-        }
+        boolean sinDatos = datos == null || datos.isEmpty();
 
         Document document = new Document(PageSize.A4.rotate(), 30, 30, 30, 30);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -48,6 +47,12 @@ public class GenericPDFExporter implements PDFExporter {
             dateParagraph.setSpacingAfter(10);
             document.add(dateParagraph);
 
+            if (sinDatos) {
+                document.add(new Paragraph("Sin registros para el periodo seleccionado.", FONT_CELL));
+                document.close();
+                return baos.toByteArray();
+            }
+
             PdfPTable table = new PdfPTable(headers.length);
             table.setWidthPercentage(100);
 
@@ -62,7 +67,7 @@ public class GenericPDFExporter implements PDFExporter {
             for (Map<String, Object> row : datos) {
                 for (String key : keys) {
                     String valor = formatValue(row.get(key));
-                    PdfPCell cell = new PdfPCell(new Phrase(valor, FONT_CELL));
+                    PdfPCell cell = new PdfPCell(crearFrase(valor));
                     cell.setPadding(3);
                     table.addCell(cell);
                 }
@@ -75,6 +80,17 @@ public class GenericPDFExporter implements PDFExporter {
         }
 
         return baos.toByteArray();
+    }
+
+    // Cada salto de línea del valor se dibuja como una línea nueva dentro de la celda
+    private Phrase crearFrase(String valor) {
+        Phrase frase = new Phrase();
+        String[] lineas = valor.split("\n", -1);
+        for (int i = 0; i < lineas.length; i++) {
+            if (i > 0) frase.add(Chunk.NEWLINE);
+            frase.add(new Chunk(lineas[i], FONT_CELL));
+        }
+        return frase;
     }
 
     private String formatValue(Object value) {

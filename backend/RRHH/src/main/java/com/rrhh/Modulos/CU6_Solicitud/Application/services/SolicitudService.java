@@ -2,6 +2,7 @@ package com.rrhh.Modulos.CU6_Solicitud.Application.services;
 
 import com.rrhh.Shared.persistence.EmpleadoModel;
 import com.rrhh.Shared.persistence.HistorialAuditoriaModel;
+import org.springframework.security.access.AccessDeniedException;
 import com.rrhh.Shared.persistence.UsuarioModel;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository;
 import com.rrhh.Modulos.CU6_Solicitud.Application.dto.DecisionGerenciaRequestDTO;
@@ -26,8 +27,6 @@ import java.util.stream.Collectors;
 @Service
 public class SolicitudService implements ISolicitudService {
 
-    private static final int DIAS_VACACIONES_ANUALES = 30;
-
     @PersistenceContext
     private EntityManager em;
 
@@ -51,15 +50,23 @@ public class SolicitudService implements ISolicitudService {
     @Transactional
     public SolicitudResponseDTO registrarSolicitud(RegistrarSolicitudRequestDTO request, Long idUsuario) {
 
+        java.util.List<String> tiposValidos = java.util.List.of(
+                "VACACIONES", "PERMISO_PERSONAL", "PERMISO_MEDICO", "OTROS");
+        boolean tipoValido = tiposValidos.stream()
+                .anyMatch(t -> t.equalsIgnoreCase(request.getTipoSolicitud()));
+        if (!tipoValido) {
+            throw new IllegalArgumentException("Error: tipo de solicitud invalido");
+        }
+
         if (request.getFechaInicio().isAfter(request.getFechaFin())) {
             throw new IllegalArgumentException(
                 "La fecha de inicio no puede ser mayor que la fecha fin."
             );
         }
 
-        validarDiasLaborables(request.getFechaInicio(), request.getFechaFin());
+        validarFechasSolicitud(request.getFechaInicio(), request.getFechaFin());
 
-        int diasSolicitados = calcularDiasLaborables(request.getFechaInicio(), request.getFechaFin());
+        int diasSolicitados = calcularDiasSolicitados(request.getFechaInicio(), request.getFechaFin());
 
         UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
             .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
@@ -71,14 +78,7 @@ public class SolicitudService implements ISolicitudService {
             throw new IllegalStateException("El empleado no esta activo en el sistema.");
         }
 
-        if ("VACACIONES".equals(request.getTipoSolicitud())) {
-            int saldoDisponible = empleado.getSaldoVacaciones() != null ? empleado.getSaldoVacaciones() : DIAS_VACACIONES_ANUALES;
-            if (diasSolicitados > saldoDisponible) {
-                throw new IllegalStateException(
-                    "No cuenta con dias disponibles de vacaciones. Saldo disponible: " + saldoDisponible + " dias."
-                );
-            }
-        }
+        validarSinSolapamiento(idEmpleado, request.getFechaInicio(), request.getFechaFin());
 
         Solicitud solicitud = solicitudFactory.crearSolicitudPermiso(
                 request.getTipoSolicitud(), request.getMotivo());
@@ -92,7 +92,9 @@ public class SolicitudService implements ISolicitudService {
         solicitud.setActualizadoEl(LocalDateTime.now());
 
         Solicitud guardada = solicitudRepository.guardar(solicitud);
-        return mapearAResponse(guardada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(guardada, empleado);
+        response.setMensaje("Solicitud registrada correctamente. Estado: PENDIENTE.");
+        return response;
     }
 
     @Override
@@ -132,7 +134,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", observacion=" + (request.getObservacionRrhh() != null ? request.getObservacionRrhh() : ""));
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por RRHH. Estado: PROCESADO."
+                : "Solicitud devuelta. Estado: OBSERVADO.");
+        return response;
     }
 
     @Override
@@ -148,29 +154,13 @@ public class SolicitudService implements ISolicitudService {
 
         if (request.isAprobado()) {
             solicitud.setEstado("APROBADA");
-            solicitud.setRespuesta(
-                (request.getRespuesta() != null && !request.getRespuesta().isBlank())
-                    ? request.getRespuesta()
-                    : "Su solicitud de vacaciones o permisos ha sido aprobada por Gerencia."
-            );
-
-            // RNF86: Descontar saldo de vacaciones
-            if ("VACACIONES".equals(solicitud.getTipoSolicitud())) {
-                jpaEmpleadoRepository.findById(Objects.requireNonNull(solicitud.getIdEmpleado())).ifPresent(emp -> {
-                    int saldoActual = emp.getSaldoVacaciones() != null ? emp.getSaldoVacaciones() : DIAS_VACACIONES_ANUALES;
-                    int dias = solicitud.getDiasSolicitados() != null ? solicitud.getDiasSolicitados() : 0;
-                    emp.setSaldoVacaciones(Math.max(0, saldoActual - dias));
-                    jpaEmpleadoRepository.save(emp);
-                });
-            }
+            solicitud.setRespuesta("Solicitud aprobada por Gerencia. Estado: APROBADA.");
         } else {
             if (request.getRespuesta() == null || request.getRespuesta().isBlank()) {
                 throw new IllegalArgumentException("Ingrese el motivo del rechazo.");
             }
             solicitud.setEstado("RECHAZADA");
-            solicitud.setRespuesta(
-                "Su solicitud de vacaciones o permisos ha sido rechazada por Gerencia. Motivo: " + request.getRespuesta()
-            );
+            solicitud.setRespuesta("Solicitud rechazada. Estado: RECHAZADA.");
         }
 
         solicitud.setAprobadoPor(idUsuarioGerencia);
@@ -189,7 +179,11 @@ public class SolicitudService implements ISolicitudService {
                 + ", respuesta=" + actualizada.getRespuesta());
         em.persist(log);
 
-        return mapearAResponse(actualizada, empleado);
+        SolicitudResponseDTO response = mapearAResponse(actualizada, empleado);
+        response.setMensaje(request.isAprobado()
+                ? "Solicitud aprobada por Gerencia. Estado: APROBADA."
+                : "Solicitud rechazada. Estado: RECHAZADA.");
+        return response;
     }
 
     @Override
@@ -220,36 +214,6 @@ public class SolicitudService implements ISolicitudService {
         return mapearAResponse(solicitud, empleado);
     }
 
-    @Override
-    @Transactional
-    public SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idUsuario) {
-        Solicitud original = solicitudRepository.buscarPorId(idSolicitud)
-            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Solicitud no encontrada."));
-
-        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
-            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
-        EmpleadoModel empleado = usuario.getEmpleado();
-        if (empleado == null) throw new IllegalArgumentException("El usuario no tiene un empleado vinculado.");
-        Long idEmpleado = empleado.getIdEmpleado();
-
-        Solicitud clon = original.clonePrototype();
-
-        clon.setIdSolicitud(null);
-        clon.setEstado("PENDIENTE");
-        clon.setRespuesta(null);
-        clon.setObservacionRrhh(null);
-        clon.setFechaRevision(null);
-        clon.setFechaDecision(null);
-        clon.setRevisadoPor(null);
-        clon.setAprobadoPor(null);
-        clon.setIdEmpleado(idEmpleado);
-        clon.setCreadoEl(LocalDateTime.now());
-        clon.setActualizadoEl(LocalDateTime.now());
-
-        Solicitud guardada = solicitudRepository.guardar(clon);
-        return mapearAResponse(guardada, empleado);
-    }
-
     public List<SolicitudResponseDTO> listarNotificacionesPorEmpleado(Long idEmpleado) {
         return solicitudRepository.buscarPorEmpleado(idEmpleado).stream()
             .filter(s -> ("APROBADA".equals(s.getEstado()) || "RECHAZADA".equals(s.getEstado())))
@@ -266,36 +230,43 @@ public class SolicitudService implements ISolicitudService {
     // PRIVATE
     // ================================
 
-    private void validarDiasLaborables(LocalDate inicio, LocalDate fin) {
-        List<LocalDate> feriados = em.createQuery(
-                "SELECT f.fecha FROM FeriadoModel f", LocalDate.class).getResultList();
-
-        LocalDate fecha = inicio;
-        while (!fecha.isAfter(fin)) {
-            DayOfWeek dia = fecha.getDayOfWeek();
-            if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY || feriados.contains(fecha)) {
-                throw new IllegalArgumentException(
-                    "Las fechas seleccionadas incluyen fines de semana o feriados."
-                );
-            }
-            fecha = fecha.plusDays(1);
+    /** Una solicitud RECHAZADA no bloquea nuevas fechas; las demás estados activos sí. */
+    private void validarSinSolapamiento(Long idEmpleado, LocalDate inicio, LocalDate fin) {
+        List<String> estadosActivos = List.of("PENDIENTE", "OBSERVADO", "PROCESADO", "APROBADA");
+        boolean solapada = solicitudRepository.buscarPorEmpleado(idEmpleado).stream()
+                .filter(s -> estadosActivos.contains(s.getEstado()))
+                .anyMatch(s -> !s.getFechaInicio().isAfter(fin) && !s.getFechaFin().isBefore(inicio));
+        if (solapada) {
+            throw new IllegalStateException(
+                "Ya tiene una solicitud activa que se cruza con las fechas indicadas.");
         }
     }
 
-    private int calcularDiasLaborables(LocalDate inicio, LocalDate fin) {
+    /** RNF77: el personal de turnos rotativos puede pedir fines de semana; solo se rechazan los feriados del rango. */
+    private void validarFechasSolicitud(LocalDate inicio, LocalDate fin) {
         List<LocalDate> feriados = em.createQuery(
                 "SELECT f.fecha FROM FeriadoModel f", LocalDate.class).getResultList();
 
-        int dias = 0;
-        LocalDate fecha = inicio;
-        while (!fecha.isAfter(fin)) {
-            DayOfWeek dia = fecha.getDayOfWeek();
-            if (dia != DayOfWeek.SATURDAY && dia != DayOfWeek.SUNDAY && !feriados.contains(fecha)) {
-                dias++;
-            }
-            fecha = fecha.plusDays(1);
+        boolean incluyeFeriado = feriados.stream()
+                .anyMatch(f -> !f.isBefore(inicio) && !f.isAfter(fin));
+        if (incluyeFeriado) {
+            throw new IllegalArgumentException("El rango de fechas incluye un feriado nacional.");
         }
-        return dias;
+    }
+
+    /** Lanza 403 si el empleado de la sesión no es dueño del registro indicado. */
+    public void validarPropiedad(Long idUsuario, Long idEmpleadoDueno) {
+        UsuarioModel usuario = jpaUsuarioRepository.findById(Objects.requireNonNull(idUsuario))
+            .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("Usuario no encontrado."));
+        EmpleadoModel empleado = usuario.getEmpleado();
+        if (empleado == null || !Objects.equals(empleado.getIdEmpleado(), idEmpleadoDueno)) {
+            throw new AccessDeniedException("No puede acceder a solicitudes de otro empleado.");
+        }
+    }
+
+    /** Días solicitados: todos los días del rango (fines de semana incluidos), ya validado que no haya feriados. */
+    private int calcularDiasSolicitados(LocalDate inicio, LocalDate fin) {
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
     }
 
     private SolicitudResponseDTO mapearAResponse(Solicitud solicitud, EmpleadoModel empleado) {

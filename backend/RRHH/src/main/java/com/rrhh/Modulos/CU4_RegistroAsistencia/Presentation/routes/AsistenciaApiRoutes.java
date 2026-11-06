@@ -18,4 +18,5 @@ public class AsistenciaApiRoutes {
     public static final String MANUAL = "/manual";
     public static final String JUSTIFICACIONES_PENDIENTES = "/justificaciones/pendientes";
     public static final String JUSTIFICACIONES_POR_EMPLEADO = "/justificaciones/empleado/{idEmpleado}";
+    public static final String JUSTIFICACIONES_POR_ESTADO = "/justificaciones/estado/{estado}";
 }

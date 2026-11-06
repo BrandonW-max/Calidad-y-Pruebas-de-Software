@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
 import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
-import { generarReporte } from "../services/api";
+import { generarReporte, getDepartamentos, getCargos, listarEmpleados } from "../services/api";
 
 const TIPOS_REPORTE = [
   { id: "empleados",   label: "Reporte de Empleados",   icon: "👥", desc: "Listado general o filtrado de empleados con sus datos personales y laborales.", color: "#3b82f6" },
   { id: "nomina",      label: "Reporte de Nómina",      icon: "💲", desc: "Detalle de pagos, bonificaciones y descuentos por período.",                    color: "#10b981" },
   { id: "asistencia",  label: "Reporte de Asistencia",  icon: "🕐", desc: "Registro de entradas, salidas, tardanzas e inasistencias.",                     color: "#f59e0b" },
   { id: "solicitudes", label: "Reporte de Solicitudes", icon: "📋", desc: "Permisos y licencias solicitadas, aprobadas o rechazadas.",                      color: "#8b5cf6" },
+  { id: "historial-laboral", label: "Historial Laboral", icon: "📜", desc: "Ascensos, cambios de sueldo y sanciones de un empleado o de todos.",            color: "#ec4899" },
 ];
 
 const FORMATOS = [
@@ -17,6 +18,23 @@ const FORMATOS = [
   { v: "EXCEL", l: "XLSX" },
   { v: "CSV",   l: "CSV" },
 ];
+
+// Nombres legibles de las columnas; las que no estén aquí se muestran con su clave
+const ETIQUETAS_COLUMNAS = {
+  fecha: "Fecha",
+  empleado: "Empleado",
+  tipo: "Tipo",
+  detalle: "Detalle",
+  periodo: "Periodo",
+  sueldoContrato: "Sueldo Contrato",
+  sueldoBase: "Sueldo Devengado",
+  horasExtra: "Horas Extra",
+  bonificaciones: "Bonificaciones",
+  descuentos: "Descuentos",
+  sueldoBruto: "Sueldo Bruto",
+  sueldoNeto: "Sueldo Neto",
+  estado: "Estado",
+};
 
 const MESES = [
   { v: "01", l: "Enero" }, { v: "02", l: "Febrero" }, { v: "03", l: "Marzo" },
@@ -36,12 +54,35 @@ export default function GenerarReportes() {
   const [fechaIni,  setFechaIni]  = useState("");
   const [fechaFin,  setFechaFin]  = useState("");
   const [estado,    setEstado]    = useState("");
+  const [departamentos, setDepartamentos] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [empleadoId, setEmpleadoId] = useState("");
+  const [departamento,  setDepartamento]  = useState("");
+  const [cargo,         setCargo]         = useState("");
+  const [cargos,        setCargos]        = useState([]);
   const [generando, setGenerando] = useState(false);
   const [mensaje,   setMensaje]   = useState("");
+  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  useEffect(() => {
+    getDepartamentos().then(setDepartamentos).catch(() => {});
+    listarEmpleados(0, 200)
+      .then(d => setEmpleados((d?.content ?? []).filter(e => e.estado === "ACTIVO")))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    getCargos(departamento).then(setCargos).catch(() => setCargos([]));
+  }, [departamento]);
   const [error,     setError]     = useState("");
   const [resultado, setResultado] = useState(null);
   const [historial, setHistorial] = useState([]);
   const [modalPreview, setModalPreview] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   const nombreArchivo = (ext) =>
     `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${ext}`;
@@ -132,6 +173,9 @@ export default function GenerarReportes() {
       fechaInicio: inicio,
       fechaFin:    fin,
       estado:     (tipoSeleccionado === "solicitudes" || tipoSeleccionado === "empleados") ? estado || undefined : undefined,
+      area:       (tipoSeleccionado === "nomina" || tipoSeleccionado === "solicitudes") ? departamento || undefined : undefined,
+      cargo:      tipoSeleccionado === "solicitudes" ? cargo.trim() || undefined : undefined,
+      idEmpleado: tipoSeleccionado === "historial-laboral" && empleadoId ? Number(empleadoId) : undefined,
     };
 
     try {
@@ -168,7 +212,7 @@ export default function GenerarReportes() {
         setHistorial(h => [{ tipo: tipoSeleccionado, formato, fecha: new Date().toLocaleString("es-PE"), estado: lista.length > 0 ? "Generado" : "Sin datos" }, ...h].slice(0, 10));
       }
     } catch (e) {
-      setError(e.message || "Error al generar el reporte. Verifique los filtros e intente de nuevo.");
+      setErrorModal({ open: true, message: e.message || "Error al generar el reporte. Verifique los filtros e intente de nuevo." });
     } finally {
       setGenerando(false);
     }
@@ -183,10 +227,10 @@ export default function GenerarReportes() {
     const keys = Object.keys(resultado[0]);
     return (
       <table>
-        <thead><tr>{keys.map(k => <th key={k}>{k}</th>)}</tr></thead>
+        <thead><tr>{keys.map(k => <th key={k} style={{ textAlign: "center", ...(k === "fecha" ? { whiteSpace: "nowrap", minWidth: 120 } : {}) }}>{ETIQUETAS_COLUMNAS[k] ?? k}</th>)}</tr></thead>
         <tbody>
           {resultado.slice(0, 50).map((row, i) => (
-            <tr key={i}>{keys.map(k => <td key={k} style={{ fontSize: "12px" }}>{row[k] != null ? String(row[k]) : "—"}</td>)}</tr>
+            <tr key={i}>{keys.map(k => <td key={k} style={{ fontSize: "12px", textAlign: "center", whiteSpace: k === "fecha" ? "nowrap" : "pre-line", ...(k === "fecha" ? { minWidth: 120 } : {}) }}>{row[k] != null ? String(row[k]) : "—"}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -208,7 +252,7 @@ export default function GenerarReportes() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
         <div className="reportes-layout">
@@ -260,6 +304,36 @@ export default function GenerarReportes() {
                     </div>
                   </>)}
 
+                  {(tipoSeleccionado === "nomina" || tipoSeleccionado === "solicitudes") && (
+                    <div className="form-group">
+                      <label>Departamento</label>
+                      <select value={departamento} onChange={e => { setDepartamento(e.target.value); setCargo(""); }}>
+                        <option value="">Todos</option>
+                        {departamentos.map(d => <option key={d.idDpto} value={d.nombre}>{d.nombre}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {tipoSeleccionado === "solicitudes" && (
+                    <div className="form-group">
+                      <label>Cargo</label>
+                      <select value={cargo} onChange={e => setCargo(e.target.value)}>
+                        <option value="">Todos</option>
+                        {cargos.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {tipoSeleccionado === "historial-laboral" && (
+                    <div className="form-group">
+                      <label>Empleado</label>
+                      <select value={empleadoId} onChange={e => setEmpleadoId(e.target.value)}>
+                        <option value="">Todos los empleados</option>
+                        {empleados.map(e => <option key={e.idEmpleado} value={e.idEmpleado}>{e.nombres} {e.apellidos}</option>)}
+                      </select>
+                    </div>
+                  )}
+
                   {(tipoSeleccionado === "empleados" || tipoSeleccionado === "solicitudes") && (<>
                     <div className="form-group">
                       <label>Fecha Desde</label>
@@ -278,7 +352,7 @@ export default function GenerarReportes() {
                         <option value="">Todos</option>
                         {tipoSeleccionado === "solicitudes"
                           ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADA">Aprobado</option><option value="RECHAZADA">Rechazado</option></>
-                          : <><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></>
+                          : <><option value="ACTIVO">Activo</option><option value="DESVINCULADO">Inactivo</option></>
                         }
                       </select>
                     </div>
@@ -301,14 +375,13 @@ export default function GenerarReportes() {
             </div>
 
             {resultado && (
-              <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
-                <div style={{ padding: "16px 20px 10px" }}>
-                  <h2 style={{ margin: 0 }}>
+              <div className="section-card asistencia-panel">
+                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+                  <h2 style={{ margin: 0, border: "none", padding: 0 }}>
                     Resultados — {tipoActual?.label}
-                    <span className="badge badge-success" style={{ marginLeft: 10, fontSize: "12px" }}>{resultado.length} registros</span>
                   </h2>
                 </div>
-                <div className="table-wrapper" style={{ marginBottom: 0 }}>{renderTabla()}</div>
+                <div className="table-wrapper" style={{ marginBottom: 0, paddingBottom: 14, ...(resultado.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>{renderTabla()}</div>
               </div>
             )}
 
@@ -366,6 +439,24 @@ export default function GenerarReportes() {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModalPreview(false)}>Cerrar</button>
               <button className="btn btn-secondary" onClick={exportar}>💾 Exportar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

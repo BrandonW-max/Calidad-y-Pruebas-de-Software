@@ -56,21 +56,6 @@ public class ReactivarEmpleadoUseCase {
             throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
         }
 
-        if (empleado.estaDesvinculado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede reactivar un empleado desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
-        }
-
         String estadoAnterior = empleado.getEstado();
 
         String motivo = "Reactivación manual";
@@ -101,12 +86,26 @@ public class ReactivarEmpleadoUseCase {
 
             jpaUsuarioRepository.findByEmpleadoIdEmpleado(idEmpleado).ifPresent(model -> {
                 model.setTokenInvalidoDesde(null);
+                // RF32: reiniciar la configuración de 2FA; el empleado debe configurarlo de nuevo
+                model.setDosfaActivo(false);
+                model.setDosfaSecret(null);
+                model.setIntentosFalla2fa(0);
+                model.setBloqueo2faHasta(null);
                 jpaUsuarioRepository.save(model);
             });
         }
 
         Contrato contrato =
                 contratoRepository.findContratoActivoByEmpleado(idEmpleado);
+
+        if (contrato == null) {
+            Contrato ultimo =
+                    contratoRepository.findUltimoContratoResueltoByEmpleado(idEmpleado);
+            if (ultimo != null) {
+                ultimo.reactivar();
+                contrato = contratoRepository.save(ultimo);
+            }
+        }
 
         auditoriaEmpleadoService.registrar(
                 empleadoGuardado.getIdEmpleado(),

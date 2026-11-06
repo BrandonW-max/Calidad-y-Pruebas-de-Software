@@ -105,6 +105,8 @@ public class NominaComprobantePDFGenerator {
                 "Fecha inicio", n.getFechaInicio() != null ? n.getFechaInicio().toString() : "—");
         addInfoRow(t, "Fecha fin", n.getFechaFin() != null ? n.getFechaFin().toString() : "—",
                 "Fecha emisión", LocalDate.now().toString());
+        addInfoRow(t, "Sueldo contrato", n.getSueldoContrato() != null ? fmt(n.getSueldoContrato()) : "—",
+                "Sueldo devengado", n.getSueldoBase() != null ? fmt(n.getSueldoBase()) : "—");
 
         doc.add(t);
     }
@@ -137,7 +139,7 @@ public class NominaComprobantePDFGenerator {
         t.addCell(hRight);
 
         // Filas de remuneraciones vs descuentos
-        addSalaryRow(t, "Sueldo Base", n.getSueldoBase(), false,
+        addSalaryRow(t, "Sueldo Devengado", n.getSueldoBase(), false,
                 "AFP / Desc. de Ley", n.getDescuentoLey(), true, false);
         addSalaryRow(t, "Bonif. Familiar", n.getBonifFamiliar(), false,
                 "Desc. Tardanzas", n.getDescuentoTardanzas(), true, true);

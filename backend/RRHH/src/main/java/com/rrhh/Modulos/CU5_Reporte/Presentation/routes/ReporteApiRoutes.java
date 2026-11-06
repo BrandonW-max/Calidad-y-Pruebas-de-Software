@@ -9,4 +9,5 @@ public class ReporteApiRoutes {
     public static final String ASISTENCIA  = BASE + "/asistencia";
     public static final String NOMINA      = BASE + "/nomina";
     public static final String SOLICITUDES = BASE + "/solicitudes";
+    public static final String HISTORIAL_LABORAL = BASE + "/historial-laboral";
 }

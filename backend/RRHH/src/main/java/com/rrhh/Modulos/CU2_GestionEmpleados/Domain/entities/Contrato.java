@@ -50,6 +50,10 @@ public class Contrato implements Prototype<Contrato> {
         this.estado = "RESUELTO";
     }
 
+    public void reactivar() {
+        this.estado = "ACTIVO";
+    }
+
     public Long getIdContrato() {
         return idContrato;
     }

@@ -53,6 +53,7 @@ public class RegistrarEmpleadoRequestDTO {
     @NotNull(message = "El departamento es obligatorio")
     private Integer idDpto;
 
+
    
     // DATOS DEL USUARIO DEL SISTEMA
     
