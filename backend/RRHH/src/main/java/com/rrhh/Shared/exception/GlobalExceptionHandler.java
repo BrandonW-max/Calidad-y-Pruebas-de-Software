@@ -175,6 +175,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException ex) {
+        Throwable causa = ex.getCause() != null ? ex.getCause() : ex;
+        boolean esErrorBD = causa.getClass().getName().contains("jdbc")
+                || causa.getClass().getName().contains("sql")
+                || causa.getClass().getName().contains("Jpa")
+                || causa.getClass().getName().contains("Hibernate")
+                || ex.getMessage() != null && ex.getMessage().toLowerCase().contains("jdbc");
+        if (esErrorBD) {
+            log.error("Error interno de base de datos (RuntimeException)", ex);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", "ERROR_BASE_DE_DATOS");
+            response.put("message", "Ocurrió un error interno. Intente nuevamente o contacte al administrador.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
         return badRequest("ERROR_DE_NEGOCIO", ex.getMessage());
     }
 
