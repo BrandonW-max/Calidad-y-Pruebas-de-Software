@@ -48,21 +48,30 @@ public class DispositivoController {
             return ResponseEntity.badRequest().body(Map.of("mensaje", "Formato de DNI inválido. Debe contener 8 dígitos numéricos."));
         }
 
-        EmpleadoModel emp = empleadoRepository.findByNumeroDi(dni)
-                .orElseThrow(() -> new com.rrhh.Shared.exception.RecursoNoEncontradoException("No se encontró un empleado activo con el documento indicado."));
+        Optional<EmpleadoModel> empOpt = empleadoRepository.findByNumeroDi(dni);
 
-        if (!"ACTIVO".equals(emp.getEstado())) {
-            return ResponseEntity.badRequest().body(Map.of("mensaje", "Empleado inactivo o desvinculado."));
+        // Anti-enumeración de empleados (CWE-203 / CWE-862):
+        // Respuesta uniforme e indistinguible tanto si el empleado existe como si no existe o está inactivo.
+        if (empOpt.isEmpty() || !"ACTIVO".equals(empOpt.get().getEstado())
+                || empOpt.get().getCorreo() == null || empOpt.get().getCorreo().isBlank()) {
+            return ResponseEntity.ok(Map.of(
+                    "sessionId", java.util.UUID.randomUUID().toString(),
+                    "mensaje", "Si el documento corresponde a un empleado activo, se envió un código OTP a su correo corporativo."
+            ));
         }
 
-        if (emp.getCorreo() == null || emp.getCorreo().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("mensaje", "El empleado no tiene correo registrado."));
-        }
-
+        EmpleadoModel emp = empOpt.get();
         OtpService.OtpResult otp = otpService.generarOtp(dni);
-        emailService.enviarCodigoOtp(emp.getCorreo(), emp.getNombres() + " " + emp.getApellidos(), otp.codigo());
+        try {
+            emailService.enviarCodigoOtp(emp.getCorreo(), emp.getNombres() + " " + emp.getApellidos(), otp.codigo());
+        } catch (Exception e) {
+            log.warn("No se pudo enviar el correo OTP: {}", e.getMessage());
+        }
 
-        return ResponseEntity.ok(Map.of("sessionId", otp.sessionId()));
+        return ResponseEntity.ok(Map.of(
+                "sessionId", otp.sessionId(),
+                "mensaje", "Si el documento corresponde a un empleado activo, se envió un código OTP a su correo corporativo."
+        ));
     }
 
     /** Vincula o actualiza el celular de un empleado, previa verificación OTP */
