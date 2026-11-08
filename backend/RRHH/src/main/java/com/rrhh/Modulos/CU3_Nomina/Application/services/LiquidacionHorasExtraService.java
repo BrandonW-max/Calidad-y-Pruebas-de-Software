@@ -108,9 +108,11 @@ public class LiquidacionHorasExtraService {
                 m.put("motivo", null);
                 return m;
             });
-            horario.put("minutos", (int) horario.get("minutos") + ((Number) f[7]).intValue());
+            int minutosAcum = ((Number) horario.get("minutos")).intValue();
+            int minutosNuevos = f[7] != null ? ((Number) f[7]).intValue() : 0;
+            horario.put("minutos", minutosAcum + minutosNuevos);
             if ("CORRECCION".equals(f[2]) && f[1] != null) horario.put("tieneCorrecciones", true);
-            if (f[3] != null && horario.get("fechaInicio") == null) {
+            if (f[3] != null && !horario.containsKey("fechaInicio")) {
                 horario.put("fechaInicio", aFecha(f[3]));
                 horario.put("fechaFin", aFecha(f[4]));
                 horario.put("horaEntrada", aHora(f[5]));
@@ -121,11 +123,11 @@ public class LiquidacionHorasExtraService {
 
         List<Map<String, Object>> resultado = new ArrayList<>();
         for (Map<String, Object> h : horarios.values()) {
-            h.put("horas", horas((int) h.get("minutos")));
+            h.put("horas", horas(((Number) h.get("minutos")).intValue()));
             resultado.add(h);
         }
         resultado.sort(Comparator.comparing(
-                (Map<String, Object> h) -> (LocalDate) h.get("fechaInicio"),
+                (Map<String, Object> h) -> (LocalDate) h.getOrDefault("fechaInicio", null),
                 Comparator.nullsLast(Comparator.naturalOrder())));
         return resultado;
     }

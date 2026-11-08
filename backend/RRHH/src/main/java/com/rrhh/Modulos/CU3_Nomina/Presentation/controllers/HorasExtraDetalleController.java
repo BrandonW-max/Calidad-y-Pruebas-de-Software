@@ -3,6 +3,8 @@ package com.rrhh.Modulos.CU3_Nomina.Presentation.controllers;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.LiquidacionHorasExtraService;
 import com.rrhh.Modulos.CU3_Nomina.Presentation.routes.NominaApiRoutes;
 import com.rrhh.Shared.config.RRHHProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,8 @@ import java.util.Map;
 @RequestMapping(NominaApiRoutes.BASE)
 public class HorasExtraDetalleController {
 
+    private static final Logger log = LoggerFactory.getLogger(HorasExtraDetalleController.class);
+
     private final LiquidacionHorasExtraService liquidacionService;
     private final RRHHProperties rrhhProperties;
 
@@ -29,6 +33,7 @@ public class HorasExtraDetalleController {
     @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<List<Map<String, Object>>> detalle(@RequestParam Long idEmpleado,
                                                              @RequestParam String periodo) {
+        log.debug("horas-extra-detalle idEmpleado={} periodo={}", idEmpleado, periodo);
         return ResponseEntity.ok(liquidacionService.detalle(idEmpleado, periodo));
     }
 
