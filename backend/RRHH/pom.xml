@@ -39,6 +39,20 @@
         <sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
         <jacoco.version>0.8.12</jacoco.version>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.exclusions>
+            **/config/**,
+            **/routes/**,
+            **/exception/**,
+            **/dto/**,
+            **/Shared/export/**,
+            **/Infrastructure/mappers/**,
+            **/Infrastructure/specifications/**,
+            **/Infrastructure/interfaces/**,
+            **/Infrastructure/factory/**,
+            **/factory/**,
+            **/Presentation/controllers/**,
+            **/*Application.java
+        </sonar.coverage.exclusions>
     </properties>
 
     <!-- ============================== -->

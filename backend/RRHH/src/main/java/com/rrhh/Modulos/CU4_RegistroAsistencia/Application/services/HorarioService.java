@@ -55,7 +55,7 @@ public class HorarioService {
             throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Horario no encontrado.");
         }
         model.setActivo(false);
-        em.merge(model);
+        model = em.merge(model);
     }
 
     @Transactional
