@@ -29,12 +29,7 @@ public class SolicitudController {
     public ResponseEntity<?> registrar(
             @Valid @RequestBody RegistrarSolicitudRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        try {
-            SolicitudResponseDTO response = solicitudService.registrarSolicitud(request, user.getIdUsuario());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(solicitudService.registrarSolicitud(request, user.getIdUsuario()));
     }
 
     @PutMapping(SolicitudApiRoutes.REVISAR_RRHH)
@@ -42,12 +37,7 @@ public class SolicitudController {
     public ResponseEntity<?> revisarRrhh(
             @Valid @RequestBody RevisionRrhhRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        try {
-            SolicitudResponseDTO response = solicitudService.revisarSolicitudRrhh(request, user.getIdUsuario());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(solicitudService.revisarSolicitudRrhh(request, user.getIdUsuario()));
     }
 
     @PutMapping(SolicitudApiRoutes.DECIDIR_GERENCIA)
@@ -55,12 +45,7 @@ public class SolicitudController {
     public ResponseEntity<?> decidirGerencia(
             @Valid @RequestBody DecisionGerenciaRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        try {
-            SolicitudResponseDTO response = solicitudService.decidirSolicitudGerencia(request, user.getIdUsuario());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(solicitudService.decidirSolicitudGerencia(request, user.getIdUsuario()));
     }
 
     @GetMapping(SolicitudApiRoutes.POR_ESTADO)

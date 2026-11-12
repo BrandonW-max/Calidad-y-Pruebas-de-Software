@@ -4,8 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Null;
 
 public class ActualizarEmpleadoRequestDTO {
+
+    @Null(message = "El numero de documento no puede modificarse")
+    private String numeroDi;
 
     private LocalDate fechaNac;
     private String sexo;
@@ -38,6 +42,14 @@ public class ActualizarEmpleadoRequestDTO {
         this.direccion = direccion;
         this.correo = correo;
         this.telefono = telefono;
+    }
+
+    public String getNumeroDi() {
+        return numeroDi;
+    }
+
+    public void setNumeroDi(String numeroDi) {
+        this.numeroDi = numeroDi;
     }
 
     public LocalDate getFechaNac() {
