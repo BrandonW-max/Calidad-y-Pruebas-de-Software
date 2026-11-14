@@ -97,6 +97,15 @@ public class ActualizarEmpleadoUseCase {
             empleado.setTelefono(dto.getTelefono());
         }
 
+        if (dto.getNumeroDi() != null && !dto.getNumeroDi().isBlank()
+                && !dto.getNumeroDi().equals(empleado.getNumeroDi())) {
+            if (empleadoRepository.existsByNumeroDi(dto.getNumeroDi())) {
+                throw new com.rrhh.Shared.exception.ConflictoException(
+                        "Ya existe un empleado con ese documento de identidad");
+            }
+            empleado.setNumeroDi(dto.getNumeroDi());
+        }
+
         Empleado empleadoActualizado =
                 empleadoRepository.save(empleado);
 
