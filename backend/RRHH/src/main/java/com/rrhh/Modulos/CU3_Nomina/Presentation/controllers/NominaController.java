@@ -3,6 +3,7 @@ package com.rrhh.Modulos.CU3_Nomina.Presentation.controllers;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaVersionDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.services.INominaService;
 import com.rrhh.Modulos.CU3_Nomina.Presentation.routes.NominaApiRoutes;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.EmailService;
@@ -124,6 +125,12 @@ public class NominaController {
             Authentication authentication) {
         Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
         return ResponseEntity.ok(nominaService.ajustarNomina(id, request, idUsuario));
+    }
+
+    @GetMapping(NominaApiRoutes.VERSIONES)
+    @PreAuthorize("hasRole('RRHH')")
+    public ResponseEntity<List<NominaVersionDTO>> listarVersiones(@PathVariable Integer id) {
+        return ResponseEntity.ok(nominaService.listarVersiones(id));
     }
 
     @PostMapping(NominaApiRoutes.BUSCAR_ID + "/enviar")

@@ -13,12 +13,12 @@ public class NominaExportFactory implements ExportAbstractFactory {
 
     @Override
     public String[] getHeaders() {
-        return new String[]{"Empleado", "Periodo", "Sueldo Base", "Horas Extra", "Bonificaciones", "Descuentos", "Sueldo Bruto", "Sueldo Neto", "Estado"};
+        return new String[]{"Empleado", "Periodo", "Sueldo Contrato", "Sueldo Devengado", "Horas Extra", "Bonificaciones", "Descuentos", "Sueldo Bruto", "Sueldo Neto", "Estado"};
     }
 
     @Override
     public String[] getKeys() {
-        return new String[]{"empleado", "periodo", "sueldoBase", "horasExtra", "bonificaciones", "descuentos", "sueldoBruto", "sueldoNeto", "estado"};
+        return new String[]{"empleado", "periodo", "sueldoContrato", "sueldoBase", "horasExtra", "bonificaciones", "descuentos", "sueldoBruto", "sueldoNeto", "estado"};
     }
 
     @Override

@@ -1,18 +1,17 @@
 package com.rrhh.Modulos.CU3_Nomina.Application.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class AjustarNominaRequestDTO {
 
-    @DecimalMin(value = "0.0", message = "El sueldo base no puede ser negativo")
+    @NotNull(message = "Error: campo requerido")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Error: el valor debe ser mayor o igual a 0")
     private BigDecimal sueldoBase;
     private BigDecimal totalHorasTrabajadas;
     private BigDecimal totalHorasExtra;
-    private BigDecimal totalHorasNocturnas;
     private Integer totalMinutosTardanza;
-    private Boolean tieneHijos;
-    private Integer cantidadHijos;
     private Integer cantidadGuardias;
     private String tipoPensionAplicada;
 
@@ -25,17 +24,8 @@ public class AjustarNominaRequestDTO {
     public BigDecimal getTotalHorasExtra() { return totalHorasExtra; }
     public void setTotalHorasExtra(BigDecimal totalHorasExtra) { this.totalHorasExtra = totalHorasExtra; }
 
-    public BigDecimal getTotalHorasNocturnas() { return totalHorasNocturnas; }
-    public void setTotalHorasNocturnas(BigDecimal totalHorasNocturnas) { this.totalHorasNocturnas = totalHorasNocturnas; }
-
     public Integer getTotalMinutosTardanza() { return totalMinutosTardanza; }
     public void setTotalMinutosTardanza(Integer totalMinutosTardanza) { this.totalMinutosTardanza = totalMinutosTardanza; }
-
-    public Boolean getTieneHijos() { return tieneHijos; }
-    public void setTieneHijos(Boolean tieneHijos) { this.tieneHijos = tieneHijos; }
-
-    public Integer getCantidadHijos() { return cantidadHijos; }
-    public void setCantidadHijos(Integer cantidadHijos) { this.cantidadHijos = cantidadHijos; }
 
     public Integer getCantidadGuardias() { return cantidadGuardias; }
     public void setCantidadGuardias(Integer cantidadGuardias) { this.cantidadGuardias = cantidadGuardias; }

@@ -47,22 +47,11 @@ public class DesactivarEmpleadoUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (empleado.estaDesvinculado()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El empleado ya se encuentra desvinculado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado ya esta inactivo");
         }
 
         String estadoAnterior = empleado.getEstado();

@@ -71,37 +71,43 @@ public class SolicitudController {
 
     @GetMapping(SolicitudApiRoutes.POR_EMPLEADO)
     @PreAuthorize("hasAnyRole('RRHH', 'EMPLEADO')")
-    public ResponseEntity<List<SolicitudResponseDTO>> listarPorEmpleado(@PathVariable Long idEmpleado) {
+    public ResponseEntity<List<SolicitudResponseDTO>> listarPorEmpleado(
+            @PathVariable Long idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        if (esEmpleado(user)) {
+            solicitudService.validarPropiedad(user.getIdUsuario(), idEmpleado);
+        }
         return ResponseEntity.ok(solicitudService.listarPorEmpleado(idEmpleado));
     }
 
     @GetMapping(SolicitudApiRoutes.BUSCAR_ID)
     @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA', 'EMPLEADO')")
-    public ResponseEntity<?> buscarPorId(@PathVariable Integer id) {
-        try {
-            return ResponseEntity.ok(solicitudService.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @PostMapping(SolicitudApiRoutes.CLONAR)
-    @PreAuthorize("hasRole('EMPLEADO')")
-    public ResponseEntity<?> clonar(
+    public ResponseEntity<?> buscarPorId(
             @PathVariable Integer id,
             @AuthenticationPrincipal AuthenticatedUser user) {
         try {
-            SolicitudResponseDTO response = solicitudService.clonarSolicitud(id, user.getIdUsuario());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            SolicitudResponseDTO solicitud = solicitudService.buscarPorId(id);
+            if (esEmpleado(user)) {
+                solicitudService.validarPropiedad(user.getIdUsuario(), solicitud.getIdEmpleado());
+            }
+            return ResponseEntity.ok(solicitud);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 
     @GetMapping(SolicitudApiRoutes.NOTIFICACIONES)
     @PreAuthorize("hasAnyRole('EMPLEADO', 'RRHH', 'GERENCIA')")
     public ResponseEntity<List<SolicitudResponseDTO>> listarNotificaciones(
-            @PathVariable Long idEmpleado) {
+            @PathVariable Long idEmpleado,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        if (esEmpleado(user)) {
+            solicitudService.validarPropiedad(user.getIdUsuario(), idEmpleado);
+        }
         return ResponseEntity.ok(solicitudService.listarNotificacionesPorEmpleado(idEmpleado));
+    }
+
+    private boolean esEmpleado(AuthenticatedUser user) {
+        return user != null && "EMPLEADO".equalsIgnoreCase(user.getRol());
     }
 }

@@ -166,7 +166,7 @@ public class EmpleadoController {
     }
 
     @GetMapping(EmpleadoApiRoutes.HISTORIAL)
-    @PreAuthorize("hasAnyRole('RRHH', 'GERENCIA')")
+    @PreAuthorize("hasRole('RRHH')")
     public ResponseEntity<List<Map<String, Object>>> getHistorialEmpleado(
             @PathVariable Long idEmpleado) {
         List<HistorialAuditoriaModel> historial = historialRepository

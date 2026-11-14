@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
+  listarPlanesRecuperacion,
+  listarJustificacionesPorEstado,
   listarJustificacionesEmpleado,
   listarAsistenciaEmpleado,
   getAsistenciaHoy,
@@ -16,11 +18,51 @@ import {
   getIdEmpleado,
 } from "../services/api";
 
+/* Selector de archivo con botón propio (en lugar del input nativo del navegador) */
+function CampoArchivo({ name, accept, onChange }) {
+  const ref = useRef(null);
+  const [nombre, setNombre] = useState("");
+
+  // Al reiniciar el formulario, también se borra el nombre mostrado
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!form) return;
+    const limpiar = () => setNombre("");
+    form.addEventListener("reset", limpiar);
+    return () => form.removeEventListener("reset", limpiar);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", position: "relative" }}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()}>
+        📎 Seleccionar archivo
+      </button>
+      <input ref={ref} type="file" name={name} accept={accept}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        onChange={e => {
+          const f = e.target.files[0] ?? null;
+          setNombre(f ? f.name : "");
+          onChange(f);
+        }} />
+      <span style={{ fontSize: 13, color: "var(--text-2)", minWidth: 0, wordBreak: "break-all" }}>
+        {nombre || "Ningún archivo seleccionado"}
+      </span>
+    </div>
+  );
+}
+
 function getRolFromPath(pathname) {
   if (pathname.startsWith("/empleado")) return "EMPLEADO";
   if (pathname.startsWith("/gerencia")) return "GERENCIA";
   return "RRHH";
 }
+
+const resolveEvidenciaUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  return `${baseUrl.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
 
 /* ══════════════════════════════════════════════════════════
    VISTA EMPLEADO
@@ -36,6 +78,18 @@ function VistaEmpleado() {
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error,   setError]     = useState("");
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [tabActiva, setTabActiva] = useState("info");
 
   // Registro manual modal
@@ -43,11 +97,38 @@ function VistaEmpleado() {
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+
   // ECU-03 A4: justificación de tardanza
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo, setJustifMotivo] = useState("");
   const [justifFile,   setJustifFile]   = useState(null);
+  const [evidenciaPreview, setEvidenciaPreview] = useState("");
   const [justifSaving, setJustifSaving] = useState(false);
+  // Fecha local (no UTC): de noche en Lima, UTC ya marca el día siguiente
+  const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const [fechaJustif, setFechaJustif] = useState(hoyISO);
+  const [idRegistroElegido, setIdRegistroElegido] = useState(null);
+  // Marcaciones de una fecha que sí se pueden justificar: tardanza, o inasistencia,
+  // y que no tengan ya una justificación pendiente o aprobada
+  const justificadas = new Set(
+    justificaciones.filter(j => j.estado !== "RECHAZADA").map(j => j.idRegistroAsistencia)
+  );
+  const justificablesDe = (fecha) => historial.filter(r =>
+    r.fecha === fecha && (r.minutosTardanza > 0 || r.estado === "INASISTENCIA") && !justificadas.has(r.idRegistro)
+  );
+  const opcionesJustif = justificablesDe(fechaJustif);
+  const textoMarcacion = (r) => {
+    const hora = (h) => (h ? String(h).slice(0, 5) : "—");
+    const incidencia = r.estado === "INASISTENCIA" ? "Inasistencia" : `Tardanza ${r.minutosTardanza} min`;
+    return `Entrada ${hora(r.horaEntrada)} · Salida ${hora(r.horaSalida)} · ${incidencia}`;
+  };
+  // Si solo hay una marcación justificable, queda preseleccionada; si hay varias, el empleado elige
+  useEffect(() => {
+    const opciones = justificablesDe(fechaJustif);
+    setIdRegistroElegido(opciones.length === 1 ? opciones[0].idRegistro : null);
+  }, [fechaJustif, historial, justificaciones]);
 
   const cerrarModalJustif = () => {
     setModalJustificar({ open: false, justificacion: null });
@@ -123,8 +204,8 @@ function VistaEmpleado() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally {
       setJustifSaving(false);
@@ -151,8 +232,8 @@ function VistaEmpleado() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally {
       setSaving(false);
@@ -165,14 +246,14 @@ function VistaEmpleado() {
   const estadoBadge = (estado) => {
     const m = {
       PENDIENTE: "badge-warning",
-      APROBADO:  "badge-success",
-      RECHAZADO: "badge-danger",
+      APROBADA:  "badge-success",
+      RECHAZADA: "badge-danger",
     };
     return m[estado] ?? "badge-gray";
   };
 
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+    r.minutosTardanza > 0 || r.estado === "INASISTENCIA"
   );
 
   return (
@@ -190,8 +271,8 @@ function VistaEmpleado() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success" style={{ marginBottom: 16 }}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
+        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
         {/* ── FILA SUPERIOR: Registro manual | Asistencia Hoy ── */}
         <div className="asist-grid">
@@ -293,7 +374,7 @@ function VistaEmpleado() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 1 hora o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes tardanza o inasistencia" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -345,13 +426,24 @@ function VistaEmpleado() {
                       </tr>
                     ) : justificaciones.map((j) => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>
-                          {j.evidenciaUrl
-                            ? <span>📎 1 archivo</span>
-                            : <span style={{ color: "var(--text-3)" }}>-</span>}
+                          {j.evidenciaUrl ? (
+                            <a
+                              href={resolveEvidenciaUrl(j.evidenciaUrl)}
+                              download={j.evidenciaUrl.split("/").pop()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "3px 8px", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+                            >
+                              ⬇️ Descargar
+                            </a>
+                          ) : (
+                            <span style={{ color: "var(--text-3)" }}>-</span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <span className={`badge ${estadoBadge(j.estado)}`}>
@@ -370,7 +462,7 @@ function VistaEmpleado() {
                             </button>
                           ) : (
                             <span className="badge badge-gray" style={{ fontSize: "11px" }}>
-                              {j.estado === "APROBADO" ? "✅ Aprobado" : "❌ Rechazado"}
+                              {j.estado === "APROBADA" ? "✅ Aprobado" : "❌ Rechazado"}
                             </span>
                           )}
                         </td>
@@ -394,42 +486,82 @@ function VistaEmpleado() {
             <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
-              const fechaSel = fd.get("fechaIncidencia");
-              const registro = historial.find(r => r.fecha === fechaSel);
-              if (!registro?.idRegistro) {
-                setError("No se encontró registro de asistencia para esa fecha. Verifica tu historial.");
+              const registro = opcionesJustif.find(r => r.idRegistro === idRegistroElegido);
+              if (!registro) {
+                setError(opcionesJustif.length === 0
+                  ? "No hay marcaciones justificables en esa fecha."
+                  : "Seleccione la marcación que desea justificar.");
                 return;
               }
               setJustifSaving(true); setMensaje(""); setError("");
               try {
+                const archivo = fd.get("evidencia");
+                let evidenciaUrl = "";
+                if (archivo && archivo.size > 0) {
+                  const res = await uploadEvidencia(archivo);
+                  evidenciaUrl = res.url ?? "";
+                }
                 await registrarJustificacion({
                   idRegistroAsistencia: registro.idRegistro,
                   idEmpleado,
                   motivo: fd.get("motivo"),
-                  evidenciaUrl: "",
+                  evidenciaUrl,
                 });
                 setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
+                setEvidenciaPreview("");
+                setFechaJustif(hoyISO());
                 e.target.reset();
                 setTabActiva("justificaciones");
                 cargarJustificaciones();
-              } catch {
-                setError("Error al enviar la justificación. Intente de nuevo.");
+              } catch (err) {
+                setError(err.message || "Error al enviar la justificación. Intente de nuevo.");
               } finally { setJustifSaving(false); }
-            }}>
+            }}
+            onReset={() => { setEvidenciaPreview(""); setFechaJustif(hoyISO()); }}>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Fecha de la incidencia *</label>
                   <input type="date" name="fechaIncidencia"
-                    max={new Date().toISOString().split("T")[0]}
-                    defaultValue={new Date().toISOString().split("T")[0]} required />
+                    max={hoyISO()} value={fechaJustif}
+                    onChange={e => setFechaJustif(e.target.value)} required />
                 </div>
+                {opcionesJustif.length === 0 && fechaJustif && (
+                  <div className="form-group form-full">
+                    <div className="alert alert-info">No hay marcaciones justificables en esa fecha: sin tardanza, sin inasistencia, o ya justificadas.</div>
+                  </div>
+                )}
+                {opcionesJustif.length > 1 && (
+                  <div className="form-group form-full">
+                    <label>Marcación a justificar *</label>
+                    {opcionesJustif.map(r => (
+                      <label key={r.idRegistro}
+                        style={{ display: "block", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 6, cursor: "pointer" }}>
+                        <input type="radio" name="registroJustif" value={r.idRegistro}
+                          checked={idRegistroElegido === r.idRegistro}
+                          onChange={() => setIdRegistroElegido(r.idRegistro)}
+                          style={{ marginRight: 8 }} />
+                        {textoMarcacion(r)}
+                      </label>
+                    ))}
+                  </div>
+                )}
                 <div className="form-group form-full">
                   <label>Motivo de la justificación *</label>
                   <textarea name="motivo" rows={4}
                     placeholder="Describa detalladamente el motivo de su tardanza o inasistencia..."
                     required />
                 </div>
+                <div className="form-group form-full">
+                  <label>Evidencia (opcional)</label>
+                  <CampoArchivo name="evidencia" accept="image/*,application/pdf" onChange={f => setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "")} />
+                  {evidenciaPreview && (
+                    <img src={evidenciaPreview} alt="Vista previa de la evidencia"
+                      style={{ display: "block", marginTop: 8, maxWidth: 200, maxHeight: 200, borderRadius: 8, border: "1px solid #e2e8f0" }} />
+                  )}
+                </div>
               </div>
+              {error && <div className="alert alert-warning" style={{ marginTop: 12, marginBottom: 12 }}>⚠️ {error}</div>}
+              {mensaje && <div className="alert alert-success" style={{ marginTop: 12, marginBottom: 12 }}>✅ {mensaje}</div>}
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={justifSaving}>
                   {justifSaving ? "Enviando..." : "📤 Enviar Justificación"}
@@ -441,7 +573,7 @@ function VistaEmpleado() {
         ) : (
           <div className="section-card">
             <div className="alert alert-info">
-              📋 Para justificar necesitas al menos 1 hora de tardanza o una inasistencia en tu historial.
+              📋 Para justificar necesitas al menos una tardanza o una inasistencia en tu historial.
             </div>
           </div>
         ))}
@@ -470,7 +602,7 @@ function VistaEmpleado() {
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Asistencia</h2>
             <button className="btn btn-secondary btn-sm" onClick={cargarHistorial}>🔄 Actualizar</button>
           </div>
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ paddingBottom: 14, ...(historial.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? <div className="loading-text">Cargando historial...</div> : (
               <table>
                 <thead>
@@ -544,12 +676,7 @@ function VistaEmpleado() {
               </div>
               <div className="form-group">
                 <label>Evidencia (opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
-                  style={{ display: "block", width: "100%", fontSize: 13 }}
-                />
+                <CampoArchivo accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
                 {justifFile && (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
                     📎 {justifFile.name}
@@ -611,6 +738,80 @@ function VistaEmpleado() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   TABLA DE JUSTIFICACIONES DECIDIDAS (aprobadas o rechazadas)
+══════════════════════════════════════════════════════════ */
+function TablaDecididas({ titulo, lista, getNombre, estado }) {
+  const esAprobada = estado === "APROBADA";
+  return (
+    <div className="section-card asistencia-panel">
+      <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+        <h2 style={{ margin: 0, border: "none", padding: 0 }}>
+          {titulo}
+        </h2>
+      </div>
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "center" }}>Empleado</th>
+              <th style={{ textAlign: "center" }}>Fecha</th>
+              <th style={{ textAlign: "center" }}>Tardanza</th>
+              <th style={{ textAlign: "center" }}>Revisado el</th>
+              <th style={{ textAlign: "center" }}>Comentario</th>
+              <th style={{ textAlign: "center" }}>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.length === 0 ? (
+              <tr><td colSpan={6}>
+                <div className="empty-state">
+                  <p>No hay justificaciones {esAprobada ? "aprobadas" : "rechazadas"}</p>
+                </div>
+              </td></tr>
+            ) : lista.map(j => (
+              <tr key={j.id ?? j.idJustificacion}>
+                <td style={{ textAlign: "center" }}>{getNombre(j.idEmpleado)}</td>
+                <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? "—"}</td>
+                <td style={{ textAlign: "center" }}>
+                  {j.minutosTardanza != null && j.minutosTardanza > 0
+                    ? `${j.minutosTardanza} min`
+                    : "—"}
+                </td>
+                <td style={{ textAlign: "center" }}>{j.fechaRevision?.substring(0, 10) ?? "—"}</td>
+                <td style={{ textAlign: "center" }}>{j.comentarioRevision || "—"}</td>
+                <td style={{ textAlign: "center" }}>
+                  <span className={`badge ${esAprobada ? "badge-success" : "badge-danger"}`}>
+                    {esAprobada ? "Aprobada" : "Rechazada"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -618,13 +819,80 @@ function VistaEmpleado() {
 /* ══════════════════════════════════════════════════════════
    VISTA RRHH
 ══════════════════════════════════════════════════════════ */
+function TablaPlanesRecuperacion({ lista }) {
+  return (
+    <div className="section-card asistencia-panel">
+      <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+        <h2 style={{ margin: 0, border: "none", padding: 0 }}>⏱️ Planes de Recuperación</h2>
+      </div>
+      <div className="table-wrapper">
+        {lista.length === 0 ? (
+          <div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay planes de recuperación</p></div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "center" }}>Empleado</th>
+                <th style={{ textAlign: "center" }}>Minutos iniciales</th>
+                <th style={{ textAlign: "center" }}>Tipo</th>
+                <th style={{ textAlign: "center" }}>Pendientes</th>
+                <th style={{ textAlign: "center" }}>Inicio</th>
+                <th style={{ textAlign: "center" }}>Límite</th>
+                <th style={{ textAlign: "center" }}>Estado</th>
+                <th style={{ textAlign: "center" }}>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(p => (
+                <tr key={p.id} style={p.estado === "VENCIDO" ? { background: "#fef2f2" } : undefined}>
+                  <td>{p.empleado}</td>
+                  <td style={{ textAlign: "center" }}>{p.minutosIniciales} min</td>
+                  <td style={{ textAlign: "center" }}>{p.tipo === "INASISTENCIA" ? "Inasistencia (bloques de 2 h)" : "Tardanza"}</td>
+                  <td style={{ textAlign: "center" }}>{p.minutosPendientes} min</td>
+                  <td style={{ textAlign: "center" }}>{p.fechaInicio}</td>
+                  <td style={{ textAlign: "center" }}>{p.fechaLimite}</td>
+                  <td style={{ textAlign: "center" }}>
+                    <span className={`badge ${p.estado === "DESCUENTO" ? "badge-sol-rechazada" : "badge-sol-pendiente"}`}>{p.estado}</span>
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    {p.estado === "DESCUENTO"
+                      ? `Descuento S/ ${Number(p.montoDescuento).toFixed(2)} en nómina ${p.periodoDescuento}`
+                      : p.estado === "PERDONADO" ? "Perdonado (menos de 1 hora)" : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function VistaRRHH() {
   const [justificaciones, setJustificaciones] = useState([]);
+  const [aprobadas,       setAprobadas]       = useState([]);
+  const [rechazadas,      setRechazadas]      = useState([]);
+  const [planes,          setPlanes]          = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!mensaje) return;
+    const t = setTimeout(() => setMensaje(""), 7000);
+    return () => clearTimeout(t);
+  }, [mensaje]);
+  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 7000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [justificacionSeleccionada, setJustificacionSeleccionada] = useState(null);
 
   const [manualForm, setManualForm] = useState({
@@ -657,8 +925,16 @@ function VistaRRHH() {
     setLoading(true);
     setError("");
     try {
-      const data = await listarJustificacionesPendientes();
-      setJustificaciones(Array.isArray(data) ? data : []);
+      const [pendientes, aprobadasData, rechazadasData, planesData] = await Promise.all([
+        listarJustificacionesPendientes(),
+        listarJustificacionesPorEstado("APROBADA"),
+        listarJustificacionesPorEstado("RECHAZADA"),
+        listarPlanesRecuperacion().catch(() => []),
+      ]);
+      setJustificaciones(Array.isArray(pendientes) ? pendientes : []);
+      setAprobadas(Array.isArray(aprobadasData) ? aprobadasData : []);
+      setRechazadas(Array.isArray(rechazadasData) ? rechazadasData : []);
+      setPlanes(Array.isArray(planesData) ? planesData : []);
     } catch {
       setError("No se pudieron cargar las justificaciones");
     } finally {
@@ -711,8 +987,8 @@ function VistaRRHH() {
       setMensaje("Registro manual guardado correctamente");
       setManualForm({ idEmpleado: "", tipo: "ENTRADA", fechaHora: "", motivo: "" });
       resetCorreccion();
-    } catch {
-      setMensaje("Error al guardar el registro manual");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al guardar el registro manual" });
     }
   };
 
@@ -720,12 +996,16 @@ function VistaRRHH() {
     const j = modalDecision.justificacion;
     setModalDecision({ open: false, justificacion: null });
     try {
-      await revisarJustificacion(j.id ?? j.idJustificacion, "APROBADA", "");
-      setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
-      handleCorregirTardanza(j);
+      const resultado = await revisarJustificacion(j.id ?? j.idJustificacion, "APROBADA", "");
+      if (resultado.estado === "RECHAZADA") {
+        setError("Plazo vencido: la justificación se registró como rechazada y aparece en la tabla de rechazadas.");
+      } else {
+        setMensaje("Justificación aprobada. Complete el Registro Manual y guárdelo.");
+        handleCorregirTardanza(j);
+      }
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al aprobar la justificación");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al aprobar la justificación" });
     }
   };
 
@@ -742,8 +1022,8 @@ function VistaRRHH() {
       setMensaje("Justificación rechazada correctamente");
       setModalRechazar({ open: false, id: null, comentario: "" });
       cargarJustificaciones();
-    } catch {
-      setMensaje("Error al rechazar la justificación");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al rechazar la justificación" });
       setModalRechazar({ open: false, id: null, comentario: "" });
     }
   };
@@ -795,7 +1075,7 @@ function VistaRRHH() {
     setManualForm(f => ({
       ...f,
       idEmpleado: j.idEmpleado,
-      motivo: j.motivo ? "Corrección de tardanza justificada: " + j.motivo : "",
+      motivo: "Corrección de tardanza justificada",
     }));
 
     setCorreccionInfo({
@@ -831,8 +1111,8 @@ function VistaRRHH() {
           <span className="role-pill role-pill-rrhh">ECU-03</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
+        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
 
         <div className="biometric-banner asistencia-biometric">
           <div className="biometric-banner-icon">🖐️</div>
@@ -843,8 +1123,9 @@ function VistaRRHH() {
         </div>
 
         <div className="asistencia-grid">
+        <div className="asistencia-justificaciones-col" style={{ order: 2, display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
         {/* ── SECCIÓN 1: JUSTIFICACIONES PENDIENTES ── */}
-        <div className="section-card asistencia-panel asistencia-justificaciones">
+        <div className="section-card asistencia-panel asistencia-justificaciones" style={{ order: 0 }}>
           <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>
               📋 Justificaciones Pendientes
@@ -864,11 +1145,10 @@ function VistaRRHH() {
               Revise cada justificación y decida si aprobarla o rechazarla.
             </div>
             <div className="table-wrapper">
-              {loading ? <div className="loading-text">Cargando justificaciones...</div> : (
+              {loading && justificaciones.length === 0 ? <div className="loading-text">Cargando justificaciones...</div> : (
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "center" }}>#</th>
                       <th style={{ textAlign: "center" }}>Empleado</th>
                       <th style={{ textAlign: "center" }}>Fecha</th>
                       <th style={{ textAlign: "center" }}>Debía llegar</th>
@@ -879,7 +1159,7 @@ function VistaRRHH() {
                   </thead>
                   <tbody>
                     {justificaciones.length === 0 ? (
-                      <tr><td colSpan={7}>
+                      <tr><td colSpan={6}>
                         <div className="empty-state">
                           <div className="empty-state-icon">✅</div>
                           <p>No hay justificaciones pendientes de revisión</p>
@@ -896,7 +1176,6 @@ function VistaRRHH() {
                             : undefined,
                         }}
                       >
-                        <td style={{ textAlign: "center" }}>{j.id ?? j.idJustificacion}</td>
                         <td style={{ textAlign: "center" }}>{getNombreEmpleado(j.idEmpleado)}</td>
                         <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
                         <td style={{ textAlign: "center", fontWeight: 600, color: "var(--text-2)" }}>
@@ -921,6 +1200,21 @@ function VistaRRHH() {
                 </table>
               )}
             </div>
+        </div>
+
+            <TablaDecididas
+              titulo="✅ Justificaciones Aprobadas"
+              lista={aprobadas}
+              getNombre={getNombreEmpleado}
+              estado="APROBADA"
+            />
+            <TablaDecididas
+              titulo="❌ Justificaciones Rechazadas"
+              lista={rechazadas}
+              getNombre={getNombreEmpleado}
+              estado="RECHAZADA"
+            />
+            <TablaPlanesRecuperacion lista={planes} />
         </div>
 
         {/* ── SECCIÓN 2: REGISTRO MANUAL ── */}
@@ -1085,21 +1379,115 @@ function VistaRRHH() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", marginBottom: 6 }}>
                   Evidencia adjunta
                 </div>
-                {modalDecision.justificacion.evidenciaUrl || modalDecision.justificacion.evidencia ? (
-                  <img
-                    src={modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia}
-                    alt="Evidencia"
-                    style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)" }}
-                  />
-                ) : (
-                  <div style={{
-                    border: "2px dashed var(--border)", borderRadius: 8, padding: "24px",
-                    textAlign: "center", color: "var(--text-3)", fontSize: 13,
-                  }}>
-                    <div style={{ fontSize: 32, marginBottom: 6 }}>📷</div>
-                    Sin evidencia adjunta
-                  </div>
-                )}
+                {(() => {
+                  const evUrl = modalDecision.justificacion.evidenciaUrl ?? modalDecision.justificacion.evidencia;
+                  if (!evUrl) {
+                    return (
+                      <div style={{
+                        border: "2px dashed var(--border)", borderRadius: 8, padding: "20px",
+                        textAlign: "center", color: "var(--text-3)", fontSize: 13,
+                      }}>
+                        <div style={{ fontSize: 28, marginBottom: 4 }}>📷</div>
+                        Sin evidencia adjunta
+                      </div>
+                    );
+                  }
+                  const fullUrl = resolveEvidenciaUrl(evUrl);
+                  const filename = evUrl.split("/").pop();
+                  const isPdfFile = evUrl.toLowerCase().endsWith(".pdf") || evUrl.toLowerCase().includes(".pdf");
+
+                  if (isPdfFile) {
+                    return (
+                      <div style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "14px 16px",
+                        background: "var(--bg-2, #f8fafc)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 32 }}>📄</span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-1)" }}>
+                              Documento PDF Adjunto
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text-3)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {filename}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <a
+                            href={fullUrl}
+                            download={filename}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            ⬇️ Descargar
+                          </a>
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "6px 12px" }}
+                          >
+                            👁️ Abrir
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "10px",
+                      background: "var(--bg-2, #f8fafc)",
+                    }}>
+                      <img
+                        src={fullUrl}
+                        alt="Evidencia"
+                        style={{
+                          width: "100%",
+                          maxHeight: 220,
+                          objectFit: "contain",
+                          borderRadius: 6,
+                          marginBottom: 8,
+                          background: "#fff",
+                        }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                        <a
+                          href={fullUrl}
+                          download={filename}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          ⬇️ Descargar Imagen
+                        </a>
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: "12px", padding: "5px 10px" }}
+                        >
+                          👁️ Ver en grande
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="alert alert-warning" style={{ fontSize: 12, marginBottom: 0 }}>
@@ -1145,6 +1533,24 @@ function VistaRRHH() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1168,6 +1574,9 @@ function VistaGerencia() {
   const [modalManual,  setModalManual]  = useState({ open: false, tipo: "ENTRADA" });
   const [manualMotivo, setManualMotivo] = useState("");
   const [saving,       setSaving]       = useState(false);
+
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
+  const closeErrorModal = () => setErrorModal({ open: false, message: "" });
 
   const [modalJustificar, setModalJustificar] = useState({ open: false, justificacion: null });
   const [justifMotivo,    setJustifMotivo]    = useState("");
@@ -1238,8 +1647,8 @@ function VistaGerencia() {
       setMensaje("Justificación enviada correctamente. RRHH la revisará en breve.");
       cerrarModalJustif();
       cargarJustificaciones();
-    } catch {
-      setError("Error al enviar la justificación. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." });
       cerrarModalJustif();
     } finally { setJustifSaving(false); }
   };
@@ -1255,8 +1664,8 @@ function VistaGerencia() {
       setMensaje(`${modalManual.tipo === "ENTRADA" ? "Entrada" : "Salida"} registrada correctamente.`);
       setModalManual({ open: false, tipo: "ENTRADA" });
       setManualMotivo("");
-    } catch {
-      setMensaje("Error al registrar la asistencia. Intente de nuevo.");
+    } catch (err) {
+      setErrorModal({ open: true, message: err.message || "Error al registrar la asistencia. Intente de nuevo." });
       setModalManual({ open: false, tipo: "ENTRADA" });
     } finally { setSaving(false); }
   };
@@ -1264,10 +1673,10 @@ function VistaGerencia() {
   const horaStr  = hora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   const fechaCorta = hora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
   const puedeJustificar = historial.some(r =>
-    r.minutosTardanza >= 60 || r.estado === "INASISTENCIA"
+    r.minutosTardanza > 0 || r.estado === "INASISTENCIA"
   );
 
-  const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADO: "badge-success", RECHAZADO: "badge-danger" }[estado] ?? "badge-gray");
+  const estadoBadge = (estado) => ({ PENDIENTE: "badge-warning", APROBADA: "badge-success", RECHAZADA: "badge-danger" }[estado] ?? "badge-gray");
 
   return (
     <div className="dashboard">
@@ -1360,7 +1769,7 @@ function VistaGerencia() {
           <button className={`tab ${tabActiva === "nueva-justif" ? "active" : ""}`}
             onClick={() => { if (!puedeJustificar) return; setTabActiva("nueva-justif"); }}
             disabled={!puedeJustificar}
-            title={!puedeJustificar ? "Solo disponible si tienes 1 hora o más de tardanza" : ""}
+            title={!puedeJustificar ? "Solo disponible si tienes tardanza o inasistencia" : ""}
             style={!puedeJustificar ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
             ✍️ Nueva Justificación
           </button>
@@ -1398,7 +1807,7 @@ function VistaGerencia() {
                       <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No tienes justificaciones pendientes</p></div></td></tr>
                     ) : justificaciones.map(j => (
                       <tr key={j.idJustificacion ?? j.id}>
-                        <td style={{ textAlign: "center" }}>{j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
+                        <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaJustificacion?.substring(0, 10) ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>Tardanza</td>
                         <td style={{ textAlign: "center" }}>{j.motivo}</td>
                         <td style={{ textAlign: "center" }}>{j.evidenciaUrl ? <span>📎 1 archivo</span> : <span style={{ color: "var(--text-3)" }}>-</span>}</td>
@@ -1412,7 +1821,7 @@ function VistaGerencia() {
                             </button>
                           ) : (
                             <span className="badge badge-gray" style={{ fontSize: "11px" }}>
-                              {j.estado === "APROBADO" ? "✅ Aprobado" : "❌ Rechazado"}
+                              {j.estado === "APROBADA" ? "✅ Aprobado" : "❌ Rechazado"}
                             </span>
                           )}
                         </td>
@@ -1445,7 +1854,7 @@ function VistaGerencia() {
                   e.target.reset();
                   setTabActiva("justificaciones");
                   cargarJustificaciones();
-                } catch { setError("Error al enviar la justificación. Intente de nuevo."); }
+                } catch (err) { setErrorModal({ open: true, message: err.message || "Error al enviar la justificación. Intente de nuevo." }); }
                 finally  { setJustifSaving(false); }
               }}>
                 <div className="form-grid">
@@ -1466,7 +1875,7 @@ function VistaGerencia() {
             </div>
           ) : (
             <div className="section-card">
-              <div className="alert alert-info">📋 Para justificar necesitas al menos 1 hora de tardanza en tu registro de hoy.</div>
+              <div className="alert alert-info">📋 Para justificar necesitas al menos una tardanza en tu registro de hoy.</div>
             </div>
           )
         )}
@@ -1486,7 +1895,7 @@ function VistaGerencia() {
             <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Asistencia</h2>
             <button className="btn btn-secondary btn-sm" onClick={cargarHistorial}>🔄 Actualizar</button>
           </div>
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ paddingBottom: 14, ...(historial.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? <div className="loading-text">Cargando historial...</div> : (
               <table>
                 <thead>
@@ -1546,12 +1955,7 @@ function VistaGerencia() {
               </div>
               <div className="form-group">
                 <label>Evidencia (opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={e => setJustifFile(e.target.files[0] ?? null)}
-                  style={{ display: "block", width: "100%", fontSize: 13 }}
-                />
+                <CampoArchivo accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
                 {justifFile && (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
                     📎 {justifFile.name}
@@ -1593,6 +1997,24 @@ function VistaGerencia() {
                 onClick={handleRegistrarManual} disabled={!manualMotivo.trim() || saving}>
                 {saving ? "Guardando..." : (modalManual.tipo === "ENTRADA" ? "→ Confirmar Entrada" : "← Confirmar Salida")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL: ERROR ══ */}
+      {errorModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div><h3>⚠️ Error de validación</h3></div>
+              <button className="modal-close" onClick={closeErrorModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
         </div>

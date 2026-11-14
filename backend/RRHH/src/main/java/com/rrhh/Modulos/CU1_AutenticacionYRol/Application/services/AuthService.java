@@ -9,12 +9,10 @@ import com.rrhh.config.security.JwtConfig;
 import com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.services.TwoFactorService;
 
 import java.util.List;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 
 
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rrhh.Shared.security.HashService;
@@ -32,9 +30,6 @@ public class AuthService implements IAuthService {
 
     private final HashService hashService;
 
-    @Value("${sistema.usuarios-prueba:}")
-    private String usuariosPruebaConfig;
-
     public AuthService(JwtConfig jwtConfig, TwoFactorService twoFactorService, IUsuarioRepository usuarioRepository, IHistorialRepository historialRepository, HashService hashService) {
         this.jwtConfig = jwtConfig;
         this.twoFactorService = twoFactorService;
@@ -47,10 +42,17 @@ public class AuthService implements IAuthService {
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO dto, String ip) {
 
+        if (dto == null || dto.getNombreUsuario() == null || dto.getNombreUsuario().isBlank()) {
+            return new AuthResponseDTO(
+                    false,
+                    "Credenciales invalidas"
+            );
+        }
+
         Usuario user =
                 usuarioRepository.findByNombreUsuarioOrCorreoInst(
-                        dto.getNombreUsuario(),
-                        dto.getNombreUsuario()
+                        dto.getNombreUsuario().trim(),
+                        dto.getNombreUsuario().trim()
                 );
 
         if (user == null) {
@@ -73,20 +75,20 @@ public class AuthService implements IAuthService {
         if (!user.puedeIntentarLogin()) {
             return new AuthResponseDTO(
                     false,
-                    "Cuenta bloqueada por 5 minutos"
+                    "Cuenta bloqueada - acceso denegado"
             );
         }
 
         // =========================
-        // BYPASS DE PRUEBA (configurable)
-        // Usuarios listados en sistema.usuarios-prueba entran sin validar
-        // contrasenia. Eliminar/desactivar en produccion.
+        // VERIFICACION DE CONTRASENIA
+        // Todos los usuarios, sin excepcion, deben presentar una contrasenia valida
         // =========================
-        boolean esUsuarioPrueba = !usuariosPruebaConfig.isBlank() && Arrays.stream(usuariosPruebaConfig.split(","))
-                .map(String::trim)
-                .anyMatch(u -> u.equals(user.getNombreUsuario()));
+        boolean passwordValida = dto.getPassword() != null
+                && !dto.getPassword().isBlank()
+                && user.getContrasenia() != null
+                && hashService.verificar(dto.getPassword(), user.getContrasenia());
 
-        if (esUsuarioPrueba || hashService.verificar(dto.getPassword(), user.getContrasenia())) {
+        if (passwordValida) {
 
             user.resetearIntentos();
             usuarioRepository.save(user);
@@ -154,15 +156,15 @@ public class AuthService implements IAuthService {
 
             historialRepository.save(logFallo);
 
-            String msg =
-                    user.isCuentaBloqueada()
-                            ? "Cuenta bloqueada"
-                            : "Contrasenia incorrecta";
+            String msg;
+            if (user.isCuentaBloqueada()) {
+                msg = "Cuenta bloqueada - acceso denegado";
+            } else {
+                int restantes = 3 - user.getIntentosFallidos();
+                msg = "Credenciales invalidas. Intentos restantes: " + restantes;
+            }
 
-            return new AuthResponseDTO(
-                    false,
-                    msg
-            );
+            return new AuthResponseDTO(false, msg);
         }
     }
 
@@ -208,7 +210,7 @@ public class AuthService implements IAuthService {
         if (!user.puedeIntentar2FA()) {
             return new TwoFactorResponseDTO(
                     false,
-                    "Verificacion 2FA bloqueada por 5 minutos. Demasiados intentos fallidos.",
+                    "Acceso bloqueado temporalmente (5 minutos)",
                     null,
                     null
             );
@@ -223,12 +225,10 @@ public class AuthService implements IAuthService {
         if (!codigoValido) {
             user.registrarFallo2FA();
             usuarioRepository.save(user);
-            return new TwoFactorResponseDTO(
-                    false,
-                    "Codigo incorrecto. Intentos restantes: " + (5 - user.getIntentosFalla2fa()),
-                    null,
-                    null
-            );
+            String msg2fa = user.getBloqueo2faHasta() != null
+                    ? "Cuenta bloqueada temporalmente por 5 minutos"
+                    : "Codigo 2FA invalido";
+            return new TwoFactorResponseDTO(false, msg2fa, null, null);
         }
 
         user.resetearIntentos2FA();
@@ -285,7 +285,7 @@ public class AuthService implements IAuthService {
         }
 
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
+            return new AuthResponseDTO(false, "Las contraseñas no coinciden");
         }
 
         user.setContrasenia(hashService.encriptar(dto.getNewPassword()));
@@ -300,11 +300,11 @@ public class AuthService implements IAuthService {
         if (user == null) {
             return new AuthResponseDTO(false, "Usuario no encontrado");
         }
-        if (!newPassword.equals(confirmPassword)) {
-            return new AuthResponseDTO(false, "Las contrasenias no coinciden");
-        }
         if (newPassword.length() < 8) {
-            return new AuthResponseDTO(false, "La contrasenia debe tener al menos 8 caracteres");
+            return new AuthResponseDTO(false, "La contraseña debe tener al menos 8 caracteres");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return new AuthResponseDTO(false, "Las contraseñas no coinciden");
         }
         user.setContrasenia(hashService.encriptar(newPassword));
         usuarioRepository.save(user);

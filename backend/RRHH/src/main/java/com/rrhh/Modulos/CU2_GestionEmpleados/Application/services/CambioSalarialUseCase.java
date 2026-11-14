@@ -30,7 +30,10 @@ public class CambioSalarialUseCase {
 
     private final RRHHProperties rrhhProperties;
 
-    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties) {
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
+
+    public CambioSalarialUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties, com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
+        this.cambioSueldo = cambioSueldo;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.usuarioRepository = usuarioRepository;
@@ -48,52 +51,19 @@ public class CambioSalarialUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirCambioSalarial()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede registrar cambio salarial a un empleado que no está activo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getNuevoSueldo() == null) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Debe ingresar el nuevo sueldo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El sueldo es obligatorio");
         }
 
         if (dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El nuevo sueldo debe ser mayor o igual al salario minimo legal (S/ " + rrhhProperties.getSalarioMinimo() + ")",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("Error: el sueldo debe ser mayor o igual a " + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString());
         }
 
         Contrato contrato =
@@ -107,21 +77,13 @@ public class CambioSalarialUseCase {
         BigDecimal sueldoNuevo = dto.getNuevoSueldo();
 
         if (sueldoAnterior != null && sueldoAnterior.compareTo(sueldoNuevo) == 0) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "El nuevo sueldo no puede ser igual al sueldo actual",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    contrato.getCargo(),
-                    contrato.getNombreDepartamento(),
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El nuevo sueldo no puede ser igual al sueldo actual");
         }
 
         contrato.cambiarSueldo(sueldoNuevo);
+        cambioSueldo.registrar(idEmpleado,
+                dto.getFechaCambio() != null ? dto.getFechaCambio() : java.time.LocalDate.now(),
+                sueldoAnterior, sueldoNuevo, null);
 
         Contrato contratoActualizado =
                 contratoRepository.save(contrato);

@@ -24,6 +24,7 @@ import com.rrhh.Shared.persistence.HorarioModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rrhh.Shared.config.RRHHProperties;
 import com.rrhh.Shared.security.HashService;
 
 import java.time.LocalDate;
@@ -54,7 +55,10 @@ public class RegistrarEmpleadoUseCase {
 
     private final HorarioService horarioService;
 
-    public RegistrarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IRolRepository rolRepository, IUsuarioGestionRepository usuarioRepository, NombreUsuarioService nombreUsuarioService, RolAsignacionService rolAsignacionService, HashService hashService, AuditoriaEmpleadoService auditoriaEmpleadoService, IContratoFactory contratoFactory, HorarioService horarioService) {
+    private final RRHHProperties rrhhProperties;
+
+    public RegistrarEmpleadoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IRolRepository rolRepository, IUsuarioGestionRepository usuarioRepository, NombreUsuarioService nombreUsuarioService, RolAsignacionService rolAsignacionService, HashService hashService, AuditoriaEmpleadoService auditoriaEmpleadoService, IContratoFactory contratoFactory, HorarioService horarioService, RRHHProperties rrhhProperties) {
+        this.rrhhProperties = rrhhProperties;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
         this.departamentoRepository = departamentoRepository;
@@ -72,25 +76,23 @@ public class RegistrarEmpleadoUseCase {
     public EmpleadoResponseDTO ejecutar(RegistrarEmpleadoRequestDTO dto) {
 
         if (empleadoRepository.existsByNumeroDi(dto.getNumeroDi())) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Ya existe un empleado con ese documento de identidad",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            throw new com.rrhh.Shared.exception.ConflictoException(
+                    "Ya existe un empleado con ese documento de identidad");
+        }
+
+        if (dto.getSueldo() != null && dto.getSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
+            throw new IllegalArgumentException("Error: el sueldo debe ser mayor o igual a " + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString());
+        }
+
+        if (dto.getFechaNac() != null && dto.getFechaNac().isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Error: fecha invalida");
         }
 
         Departamento departamento =
                 departamentoRepository.findById(dto.getIdDpto());
 
         if (departamento == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento no encontrado.");
         }
 
         Empleado empleado = new Empleado();

@@ -2,13 +2,23 @@ package com.rrhh.Shared.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +54,96 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<Map<String, Object>> handleConflicto(ConflictoException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "CONFLICTO");
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingRequestHeaderException.class})
+    public ResponseEntity<Map<String, Object>> handleFaltaDato(Exception ex) {
+        String nombre = ex instanceof MissingServletRequestParameterException p
+                ? p.getParameterName() : ((MissingRequestHeaderException) ex).getHeaderName();
+        return badRequest("DATOS_INVALIDOS", "Falta el dato requerido: " + nombre + ".");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTipoIncorrecto(MethodArgumentTypeMismatchException ex) {
+        return badRequest("DATOS_INVALIDOS", "Error: el valor de '" + ex.getName() + "' no es valido.");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMetodoNoPermitido(HttpRequestMethodNotSupportedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "METODO_NO_PERMITIDO");
+        response.put("message", "Metodo no permitido para esta ruta.");
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleContenidoNoSoportado(HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "CONTENIDO_NO_SOPORTADO");
+        response.put("message", "Tipo de contenido no soportado. Use application/json.");
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonInvalido(HttpMessageNotReadableException ex) {
+        if (ex.getCause() instanceof InvalidFormatException formato) {
+            String campo = formato.getPath().isEmpty() ? "" : formato.getPath().get(0).getFieldName();
+            Class<?> tipo = formato.getTargetType();
+            if (tipo != null && (Number.class.isAssignableFrom(tipo) || tipo.isPrimitive())) {
+                String texto = (Integer.class == tipo || Long.class == tipo || int.class == tipo || long.class == tipo)
+                        ? "Error: solo se permiten numeros enteros."
+                        : "Error: solo se permiten numeros.";
+                return badRequest("DATOS_INVALIDOS", texto + (campo.isEmpty() ? "" : " (campo: " + campo + ")"));
+            }
+        }
+        return badRequest("DATOS_INVALIDOS", "Los datos enviados no tienen el formato correcto.");
+    }
+
+    @ExceptionHandler(ArchivoInvalidoException.class)
+    public ResponseEntity<Map<String, Object>> handleArchivoInvalido(ArchivoInvalidoException ex) {
+        return badRequest("ARCHIVO_INVALIDO", ex.getMessage());
+    }
+
+    // #9: IOException al leer bytes del multipart (archivo corrupto o subida interrumpida) → 400
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Map<String, Object>> handleIO(IOException ex) {
+        log.warn("Error al procesar archivo subido", ex);
+        return badRequest("ARCHIVO_INVALIDO", "No se pudo procesar el archivo. Verifique que el archivo sea válido e intente nuevamente.");
+    }
+
+    // #10: duplicado de documento/correo → ocultar nombre de restricción SQL
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Violacion de integridad de datos", ex);
+        String msg = "Ya existe un registro con los mismos datos únicos (documento o correo electrónico).";
+        return badRequest("DATO_DUPLICADO", msg);
+    }
+
+    // Errores internos de JDBC/JPA (tabla inexistente, conexión caída, etc.) → no exponer SQL
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<Map<String, Object>> handleJpaSystem(JpaSystemException ex) {
+        log.error("Error interno de base de datos", ex);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "ERROR_BASE_DE_DATOS");
+        response.put("message", "Ocurrió un error interno. Intente nuevamente o contacte al administrador.");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return badRequest("ARCHIVO_INVALIDO", "El archivo excede el tamaño máximo permitido (10MB).");
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return badRequest("SOLICITUD_INVALIDA", ex.getMessage());
@@ -52,6 +152,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
         return badRequest("ESTADO_INVALIDO", ex.getMessage());
+    }
+
+    @ExceptionHandler(CambioSueldoPendienteException.class)
+    public ResponseEntity<Map<String, Object>> handleCambioSueldoPendiente(CambioSueldoPendienteException ex) {
+        return badRequest("CAMBIO_SUELDO_PENDIENTE", ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -70,6 +175,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException ex) {
+        Throwable causa = ex.getCause() != null ? ex.getCause() : ex;
+        boolean esErrorBD = causa.getClass().getName().contains("jdbc")
+                || causa.getClass().getName().contains("sql")
+                || causa.getClass().getName().contains("Jpa")
+                || causa.getClass().getName().contains("Hibernate")
+                || ex.getMessage() != null && ex.getMessage().toLowerCase().contains("jdbc");
+        if (esErrorBD) {
+            log.error("Error interno de base de datos (RuntimeException)", ex);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", "ERROR_BASE_DE_DATOS");
+            response.put("message", "Ocurrió un error interno. Intente nuevamente o contacte al administrador.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
         return badRequest("ERROR_DE_NEGOCIO", ex.getMessage());
     }
 

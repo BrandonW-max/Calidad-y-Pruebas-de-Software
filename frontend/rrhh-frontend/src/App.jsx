@@ -17,6 +17,8 @@ import ResetPassword from "./pages/ResetPassword";
 import GestionHorarios from "./pages/GestionHorarios";
 import DevLogin from "./pages/DevLogin"; // ELIMINAR ANTES DE PRODUCCIÓN
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AccessibilityProvider } from "./context/AccessibilityContext";
+import AccessibilityToolbar from "./components/AccessibilityToolbar";
 
 const DASH = { RRHH: '/rrhh', EMPLEADO: '/empleado', GERENCIA: '/gerencia' };
 
@@ -442,15 +444,20 @@ function App() {
 
   return (
     <ErrorBoundary>
-    <Setup2FAModal />
-    {sessionActive && showAfkModal && (
-      <AfkModal
-        countdown={afkCountdown}
-        onContinuar={resetAfk}
-        onSalir={handleLogout}
-      />
-    )}
-    <Routes>
+      <AccessibilityProvider>
+        <a href="#main-content" className="a11y-skip-link">
+          Saltar al contenido principal
+        </a>
+        <Setup2FAModal />
+        {sessionActive && showAfkModal && (
+          <AfkModal
+            countdown={afkCountdown}
+            onContinuar={resetAfk}
+            onSalir={handleLogout}
+          />
+        )}
+        <AccessibilityToolbar />
+        <Routes>
       {/* Auth (rutas públicas) */}
       <Route path="/" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -482,6 +489,7 @@ function App() {
       {/* Catch-all: URL inexistente → autocorrector */}
       <Route path="*" element={<AutoRedirect />} />
     </Routes>
+    </AccessibilityProvider>
     </ErrorBoundary>
   );
 }

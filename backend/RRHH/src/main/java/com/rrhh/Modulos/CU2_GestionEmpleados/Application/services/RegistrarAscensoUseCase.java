@@ -5,17 +5,19 @@ import com.rrhh.Modulos.CU1_AutenticacionYRol.Application.services.RolAsignacion
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.EmpleadoResponseDTO;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.RegistrarAscensoRequestDTO;
 
+import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.catalogo.CatalogoCargos;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Contrato;
-import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Departamento;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Empleado;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Rol;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.UsuarioGestion;
 
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IContratoRepository;
-import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IDepartamentoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IEmpleadoRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IRolRepository;
 import com.rrhh.Modulos.CU2_GestionEmpleados.Domain.repository.IUsuarioGestionRepository;
+import com.rrhh.Shared.config.RRHHProperties;
+
+import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,8 +29,6 @@ public class RegistrarAscensoUseCase {
 
     private final IContratoRepository contratoRepository;
 
-    private final IDepartamentoRepository departamentoRepository;
-
     private final IUsuarioGestionRepository usuarioRepository;
 
     private final IRolRepository rolRepository;
@@ -37,10 +37,15 @@ public class RegistrarAscensoUseCase {
 
     private final AuditoriaEmpleadoService auditoriaEmpleadoService;
 
-    public RegistrarAscensoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IDepartamentoRepository departamentoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService) {
+    private final RRHHProperties rrhhProperties;
+
+    private final com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
+
+    public RegistrarAscensoUseCase(IEmpleadoRepository empleadoRepository, IContratoRepository contratoRepository, IUsuarioGestionRepository usuarioRepository, IRolRepository rolRepository, RolAsignacionService rolAsignacionService, AuditoriaEmpleadoService auditoriaEmpleadoService, RRHHProperties rrhhProperties, com.rrhh.Shared.service.CambioSueldoService cambioSueldo) {
+        this.cambioSueldo = cambioSueldo;
+        this.rrhhProperties = rrhhProperties;
         this.empleadoRepository = empleadoRepository;
         this.contratoRepository = contratoRepository;
-        this.departamentoRepository = departamentoRepository;
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.rolAsignacionService = rolAsignacionService;
@@ -57,37 +62,21 @@ public class RegistrarAscensoUseCase {
                 empleadoRepository.findById(idEmpleado);
 
         if (empleado == null) {
-            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Empleado no encontrado");
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Error: empleado no encontrado");
         }
 
         if (!empleado.puedeRecibirAscenso()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "No se puede registrar ascenso a un empleado que no está activo",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalStateException("Error: el empleado esta inactivo");
         }
 
         if (dto == null || dto.getNuevoCargo() == null || dto.getNuevoCargo().isBlank()) {
-            return new EmpleadoResponseDTO(
-                    false,
-                    "Debe ingresar el nuevo cargo del empleado",
-                    empleado.getIdEmpleado(),
-                    empleado.getNombres() + " " + empleado.getApellidos(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    empleado.getEstado()
-            );
+            throw new IllegalArgumentException("El cargo es obligatorio");
+        }
+
+        if (dto.getNuevoSueldo() != null
+                && dto.getNuevoSueldo().compareTo(rrhhProperties.getSalarioMinimo()) < 0) {
+            throw new IllegalArgumentException("Error: el sueldo debe ser mayor o igual a "
+                    + rrhhProperties.getSalarioMinimo().stripTrailingZeros().toPlainString());
         }
 
         Contrato contrato =
@@ -97,32 +86,36 @@ public class RegistrarAscensoUseCase {
             throw new RuntimeException("El empleado no tiene contrato activo");
         }
 
+        // El ascenso no cambia de departamento: el cargo nuevo debe pertenecer al actual
+        String departamento = contrato.getNombreDepartamento();
+        String nuevoCargo = dto.getNuevoCargo();
+
+        if (departamento == null || departamento.isBlank()) {
+            throw new IllegalArgumentException("El empleado no tiene departamento asignado. Asígnele un departamento antes del ascenso.");
+        }
+
+        if (nuevoCargo.equals(contrato.getCargo())) {
+            throw new IllegalArgumentException("El empleado ya tiene el cargo " + nuevoCargo);
+        }
+
+        if (!CatalogoCargos.pertenece(departamento, nuevoCargo)) {
+            throw new IllegalArgumentException("El cargo '" + nuevoCargo + "' no pertenece al departamento " + departamento);
+        }
+
         String cargoAnterior = contrato.getCargo();
         String departamentoAnterior = contrato.getNombreDepartamento();
 
-        Departamento departamentoNuevo = null;
-
-        if (dto.getNuevoIdDpto() != null) {
-            departamentoNuevo =
-                    departamentoRepository.findById(dto.getNuevoIdDpto());
-
-            if (departamentoNuevo == null) {
-                throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Departamento nuevo no encontrado");
-            }
-
-            contrato.cambiarDepartamento(
-                    departamentoNuevo.getIdDpto(),
-                    departamentoNuevo.getNombre()
-            );
-        } else {
-            departamentoNuevo = new Departamento();
-            departamentoNuevo.setIdDpto(contrato.getIdDpto());
-            departamentoNuevo.setNombre(contrato.getNombreDepartamento());
-        }
-
-        String nuevoCargo = dto.getNuevoCargo();
-
         contrato.cambiarCargo(nuevoCargo);
+
+        BigDecimal sueldoAnterior = contrato.getSueldo();
+
+        if (dto.getNuevoSueldo() != null
+                && (sueldoAnterior == null || sueldoAnterior.compareTo(dto.getNuevoSueldo()) != 0)) {
+            contrato.cambiarSueldo(dto.getNuevoSueldo());
+            cambioSueldo.registrar(idEmpleado,
+                    dto.getFechaAscenso() != null ? dto.getFechaAscenso() : java.time.LocalDate.now(),
+                    sueldoAnterior, dto.getNuevoSueldo(), null);
+        }
 
         Contrato contratoActualizado =
                 contratoRepository.save(contrato);
@@ -139,7 +132,7 @@ public class RegistrarAscensoUseCase {
 
             String nombreRolCalculado =
                     rolAsignacionService.determinarRol(
-                            departamentoNuevo.getNombre(),
+                            departamento,
                             nuevoCargo
                     );
 
@@ -171,13 +164,15 @@ public class RegistrarAscensoUseCase {
         String valorAnterior =
                 "Cargo anterior: " + cargoAnterior
                         + " | Departamento anterior: " + departamentoAnterior
-                        + " | Rol anterior: " + rolAnterior;
+                        + " | Rol anterior: " + rolAnterior
+                        + " | Sueldo anterior: " + sueldoAnterior;
 
         String valorNuevo =
                 "Nuevo cargo: " + contratoActualizado.getCargo()
                         + " | Nuevo departamento: " + contratoActualizado.getNombreDepartamento()
                         + " | Nuevo rol: " + rolNuevo
                         + " | Fecha ascenso: " + fechaAscenso
+                        + " | Nuevo sueldo: " + contratoActualizado.getSueldo()
                         + " | Motivo: " + motivo;
 
         auditoriaEmpleadoService.registrar(

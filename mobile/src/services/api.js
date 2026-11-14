@@ -1,5 +1,4 @@
 // LOCAL: usa tu IP (ipconfig → IPv4), ej: 'http://192.168.1.100:8080'
-// AZURE: usa la URL pública del backend, ej: 'https://mi-backend.azurewebsites.net'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.100:8080';
 
 const leerRespuesta = async (res) => {
@@ -23,14 +22,6 @@ export const getEstadoAsistenciaHoy = async (idEmpleado, deviceToken) => {
     `${BASE_URL}/api/v1/asistencia/biometrico/estado/${idEmpleado}`,
     { headers: { 'X-Device-Token': deviceToken } }
   );
-  if (!res.ok) throw new Error(`Error ${res.status}`);
-  return res.json();
-};
-
-export const buscarEmpleadoPorDni = async (numeroDi) => {
-  const res = await fetch(`${BASE_URL}/api/v1/dispositivos/dni/${numeroDi}`);
-  if (res.status === 404) throw new Error('DNI no encontrado. Verifica tu número de documento.');
-  if (res.status === 400) throw new Error('Empleado inactivo o desvinculado.');
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return res.json();
 };
