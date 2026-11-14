@@ -245,4 +245,74 @@ class ReporteServiceTest {
         assertArrayEquals(esperado, resultado);
         verify(pdf).export(eq("Reporte de SOLICITUDES"), anyList(), any(), any());
     }
+
+    @Test
+    @DisplayName("Generar reporte de empleados con datos")
+    void generarReporteEmpleados_Exitoso() {
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroEmpleadoDTO filtro =
+                new com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroEmpleadoDTO();
+
+        com.rrhh.Shared.persistence.EmpleadoModel emp = new com.rrhh.Shared.persistence.EmpleadoModel();
+        emp.setIdEmpleado(1L);
+        emp.setNombres("Carlos");
+        emp.setApellidos("Mendoza");
+        emp.setNumeroDi("12345678");
+        emp.setCorreo("carlos@hospital.com");
+        emp.setEstado("ACTIVO");
+
+        when(jpaEmpleadoRepository.buscarConFiltros(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(List.of(emp));
+
+        com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado reporte =
+                new com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado();
+        reporte.setIdReporte(10);
+        reporte.setTipoReporte("EMPLEADOS");
+
+        when(reporteFactory.crearReporteBase()).thenReturn(reporte);
+        when(reporteGeneradoRepository.guardar(any())).thenReturn(reporte);
+
+        jakarta.persistence.Query countQuery = mock(jakarta.persistence.Query.class);
+        when(em.createNativeQuery(anyString())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(10);
+
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.ReporteResponseDTO res =
+                reporteService.generarReporteEmpleados(filtro, ID_USUARIO);
+
+        assertNotNull(res);
+        assertEquals(1, res.getTotalRegistros());
+        assertEquals("EMPLEADOS", res.getTipoReporte());
+    }
+
+    @Test
+    @DisplayName("Generar reporte de solicitudes con datos")
+    void generarReporteSolicitudes_Exitoso() {
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroSolicitudDTO filtro =
+                new com.rrhh.Modulos.CU5_Reporte.Application.dto.FiltroSolicitudDTO();
+
+        com.rrhh.Shared.persistence.SolicitudModel sol = new com.rrhh.Shared.persistence.SolicitudModel();
+        sol.setIdSolicitud(1);
+        sol.setTipoSolicitud("PERMISO");
+
+        when(jpaSolicitudRepository.buscarConFiltros(anyLong(), anyString(), anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(List.of(sol));
+
+        com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado reporte =
+                new com.rrhh.Modulos.CU5_Reporte.Domain.entities.ReporteGenerado();
+        reporte.setIdReporte(11);
+        reporte.setTipoReporte("SOLICITUDES");
+
+        when(reporteFactory.crearReporteBase()).thenReturn(reporte);
+        when(reporteGeneradoRepository.guardar(any())).thenReturn(reporte);
+
+        jakarta.persistence.Query countQuery = mock(jakarta.persistence.Query.class);
+        when(em.createNativeQuery(anyString())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(10);
+
+        com.rrhh.Modulos.CU5_Reporte.Application.dto.ReporteResponseDTO res =
+                reporteService.generarReporteSolicitudes(filtro, ID_USUARIO);
+
+        assertNotNull(res);
+        assertEquals(1, res.getTotalRegistros());
+        assertEquals("SOLICITUDES", res.getTipoReporte());
+    }
 }

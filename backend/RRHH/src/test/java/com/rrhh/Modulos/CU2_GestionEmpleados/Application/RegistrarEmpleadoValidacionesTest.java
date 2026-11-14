@@ -109,4 +109,59 @@ class RegistrarEmpleadoValidacionesTest {
         assertEquals("Error: el sueldo debe ser mayor o igual a 1130", ex.getMessage());
         verify(empleadoRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Registrar empleado exitosamente en happy path")
+    void registrarEmpleado_HappyPath_Exitoso() {
+        RegistrarEmpleadoRequestDTO dto = empleadoBase("70123456", new BigDecimal("2500.00"));
+        dto.setCorreo("test@gmail.com");
+
+        when(empleadoRepository.existsByNumeroDi("70123456")).thenReturn(false);
+        when(rrhhProperties.getSalarioMinimo()).thenReturn(new BigDecimal("1130.00"));
+
+        com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Departamento dpto =
+                new com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Departamento();
+        dpto.setIdDpto(3);
+        dpto.setNombre("Emergencias");
+        when(departamentoRepository.findById(3)).thenReturn(dpto);
+
+        com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Empleado empGuardado =
+                new com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Empleado();
+        empGuardado.setIdEmpleado(100L);
+        empGuardado.setNombres(dto.getNombres());
+        empGuardado.setApellidos(dto.getApellidos());
+        empGuardado.setNumeroDi(dto.getNumeroDi());
+        when(empleadoRepository.save(any())).thenReturn(empGuardado);
+
+        com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Contrato contrato =
+                new com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Contrato();
+        when(contratoFactory.crearIndefinido(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(contrato);
+
+        when(rolAsignacionService.determinarRol(any(), any())).thenReturn("MEDICO");
+        com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Rol rol =
+                new com.rrhh.Modulos.CU2_GestionEmpleados.Domain.entities.Rol();
+        rol.setIdRol(2);
+        rol.setNombreRol("MEDICO");
+        when(rolRepository.findByNombreRol("MEDICO")).thenReturn(rol);
+
+        when(nombreUsuarioService.generarNombreUsuarioUnico(any(), any())).thenReturn("juan.perez");
+        when(nombreUsuarioService.generarCorreoInstitucional(any())).thenReturn("juan.perez@hospital.com");
+        when(hashService.encriptar(any())).thenReturn("hashed123");
+
+        com.rrhh.Shared.persistence.HorarioModel h = new com.rrhh.Shared.persistence.HorarioModel();
+        h.setIdHorario(1);
+        h.setNombreTurno("Turno Mañana");
+        when(horarioService.listar()).thenReturn(java.util.List.of(h));
+
+        com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto.EmpleadoResponseDTO res =
+                useCase.ejecutar(dto);
+
+        assertNotNull(res);
+        assertEquals(100L, res.getIdEmpleado());
+        assertEquals("juan.perez", res.getNombreUsuario());
+        verify(empleadoRepository).save(any());
+        verify(contratoRepository).save(any());
+        verify(usuarioRepository).save(any());
+    }
 }
