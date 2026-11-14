@@ -77,7 +77,6 @@ public class SecurityConfig {
                                 "/api/v1/auth/verify-2fa",
                                 "/api/v1/auth/recovery",
                                 "/api/v1/auth/reset-password",
-                                "/uploads/**",
                                 // App móvil: registro y vinculación de dispositivo
                                 "/api/v1/dispositivos/enviar-otp",
                                 "/api/v1/dispositivos/registrar",

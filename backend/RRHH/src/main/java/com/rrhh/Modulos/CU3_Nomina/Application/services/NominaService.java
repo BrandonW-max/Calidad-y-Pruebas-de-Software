@@ -511,13 +511,7 @@ public class NominaService implements INominaService {
             .orElseThrow(() -> new IllegalStateException(
                 "El empleado asociado a la nomina no tiene contrato activo."
             ));
-        if (request.getSueldoBase() != null && request.getSueldoBase().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
-        }
-        // Si la petición no trae sueldoBase se toma el del contrato activo.
-        BigDecimal sueldoBase = request.getSueldoBase() != null
-            ? normalizar(request.getSueldoBase())
-            : normalizar(contratoActivo.getSueldo());
+        BigDecimal sueldoBase = normalizar(contratoActivo.getSueldo());
         if (sueldoBase.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El sueldo base debe ser mayor a cero.");
         }
