@@ -13,6 +13,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -43,9 +44,9 @@ class NominaMensualServiceTest {
         verify(nominaService, times(2)).calcularNomina(captor.capture(), anyLong());
 
         List<LocalDate> inicios = captor.getAllValues().stream().map(CalcularNominaRequestDTO::getFechaInicio).toList();
-        assert inicios.contains(actual.minusMonths(2).atDay(1));
-        assert inicios.contains(actual.minusMonths(3).atDay(1));
-        assert !inicios.contains(actual.minusMonths(1).atDay(1));
+        assertTrue(inicios.contains(actual.minusMonths(2).atDay(1)));
+        assertTrue(inicios.contains(actual.minusMonths(3).atDay(1)));
+        assertTrue(!inicios.contains(actual.minusMonths(1).atDay(1)));
     }
 
     @Test

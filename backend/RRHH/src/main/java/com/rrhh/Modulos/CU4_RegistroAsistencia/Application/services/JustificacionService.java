@@ -69,7 +69,7 @@ public class JustificacionService {
         j.setFechaJustificacion(LocalDateTime.now());
 
         r.setObservacion("Justificacion pendiente de aprobacion");
-        em.merge(r);
+        r = em.merge(r);
 
         em.persist(j);
         return j;
@@ -116,7 +116,7 @@ public class JustificacionService {
             }
             r.setMinutosTardanza(0);
             r.setObservacion("Tardanza justificada y aprobada");
-            em.merge(r);
+            r = em.merge(r);
         }
 
         return em.merge(j);

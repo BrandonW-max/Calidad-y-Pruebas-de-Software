@@ -187,4 +187,40 @@ class JustificacionServiceTest {
         assertEquals(90, registro.getMinutosTardanza());
         assertTrue(resultado.getComentarioRevision().contains("Plazo de justificacion vencido"));
     }
+
+    @Test
+    @DisplayName("Listar justificaciones pendientes, por estado y por empleado")
+    void listarJustificaciones_Exitoso() {
+        TypedQuery<JustificacionTardanzaModel> query = mock(TypedQuery.class);
+        when(em.createQuery(anyString(), eq(JustificacionTardanzaModel.class))).thenReturn(query);
+        when(query.setParameter(anyString(), any())).thenReturn(query);
+
+        JustificacionTardanzaModel j = new JustificacionTardanzaModel();
+        j.setIdJustificacion(1);
+        j.setIdRegistroAsistencia(ID_REGISTRO);
+        j.setIdEmpleado(ID_EMPLEADO);
+        j.setEstado("PENDIENTE");
+
+        RegistroAsistenciaModel r = registroConTardanza(30, LocalDate.now());
+        r.setHoraEntrada(java.time.LocalTime.of(8, 30));
+        when(em.find(RegistroAsistenciaModel.class, ID_REGISTRO)).thenReturn(r);
+
+        TypedQuery<com.rrhh.Shared.persistence.AsignacionHorarioModel> asigQuery = mock(TypedQuery.class);
+        when(em.createQuery(contains("AsignacionHorarioModel"), eq(com.rrhh.Shared.persistence.AsignacionHorarioModel.class)))
+                .thenReturn(asigQuery);
+        when(asigQuery.setParameter(anyString(), any())).thenReturn(asigQuery);
+        when(asigQuery.setMaxResults(anyInt())).thenReturn(asigQuery);
+        when(asigQuery.getResultList()).thenReturn(java.util.List.of());
+
+        when(query.getResultList()).thenReturn(java.util.List.of(j));
+
+        java.util.List<JustificacionTardanzaModel> pendientes = justificacionService.listarPendientes();
+        assertEquals(1, pendientes.size());
+
+        java.util.List<JustificacionTardanzaModel> aprobadas = justificacionService.listarPorEstado("APROBADA");
+        assertEquals(1, aprobadas.size());
+
+        java.util.List<JustificacionTardanzaModel> porEmpleado = justificacionService.listarPorEmpleado(ID_EMPLEADO);
+        assertEquals(1, porEmpleado.size());
+    }
 }

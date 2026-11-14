@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
+import { Volume2 } from "lucide-react";
+import PayrollAudioModal from "../components/PayrollAudioModal";
+import { speakText, stopSpeech, buildGeneralPayrollSummaryNarrative } from "../utils/speech";
 import {
   calcularNomina,
   getNominasPorPeriodo,
@@ -76,6 +79,8 @@ export default function CalculoNomina() {
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
   const closeErrorModal = () => setErrorModal({ open: false, message: "" });
   const [previewNomina, setPreviewNomina] = useState(null);
+  const [audioModal, setAudioModal] = useState({ open: false, nomina: null, periodoLabel: "" });
+  const [narrandoGeneral, setNarrandoGeneral] = useState(false);
   const [modalEstructura, setModalEstructura] = useState(null);
   const [versionesNomina, setVersionesNomina] = useState([]);
   const [mostrarHistorialAjustes, setMostrarHistorialAjustes] = useState(false);
@@ -385,7 +390,7 @@ export default function CalculoNomina() {
     <div className="dashboard">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex="-1">
         <header className="main-header header-rrhh">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Cálculo de Nómina</span>
@@ -527,10 +532,33 @@ export default function CalculoNomina() {
 
             {resultList.length > 0 && (
               <div className="section-card asistencia-panel">
-                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+                <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
                   <h2 style={{ margin: 0, border: "none", padding: 0 }}>
                     Resultados — {MESES.find(m => m.v === mes)?.l} {anio}
                   </h2>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, borderColor: "#3b82f6", color: "#1d4ed8" }}
+                    onClick={() => {
+                      if (narrandoGeneral) {
+                        stopSpeech();
+                        setNarrandoGeneral(false);
+                      } else {
+                        const mLabel = MESES.find(m => m.v === mes)?.l ?? mes;
+                        const texto = buildGeneralPayrollSummaryNarrative(resultList, `${mLabel} ${anio}`);
+                        setNarrandoGeneral(true);
+                        speakText(texto, {
+                          onEnd: () => setNarrandoGeneral(false),
+                          onError: () => setNarrandoGeneral(false),
+                        });
+                      }
+                    }}
+                    title="Narración auditiva del total de la nómina para personas con discapacidad visual"
+                  >
+                    <Volume2 size={15} />
+                    <span>{narrandoGeneral ? "⏹ Detener audio" : "🔊 Escuchar resumen del período"}</span>
+                  </button>
                 </div>
                 <div className="table-wrapper" style={{ marginBottom: 0, overflowX: "auto", paddingBottom: 14, ...(resultList.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
                   <table style={{ minWidth: 700 }}>
@@ -558,6 +586,15 @@ export default function CalculoNomina() {
                           <td style={{ textAlign: "center", fontWeight: 700, color: "#0f172a" }}>{fmtS(n.sueldoNeto)}</td>
                           <td style={{ textAlign: "center" }}>
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                              <button className="btn btn-secondary btn-sm"
+                                title="Escuchar boleta accesible por voz (ODS 10)"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  const mLabel = MESES.find(m => m.v === mes)?.l ?? mes;
+                                  setAudioModal({ open: true, nomina: n, periodoLabel: `${mLabel} ${anio}` });
+                                }}>
+                                <Volume2 size={13} />
+                              </button>
                               <button className="btn btn-secondary btn-sm"
                                 title="Vista previa detallada"
                                 onClick={e => { e.stopPropagation(); setPreviewNomina(n); }}>
@@ -768,7 +805,19 @@ export default function CalculoNomina() {
                   <span style={{ fontWeight: 800, fontSize: 18, color: "#15803d" }}>{fmtS(neto)}</span>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#0284c7" }}
+                  onClick={() => {
+                    const mLabel = MESES.find(m => m.v === mes)?.l ?? mes;
+                    setAudioModal({ open: true, nomina: n, periodoLabel: `${mLabel} ${anio}` });
+                  }}
+                >
+                  <Volume2 size={16} />
+                  <span>Escuchar en Voz Alta</span>
+                </button>
                 <button className="btn btn-secondary" onClick={() => setPreviewNomina(null)}>Cerrar</button>
               </div>
             </div>
@@ -1118,6 +1167,14 @@ export default function CalculoNomina() {
           </div>
         </div>
       )}
+
+      {/* Modal de Lectura Fácil y Asistente por Voz ODS 10 */}
+      <PayrollAudioModal
+        nomina={audioModal.nomina}
+        periodoLabel={audioModal.periodoLabel}
+        isOpen={audioModal.open}
+        onClose={() => setAudioModal({ open: false, nomina: null, periodoLabel: "" })}
+      />
     </div>
   );
 }
