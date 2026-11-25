@@ -20,8 +20,9 @@ public class GenericExcelExporter implements ExcelExporter {
 
     @Override
     public byte[] export(String titulo, List<Map<String, Object>> datos, String[] headers, String[] keys) {
-        if (datos == null || datos.isEmpty()) {
-            return new byte[0];
+        // Sin filas se genera igual el libro con título y encabezados, para que el archivo siempre se abra
+        if (datos == null) {
+            datos = List.of();
         }
 
         try (Workbook workbook = new XSSFWorkbook()) {

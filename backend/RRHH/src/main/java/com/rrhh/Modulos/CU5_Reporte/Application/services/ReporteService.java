@@ -18,7 +18,10 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +34,18 @@ public class ReporteService implements IReporteService {
         "EMPLEADOS", "gestionEmpleadosExportFactory",
         "ASISTENCIA", "registroAsistenciaExportFactory",
         "NOMINA", "nominaExportFactory",
-        "SOLICITUDES", "solicitudExportFactory"
+        "SOLICITUDES", "solicitudExportFactory",
+        "HISTORIAL_LABORAL", "historialLaboralExportFactory"
+    );
+
+    // Nombres legibles de los campos que guarda la auditoría de actualización de datos
+    private static final Map<String, String> ETIQUETAS_CAMPOS = Map.of(
+        "fechaNac", "Fecha de nacimiento",
+        "sexo", "Sexo",
+        "estadoCivil", "Estado civil",
+        "direccion", "Dirección",
+        "correo", "Correo",
+        "telefono", "Teléfono"
     );
 
     private final IReporteGeneradoRepository reporteGeneradoRepository;
@@ -70,13 +84,23 @@ public class ReporteService implements IReporteService {
     public ReporteResponseDTO generarReporteEmpleados(FiltroEmpleadoDTO filtro, Long idUsuario) {
 
         validarFiltroEmpleado(filtro);
+        validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
+
+        LocalDateTime inicio = filtro.getFechaInicio() != null
+            ? filtro.getFechaInicio().atStartOfDay()
+            : LocalDateTime.of(1900, 1, 1, 0, 0);
+        LocalDateTime fin = filtro.getFechaFin() != null
+            ? filtro.getFechaFin().atTime(23, 59, 59)
+            : LocalDateTime.of(2999, 12, 31, 23, 59, 59);
 
         List<EmpleadoModel> empleados = jpaEmpleadoRepository.buscarConFiltros(
             filtro.getEstado(),
             filtro.getArea(),
             filtro.getCargo(),
             filtro.getTipoContrato(),
-            filtro.getIdEmpleado()
+            filtro.getIdEmpleado(),
+            inicio,
+            fin
         );
 
         if (empleados.isEmpty()) {
@@ -162,11 +186,26 @@ public class ReporteService implements IReporteService {
 
         validarConsistenciaDatos("NOMINA", nominas);
 
+        // Sueldo del contrato activo de cada empleado, en una sola consulta (evita N+1)
+        List<Long> idsEmpleados = nominas.stream()
+            .filter(n -> n.getEmpleado() != null)
+            .map(n -> n.getEmpleado().getIdEmpleado())
+            .distinct()
+            .toList();
+        Map<Long, java.math.BigDecimal> sueldoContratoPorEmpleado = idsEmpleados.isEmpty() ? Map.of() :
+            em.createQuery("SELECT c FROM ContratoModel c WHERE c.empleado.idEmpleado IN :ids AND c.estado = 'ACTIVO'",
+                    ContratoModel.class)
+                .setParameter("ids", idsEmpleados)
+                .getResultList().stream()
+                .collect(Collectors.toMap(c -> c.getEmpleado().getIdEmpleado(), ContratoModel::getSueldo, (a, b) -> a));
+
         List<Map<String, Object>> datos = nominas.stream().map(n -> {
             Map<String, Object> fila = new LinkedHashMap<>();
             fila.put("empleado", n.getEmpleado() != null ?
                 n.getEmpleado().getNombres() + " " + n.getEmpleado().getApellidos() : "");
             fila.put("periodo", n.getPeriodo());
+            fila.put("sueldoContrato", n.getEmpleado() != null
+                ? sueldoContratoPorEmpleado.get(n.getEmpleado().getIdEmpleado()) : null);
             fila.put("sueldoBase", n.getSueldoBase());
             fila.put("horasExtra", n.getTotalHorasExtra());
             fila.put("bonificaciones", sumaBonificaciones(n));
@@ -187,14 +226,15 @@ public class ReporteService implements IReporteService {
         if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
         validarFiltroFechas(filtro.getFechaInicio(), filtro.getFechaFin());
 
+        // Valores centinela en vez de null: PostgreSQL no puede tipar un parámetro nulo en "IS NULL".
         List<SolicitudModel> solicitudes = jpaSolicitudRepository.buscarConFiltros(
-            filtro.getIdEmpleado(),
-            filtro.getArea(),
-            filtro.getTipoSolicitud(),
-            filtro.getEstado(),
-            filtro.getCargo(),
-            filtro.getFechaInicio(),
-            filtro.getFechaFin()
+            filtro.getIdEmpleado() != null ? filtro.getIdEmpleado() : 0L,
+            filtro.getArea() != null ? filtro.getArea() : "",
+            filtro.getTipoSolicitud() != null ? filtro.getTipoSolicitud() : "",
+            filtro.getEstado() != null ? filtro.getEstado() : "",
+            filtro.getCargo() != null ? filtro.getCargo() : "",
+            filtro.getFechaInicio() != null ? filtro.getFechaInicio() : LocalDate.of(1900, 1, 1),
+            filtro.getFechaFin() != null ? filtro.getFechaFin() : LocalDate.of(2999, 12, 31)
         );
 
         if (solicitudes.isEmpty()) {
@@ -219,9 +259,87 @@ public class ReporteService implements IReporteService {
         return guardarYRetornar("SOLICITUDES", filtro, datos, idUsuario);
     }
 
+    @Override
+    @Transactional(timeout = 30)
+    public ReporteResponseDTO generarReporteHistorialLaboral(FiltroHistorialLaboralDTO filtro, Long idUsuario) {
+
+        if (filtro == null) throw new IllegalArgumentException("Los filtros ingresados no son validos, verifique la informacion.");
+
+        // 0 como centinela de "todos los empleados" (PostgreSQL no tipa un parámetro nulo)
+        Long id = filtro.getIdEmpleado() != null ? filtro.getIdEmpleado() : 0L;
+
+        Map<Long, String> nombres = em.createQuery(
+                "SELECT e FROM EmpleadoModel e WHERE (:id = 0L OR e.idEmpleado = :id)", EmpleadoModel.class)
+            .setParameter("id", id)
+            .getResultList().stream()
+            .collect(Collectors.toMap(EmpleadoModel::getIdEmpleado, e -> e.getNombres() + " " + e.getApellidos()));
+
+        List<HistorialAuditoriaModel> cambios = em.createQuery(
+                "SELECT h FROM HistorialAuditoriaModel h WHERE h.tablaAfectada = 'EMPLEADO' " +
+                "AND h.accion IN ('ASCENSO_EMPLEADO', 'CAMBIO_SALARIAL', 'ACTUALIZACION_EMPLEADO') " +
+                "AND (:id = 0L OR h.idRegistroAfectado = :id)", HistorialAuditoriaModel.class)
+            .setParameter("id", id)
+            .getResultList();
+
+        List<SancionModel> sanciones = em.createQuery(
+                "SELECT s FROM SancionModel s WHERE (:id = 0L OR s.empleado.idEmpleado = :id)", SancionModel.class)
+            .setParameter("id", id)
+            .getResultList();
+
+        List<Map<String, Object>> datos = new ArrayList<>();
+
+        for (HistorialAuditoriaModel h : cambios) {
+            Map<String, Object> fila = new LinkedHashMap<>();
+            fila.put("fecha", h.getFechaDeCambio() != null ? h.getFechaDeCambio().toLocalDate() : null);
+            fila.put("empleado", nombres.getOrDefault(h.getIdRegistroAfectado(), ""));
+            fila.put("tipo", switch (h.getAccion()) {
+                case "ASCENSO_EMPLEADO" -> "Ascenso / cambio de sueldo";
+                case "CAMBIO_SALARIAL" -> "Cambio salarial";
+                default -> "Actualización de datos";
+            });
+            fila.put("detalle", "ACTUALIZACION_EMPLEADO".equals(h.getAccion())
+                ? formatearDetalleActualizacion(h.getValorNuevo())
+                : h.getValorNuevo());
+            datos.add(fila);
+        }
+
+        for (SancionModel s : sanciones) {
+            Map<String, Object> fila = new LinkedHashMap<>();
+            fila.put("fecha", s.getFechaInicio());
+            fila.put("empleado", s.getEmpleado() != null ? nombres.getOrDefault(s.getEmpleado().getIdEmpleado(), "") : "");
+            fila.put("tipo", "Sanción");
+            fila.put("detalle", s.getMotivo() + " | Estado: " + s.getEstado()
+                + (s.getFechaFin() != null ? " | Hasta: " + s.getFechaFin() : ""));
+            datos.add(fila);
+        }
+
+        datos.sort(Comparator.comparing((Map<String, Object> m) -> (LocalDate) m.get("fecha"),
+                Comparator.nullsLast(Comparator.reverseOrder())));
+
+        if (datos.isEmpty()) {
+            return guardarYRetornar("HISTORIAL_LABORAL", filtro, List.of(), idUsuario);
+        }
+
+        return guardarYRetornar("HISTORIAL_LABORAL", filtro, datos, idUsuario);
+    }
+
     // ================================
     // METODOS PRIVADOS
     // ================================
+
+    // Convierte "fechaNac=1990-05-15, sexo=M" en "Fecha de nacimiento: 1990-05-15\nSexo: M"
+    private String formatearDetalleActualizacion(String valorNuevo) {
+        if (valorNuevo == null || valorNuevo.isBlank()) return "";
+        return java.util.Arrays.stream(valorNuevo.split(", "))
+            .map(par -> {
+                int igual = par.indexOf('=');
+                if (igual < 0) return par.trim();
+                String campo = par.substring(0, igual).trim();
+                String valor = par.substring(igual + 1).trim();
+                return ETIQUETAS_CAMPOS.getOrDefault(campo, campo) + ": " + ("null".equals(valor) ? "—" : valor);
+            })
+            .collect(Collectors.joining("\n"));
+    }
 
     private void validarFiltroEmpleado(FiltroEmpleadoDTO filtro) {
         if (filtro == null) {
@@ -313,8 +431,10 @@ public class ReporteService implements IReporteService {
     @Override
     public byte[] exportarReporte(String tipo, String formato,
                                    List<Map<String, Object>> datos) {
-        String factoryBeanName = FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory");
-        ExportAbstractFactory factory = exportFactories.get(factoryBeanName);
+        String factoryBeanName = tipo != null
+                ? FACTORY_BY_TIPO.getOrDefault(tipo, tipo.toLowerCase() + "ExportFactory")
+                : null;
+        ExportAbstractFactory factory = factoryBeanName != null ? exportFactories.get(factoryBeanName) : null;
         if (factory == null) {
             throw new IllegalArgumentException("No existe fabrica de exportacion para: " + tipo);
         }

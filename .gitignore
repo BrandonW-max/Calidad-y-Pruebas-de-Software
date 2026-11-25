@@ -1,0 +1,6 @@
+.playwright-mcp/
+.env
+backend/RRHH/.env
+backend/RRHH/uploads/
+uploads/
+.claude/

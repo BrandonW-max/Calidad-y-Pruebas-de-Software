@@ -109,6 +109,28 @@ public class ReporteController {
         }
     }
 
+    @PostMapping(ReporteApiRoutes.HISTORIAL_LABORAL)
+    @PreAuthorize("hasRole('RRHH')")
+    public ResponseEntity<?> reporteHistorialLaboral(
+            @RequestBody FiltroHistorialLaboralDTO filtro,
+            @RequestParam(required = false) String formato,
+            Authentication authentication) {
+        try {
+            Long idUsuario = AuthUtils.extraerIdUsuario(authentication);
+            ReporteResponseDTO dto = reporteService.generarReporteHistorialLaboral(filtro, idUsuario);
+            if (formato != null) {
+                byte[] archivo = reporteService.exportarReporte("HISTORIAL_LABORAL", formato,
+                        dto.getDatos());
+                return buildFileResponse(archivo, "reporte_historial_laboral", formato);
+            }
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error interno: " + e.getMessage());
+        }
+    }
+
     private ResponseEntity<byte[]> buildFileResponse(byte[] archivo, String nombre, String formato) {
         String extension;
         MediaType mediaType;

@@ -45,6 +45,9 @@ public class NominaModel {
     @Column(name = "total_horas_extra")
     private BigDecimal totalHorasExtra = BigDecimal.ZERO;
 
+    @Column(name = "total_horas_extra_asistencia")
+    private BigDecimal totalHorasExtraAsistencia = BigDecimal.ZERO;
+
     @Column(name = "total_minutos_tardanza")
     private Integer totalMinutosTardanza = 0;
 
@@ -90,8 +93,6 @@ public class NominaModel {
     @Column(name = "cantidad_guardias")
     private Integer cantidadGuardias = 0;
 
-    @Column(name = "total_horas_nocturnas")
-    private BigDecimal totalHorasNocturnas = BigDecimal.ZERO;
 
     @Column(name = "tipo_pension_aplicada", length = 10)
     private String tipoPensionAplicada = "ONP";

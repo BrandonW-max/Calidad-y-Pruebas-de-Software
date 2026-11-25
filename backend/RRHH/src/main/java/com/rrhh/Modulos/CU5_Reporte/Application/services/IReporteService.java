@@ -15,5 +15,7 @@ public interface IReporteService {
 
     ReporteResponseDTO generarReporteSolicitudes(FiltroSolicitudDTO filtro, Long idUsuario);
 
+    ReporteResponseDTO generarReporteHistorialLaboral(FiltroHistorialLaboralDTO filtro, Long idUsuario);
+
     byte[] exportarReporte(String tipo, String formato, List<Map<String, Object>> datos);
 }

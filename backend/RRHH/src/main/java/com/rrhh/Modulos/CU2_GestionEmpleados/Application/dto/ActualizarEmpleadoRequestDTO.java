@@ -4,8 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public class ActualizarEmpleadoRequestDTO {
+
+    @Pattern(regexp = "\\d+", message = "El numero de documento debe ser numerico")
+    @Size(min = 8, max = 12, message = "El numero de documento debe tener entre 8 y 12 digitos")
+    private String numeroDi;
 
     private LocalDate fechaNac;
     private String sexo;
@@ -118,5 +124,13 @@ public class ActualizarEmpleadoRequestDTO {
 
     public void setTipoContrato(String tipoContrato) {
         this.tipoContrato = tipoContrato;
+    }
+
+    public String getNumeroDi() {
+        return numeroDi;
+    }
+
+    public void setNumeroDi(String numeroDi) {
+        this.numeroDi = numeroDi;
     }
 }

@@ -5,7 +5,7 @@ export default function DashboardLayout({ rol, children }) {
   return (
     <div className="dashboard">
       <Sidebar rol={rol} />
-      <main className="main-content">{children}</main>
+      <main className="main-content" id="main-content" tabIndex="-1">{children}</main>
     </div>
   );
 }

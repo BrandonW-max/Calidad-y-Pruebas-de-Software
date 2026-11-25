@@ -1,0 +1,540 @@
+/* ═════════════════════════════════════════════════════════════════════
+   accessibility.css — Estilos de Adaptabilidad y Accesibilidad (ODS 10)
+   Conforme a WCAG 2.1 AA / AAA para inclusión visual y cognitiva
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* ── Clase de accesibilidad para lectores de pantalla ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Enlace de salto accesible (Skip to Content - WCAG 2.4.1) ── */
+.a11y-skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  background: #1e40af;
+  color: #ffffff !important;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 0 0 8px 8px;
+  z-index: 9999999;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: top 0.15s ease-out;
+}
+
+.a11y-skip-link:focus,
+.a11y-skip-link:focus-visible {
+  top: 0;
+  outline: 3px solid #facc15 !important;
+  outline-offset: 2px !important;
+}
+
+/* ── FOCO VISIBLE UNIVERSAL PARA LECTORES Y TECLADO (WCAG 2.4.7) ── */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+
+body.a11y-contrast-dark a:focus-visible,
+body.a11y-contrast-dark button:focus-visible,
+body.a11y-contrast-dark input:focus-visible,
+body.a11y-contrast-dark select:focus-visible,
+body.a11y-contrast-dark textarea:focus-visible,
+body.a11y-contrast-dark [tabindex]:focus-visible {
+  outline: 3px solid #ffff00 !important;
+  outline-offset: 2px !important;
+}
+
+body.a11y-contrast-light a:focus-visible,
+body.a11y-contrast-light button:focus-visible,
+body.a11y-contrast-light input:focus-visible,
+body.a11y-contrast-light select:focus-visible,
+body.a11y-contrast-light textarea:focus-visible,
+body.a11y-contrast-light [tabindex]:focus-visible {
+  outline: 3px solid #000000 !important;
+  outline-offset: 2px !important;
+}
+
+/* ── ESCALADO DE FUENTE ── */
+body.a11y-text-large {
+  font-size: 110% !important;
+}
+
+body.a11y-text-large * {
+  font-size: 1.03em;
+}
+
+body.a11y-text-xlarge {
+  font-size: 120% !important;
+}
+
+body.a11y-text-xlarge * {
+  font-size: 1.08em;
+}
+
+/* ── FILTROS PARA DALTONISMO Y TRASTORNOS DEL COLOR (WCAG 2.1) ── */
+body.a11y-colorblind-protanopia {
+  filter: url('#a11y-filter-protanopia') !important;
+}
+
+body.a11y-colorblind-deuteranopia {
+  filter: url('#a11y-filter-deuteranopia') !important;
+}
+
+body.a11y-colorblind-tritanopia {
+  filter: url('#a11y-filter-tritanopia') !important;
+}
+
+body.a11y-colorblind-achromatopsia {
+  filter: grayscale(100%) contrast(108%) !important;
+}
+
+/* ── TIPOGRAFÍA PARA DISLEXIA Y BAJA VISIÓN ── */
+body.a11y-font-dyslexic,
+body.a11y-font-dyslexic * {
+  font-family: 'Atkinson Hyperlegible', 'Lexend', 'OpenDyslexic', 'Segoe UI', Arial, sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.08em !important;
+}
+
+/* ── ESPACIADO RELAJADO ── */
+body.a11y-spacing-relaxed p,
+body.a11y-spacing-relaxed td,
+body.a11y-spacing-relaxed th,
+body.a11y-spacing-relaxed span,
+body.a11y-spacing-relaxed label,
+body.a11y-spacing-relaxed button,
+body.a11y-spacing-relaxed input {
+  line-height: 1.85 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* ── RESALTADO DE ELEMENTOS INTERACTIVOS (Enlaces y Botones) ── */
+body.a11y-highlight-interactive a,
+body.a11y-highlight-interactive button,
+body.a11y-highlight-interactive input,
+body.a11y-highlight-interactive select,
+body.a11y-highlight-interactive textarea {
+  outline: 2px dashed #0284c7 !important;
+  outline-offset: 3px !important;
+}
+
+body.a11y-highlight-interactive a {
+  text-decoration: underline !important;
+  font-weight: 700 !important;
+}
+
+/* ── REDUCCIÓN DE MOVIMIENTO ── */
+body.a11y-reduced-motion *,
+body.a11y-reduced-motion *::before,
+body.a11y-reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── MODO ALTO CONTRASTE OSCURO (Dark High Contrast - WCAG AAA) ── */
+body.a11y-contrast-dark {
+  background-color: #000000 !important;
+  color: #ffff00 !important; /* Amarillo de alta legibilidad sobre negro */
+}
+
+body.a11y-contrast-dark .dashboard,
+body.a11y-contrast-dark .main-content,
+body.a11y-contrast-dark .section-card,
+body.a11y-contrast-dark .metric-card,
+body.a11y-contrast-dark .quick-access-card,
+body.a11y-contrast-dark .table-wrapper,
+body.a11y-contrast-dark .asistencia-panel,
+body.a11y-contrast-dark .modal-content,
+body.a11y-contrast-dark .modal-box,
+body.a11y-contrast-dark .form-card {
+  background-color: #0b0f19 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffff00 !important;
+  box-shadow: none !important;
+}
+
+body.a11y-contrast-dark .sidebar {
+  background: #000000 !important;
+  border-right: 2px solid #ffff00 !important;
+}
+
+body.a11y-contrast-dark .sidebar-item {
+  color: #ffffff !important;
+  border-bottom: 1px solid #333333 !important;
+}
+
+body.a11y-contrast-dark .sidebar-item.active {
+  background: #ffff00 !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+body.a11y-contrast-dark table,
+body.a11y-contrast-dark th,
+body.a11y-contrast-dark td {
+  border: 1px solid #ffff00 !important;
+  color: #ffffff !important;
+  background-color: #050811 !important;
+}
+
+body.a11y-contrast-dark th {
+  background-color: #1a2234 !important;
+  color: #ffff00 !important;
+}
+
+body.a11y-contrast-dark tr:hover td {
+  background-color: #1f2937 !important;
+}
+
+body.a11y-contrast-dark input,
+body.a11y-contrast-dark select,
+body.a11y-contrast-dark textarea {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+  border: 2px solid #ffff00 !important;
+}
+
+body.a11y-contrast-dark .btn,
+body.a11y-contrast-dark button {
+  background-color: #111827 !important;
+  color: #ffff00 !important;
+  border: 2px solid #ffff00 !important;
+  font-weight: 700 !important;
+}
+
+body.a11y-contrast-dark .btn-primary {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+}
+
+body.a11y-contrast-dark .btn:hover {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+body.a11y-contrast-dark h1,
+body.a11y-contrast-dark h2,
+body.a11y-contrast-dark h3,
+body.a11y-contrast-dark h4 {
+  color: #ffff00 !important;
+}
+
+/* ── MODO ALTO CONTRASTE CLARO (Light High Contrast) ── */
+body.a11y-contrast-light {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+body.a11y-contrast-light .dashboard,
+body.a11y-contrast-light .main-content,
+body.a11y-contrast-light .section-card,
+body.a11y-contrast-light .metric-card,
+body.a11y-contrast-light .table-wrapper,
+body.a11y-contrast-light .modal-content,
+body.a11y-contrast-light .modal-box {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+body.a11y-contrast-light table,
+body.a11y-contrast-light th,
+body.a11y-contrast-light td {
+  border: 2px solid #000000 !important;
+  color: #000000 !important;
+}
+
+body.a11y-contrast-light th {
+  background-color: #f1f5f9 !important;
+  font-weight: 800 !important;
+}
+
+body.a11y-contrast-light input,
+body.a11y-contrast-light select,
+body.a11y-contrast-light textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+
+body.a11y-contrast-light .btn,
+body.a11y-contrast-light button {
+  border: 2px solid #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* ── GUÍA DE LECTURA (Reading Ruler) ── */
+.a11y-reading-ruler {
+  position: fixed;
+  left: 0;
+  width: 100vw;
+  height: 38px;
+  background-color: rgba(254, 240, 138, 0.28);
+  border-top: 2px solid rgba(234, 179, 8, 0.7);
+  border-bottom: 2px solid rgba(234, 179, 8, 0.7);
+  pointer-events: none;
+  z-index: 999998;
+  transform: translateY(-50%);
+  transition: top 0.05s ease-out;
+}
+
+body.a11y-contrast-dark .a11y-reading-ruler {
+  background-color: rgba(255, 255, 0, 0.2);
+  border-top: 2px solid #ffff00;
+  border-bottom: 2px solid #ffff00;
+}
+
+/* ── BOTÓN FLOTANTE Y PANEL DE ACCESIBILIDAD ── */
+.a11y-floating-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999990;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.a11y-floating-trigger:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+}
+
+.a11y-floating-trigger:focus-visible {
+  outline: 3px solid #facc15;
+  outline-offset: 3px;
+}
+
+.a11y-floating-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 1px 6px;
+  border: 1px solid #ffffff;
+}
+
+/* ── PANEL DRAWER DE CONFIGURACIÓN ── */
+.a11y-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 999995;
+  display: flex;
+  justify-content: flex-end;
+  animation: a11yFadeIn 0.2s ease;
+}
+
+@keyframes a11yFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.a11y-panel-drawer {
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: a11ySlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes a11ySlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.a11y-panel-header {
+  padding: 18px 20px;
+  background: #1e293b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.a11y-panel-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+
+.a11y-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.a11y-btn-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.a11y-toggle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.a11y-toggle-btn:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.a11y-toggle-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.a11y-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+/* ── MODAL DE LECTURA FÁCIL Y TTS DE NÓMINA ── */
+.tts-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 999980;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: a11yFadeIn 0.2s ease;
+}
+
+.tts-modal-card {
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tts-modal-header {
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tts-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tts-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: ttsPulse 1.2s infinite;
+}
+
+@keyframes ttsPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.tts-easyread-card {
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tts-easyread-card.income {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+}
+
+.tts-easyread-card.deduction {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+}
+
+.tts-easyread-card.net {
+  background: #eff6ff;
+  border: 2px solid #60a5fa;
+}
+

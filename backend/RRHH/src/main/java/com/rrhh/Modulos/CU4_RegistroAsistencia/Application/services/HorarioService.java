@@ -51,10 +51,11 @@ public class HorarioService {
     @Transactional
     public void eliminar(Integer id) {
         HorarioModel model = em.find(HorarioModel.class, id);
-        if (model != null) {
-            model.setActivo(false);
-            em.merge(model);
+        if (model == null) {
+            throw new com.rrhh.Shared.exception.RecursoNoEncontradoException("Horario no encontrado.");
         }
+        model.setActivo(false);
+        model = em.merge(model);
     }
 
     @Transactional

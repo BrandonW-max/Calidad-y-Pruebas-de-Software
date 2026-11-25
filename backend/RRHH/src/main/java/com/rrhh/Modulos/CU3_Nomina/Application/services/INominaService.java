@@ -3,6 +3,7 @@ package com.rrhh.Modulos.CU3_Nomina.Application.services;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.CalcularNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.AjustarNominaRequestDTO;
 import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaResponseDTO;
+import com.rrhh.Modulos.CU3_Nomina.Application.dto.NominaVersionDTO;
 
 import java.util.List;
 
@@ -19,6 +20,8 @@ public interface INominaService {
     List<NominaResponseDTO> buscarPorNombreEmpleado(String nombre);
 
     NominaResponseDTO ajustarNomina(Integer idNomina, AjustarNominaRequestDTO request, Long idUsuarioRrhh);
+
+    List<NominaVersionDTO> listarVersiones(Integer idNomina);
 
     byte[] generarComprobantePDF(Integer idNomina);
 }

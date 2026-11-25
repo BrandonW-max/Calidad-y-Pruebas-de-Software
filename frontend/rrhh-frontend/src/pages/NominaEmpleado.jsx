@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import { getNominasPorEmpleado, getIdEmpleado, descargarComprobante } from "../services/api";
+import { Volume2 } from "lucide-react";
+import PayrollAudioModal from "../components/PayrollAudioModal";
 
 const getBonif = (n) =>
   (Number(n.bonifFamiliar)      || 0) +
@@ -19,6 +21,7 @@ export default function NominaEmpleado() {
   const [nominas,  setNominas]  = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
+  const [audioModal, setAudioModal] = useState({ open: false, nomina: null, periodoLabel: "" });
 
   async function cargarNominas() {
     setLoading(true);
@@ -74,7 +77,7 @@ export default function NominaEmpleado() {
     <div className="dashboard">
       <Sidebar rol="EMPLEADO" />
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex="-1">
         <header className="main-header header-empleado">
           <div className="header-left">
             <span className="page-breadcrumb">Dashboard / Mi Nómina</span>
@@ -88,12 +91,54 @@ export default function NominaEmpleado() {
 
         {error   && <div className="alert alert-warning">⚠️ {error}</div>}
 
-        <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid var(--border)" }}>
-            <h2 style={{ margin: 0 }}>Historial de Pagos</h2>
+        {nominas.length > 0 && (
+          <div style={{
+            background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)",
+            border: "1px solid #bfdbfe",
+            borderRadius: 12,
+            padding: "14px 18px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 26 }}>🎧</span>
+              <div>
+                <strong style={{ fontSize: 14, color: "#1e3a8a", display: "block" }}>
+                  Inclusión ODS 10: Asistente por Voz y Lectura Fácil
+                </strong>
+                <span style={{ fontSize: 12, color: "#475569" }}>
+                  Escucha el desglose de tu sueldo o léelo sin tecnicismos en cualquier momento.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              onClick={() => setAudioModal({
+                open: true,
+                nomina: nominas[0],
+                periodoLabel: nominas[0].mes && nominas[0].anio
+                  ? fmtPeriodo(nominas[0].mes, nominas[0].anio)
+                  : (nominas[0].periodo ?? "Último período")
+              })}
+            >
+              <Volume2 size={16} />
+              <span>Escuchar última nómina</span>
+            </button>
+          </div>
+        )}
+
+        <div className="section-card asistencia-panel">
+          <div className="section-header asistencia-panel-header" style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, border: "none", padding: 0 }}>Historial de Pagos</h2>
           </div>
 
-          <div className="table-wrapper" style={{ marginBottom: 0 }}>
+          <div className="table-wrapper" style={{ marginBottom: 0, paddingBottom: 14, ...(nominas.length > 15 ? { maxHeight: 690, overflowY: "auto" } : {}) }}>
             {loading ? (
               <div className="loading-text">Cargando tu historial de nómina...</div>
             ) : (
@@ -102,11 +147,11 @@ export default function NominaEmpleado() {
                   <tr>
                     <th style={{ textAlign: "center" }}>#</th>
                     <th style={{ textAlign: "center" }}>Período</th>
-                    <th style={{ textAlign: "center" }}>Sueldo Base</th>
+                    <th style={{ textAlign: "center" }}>Sueldo Devengado</th>
                     <th style={{ textAlign: "center" }}>Bonificaciones</th>
                     <th style={{ textAlign: "center" }}>Descuentos</th>
                     <th style={{ textAlign: "center" }}>Sueldo Neto</th>
-                    <th style={{ textAlign: "center" }}>Comprobante</th>
+                    <th style={{ textAlign: "center" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -138,13 +183,30 @@ export default function NominaEmpleado() {
                         {fmtS(n.sueldoNeto)}
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleDescargar(n.idNomina, n.periodo)}
-                          disabled={!n.idNomina || descargando === n.idNomina}
-                        >
-                          {descargando === n.idNomina ? "..." : "⬇ PDF"}
-                        </button>
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#0284c7" }}
+                            title="Escuchar resumen en voz alta y modo lectura fácil (ODS 10)"
+                            aria-label={`Escuchar resumen por voz de nómina ${n.periodo ?? ""}`}
+                            onClick={() => setAudioModal({
+                              open: true,
+                              nomina: n,
+                              periodoLabel: n.mes && n.anio ? fmtPeriodo(n.mes, n.anio) : (n.periodo ?? "")
+                            })}
+                          >
+                            <Volume2 size={14} />
+                            <span>Escuchar</span>
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleDescargar(n.idNomina, n.periodo)}
+                            disabled={!n.idNomina || descargando === n.idNomina}
+                          >
+                            {descargando === n.idNomina ? "..." : "⬇ PDF"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -155,11 +217,19 @@ export default function NominaEmpleado() {
 
           {nominas.length > 0 && (
             <div className="table-footer-bar">
-              <span>ℹ️ Haga clic en ⬇ PDF para descargar el comprobante de nómina en formato PDF.</span>
+              <span>ℹ️ Haga clic en <strong>Escuchar</strong> para la narración accesible y lectura fácil, o en ⬇ PDF para descargar el comprobante oficial.</span>
             </div>
           )}
         </div>
       </main>
+
+      {/* Modal de Lectura Fácil y Síntesis de Voz */}
+      <PayrollAudioModal
+        nomina={audioModal.nomina}
+        periodoLabel={audioModal.periodoLabel}
+        isOpen={audioModal.open}
+        onClose={() => setAudioModal({ open: false, nomina: null, periodoLabel: "" })}
+      />
     </div>
   );
 }

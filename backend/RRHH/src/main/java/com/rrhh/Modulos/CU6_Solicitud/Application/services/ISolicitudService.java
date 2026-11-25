@@ -21,7 +21,7 @@ public interface ISolicitudService {
 
     SolicitudResponseDTO buscarPorId(Integer idSolicitud);
 
-    SolicitudResponseDTO clonarSolicitud(Integer idSolicitud, Long idEmpleado);
+    void validarPropiedad(Long idUsuario, Long idEmpleadoDueno);
 
     List<SolicitudResponseDTO> listarNotificacionesPorEmpleado(Long idEmpleado);
 }

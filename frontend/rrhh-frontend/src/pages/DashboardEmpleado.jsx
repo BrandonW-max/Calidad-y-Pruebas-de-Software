@@ -6,16 +6,17 @@ import {
 import DashboardLayout from "../components/DashboardLayout";
 import DashboardHero from "../components/DashboardHero";
 import MetricCard from "../components/MetricCard";
-import { getUser, getIdEmpleado, getSolicitudesPorEmpleado, getNotificacionesEmpleado } from "../services/api";
+import { getUser, getIdEmpleado, getSolicitudesPorEmpleado, getNotificacionesEmpleado, getAsistenciaHoy } from "../services/api";
 
 export default function DashboardEmpleado() {
   const user = getUser();
   const idEmpleado = getIdEmpleado();
 
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
-  const [asistenciaHoy] = useState(null);
+  const [asistenciaHoy, setAsistenciaHoy] = useState(null);
   const [vacacionesDias] = useState(null);
   const [notifCount, setNotifCount] = useState(0);
+  const [resultadosRecientes, setResultadosRecientes] = useState([]);
 
   const cargarDatos = async () => {
     try {
@@ -25,7 +26,16 @@ export default function DashboardEmpleado() {
           s => s.estado === "PENDIENTE" || s.estado === "PROCESADO"
         ).length;
         setSolicitudesPendientes(pendientes);
+        const resultados = solicitudes
+          .filter(s => (s.estado === "APROBADA" || s.estado === "RECHAZADA") && s.fechaDecision)
+          .sort((a, b) => new Date(b.fechaDecision) - new Date(a.fechaDecision))
+          .slice(0, 5);
+        setResultadosRecientes(resultados);
       }
+    } catch { /* silently fail */ }
+    try {
+      const hoy = await getAsistenciaHoy(idEmpleado);
+      setAsistenciaHoy(hoy);
     } catch { /* silently fail */ }
     try {
       const notif = await getNotificacionesEmpleado(idEmpleado);
@@ -104,6 +114,30 @@ export default function DashboardEmpleado() {
             );
           })}
         </div>
+      </section>
+      <section className="mt-6 rounded-2xl border border-white bg-white/85 p-6 shadow-glass-sm backdrop-blur-md" aria-label="Resultados recientes de mis solicitudes">
+        <h2 className="mb-5 font-[var(--font-display)] text-[16px] font-bold text-ink-900">Resultados Recientes de mis Solicitudes</h2>
+        {resultadosRecientes.length === 0 ? (
+          <p className="text-[13px] text-ink-500">Aún no tienes solicitudes aprobadas o rechazadas.</p>
+        ) : (
+          <ul className="flex flex-col gap-3" style={{ maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
+            {resultadosRecientes.map(s => {
+              const aprobada = s.estado === "APROBADA";
+              return (
+                <li key={s.idSolicitud ?? s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-200 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-semibold text-ink-900">{s.tipoSolicitud}</p>
+                    <p className="text-[12px] text-ink-500">{s.fechaInicio} al {s.fechaFin} · Decidida el {String(s.fechaDecision).substring(0, 10)}</p>
+                    {s.respuesta && <p className="text-[12px] text-ink-600">{s.respuesta}</p>}
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[11.5px] font-bold ${aprobada ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                    {aprobada ? "Aprobada" : "Rechazada"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </DashboardLayout>
   );

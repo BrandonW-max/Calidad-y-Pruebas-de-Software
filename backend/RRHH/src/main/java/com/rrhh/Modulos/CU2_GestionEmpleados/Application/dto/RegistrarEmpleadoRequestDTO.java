@@ -3,6 +3,7 @@ package com.rrhh.Modulos.CU2_GestionEmpleados.Application.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -35,6 +36,7 @@ public class RegistrarEmpleadoRequestDTO {
     @NotBlank(message = "La direccion es obligatoria")
     private String direccion;
 
+    @Email(message = "El correo electronico no tiene un formato valido")
     private String correo;
 
     private String telefono;
@@ -52,6 +54,7 @@ public class RegistrarEmpleadoRequestDTO {
 
     @NotNull(message = "El departamento es obligatorio")
     private Integer idDpto;
+
 
    
     // DATOS DEL USUARIO DEL SISTEMA

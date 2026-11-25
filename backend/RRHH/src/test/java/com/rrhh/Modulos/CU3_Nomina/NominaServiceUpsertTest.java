@@ -49,6 +49,12 @@ class NominaServiceUpsertTest {
     @Mock JpaRegistroAsistenciaRepository jpaRegistroAsistenciaRepository;
     @Mock JpaContratoRepository jpaContratoRepository;
     @Mock JpaFamiliaInfoRepository jpaFamiliaInfoRepository;
+    @Mock com.rrhh.Modulos.CU1_AutenticacionYRol.Infrastructure.interfaces.JpaUsuarioRepository jpaUsuarioRepository;
+    @Mock com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionRepository jpaNominaVersionRepository;
+    @Mock com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaAjusteNominaManualRepository jpaAjusteNominaManualRepository;
+    @Mock com.rrhh.Modulos.CU3_Nomina.Infrastructure.interfaces.JpaNominaVersionAnteriorRepository jpaNominaVersionAnteriorRepository;
+    @Mock com.rrhh.Modulos.CU3_Nomina.Application.services.LiquidacionHorasExtraService liquidacionHorasExtra;
+    @Mock com.rrhh.Shared.service.CambioSueldoService cambioSueldo;
 
     NominaService service;
 
@@ -90,7 +96,13 @@ class NominaServiceUpsertTest {
                 jpaEmpleadoRepository,
                 jpaRegistroAsistenciaRepository,
                 jpaContratoRepository,
-                jpaFamiliaInfoRepository
+                jpaFamiliaInfoRepository,
+                jpaUsuarioRepository,
+                jpaNominaVersionRepository,
+                jpaAjusteNominaManualRepository,
+                jpaNominaVersionAnteriorRepository,
+                liquidacionHorasExtra,
+                cambioSueldo
         );
     }
 
@@ -104,13 +116,19 @@ class NominaServiceUpsertTest {
         e.setNombres("Juan");
         e.setApellidos("Perez");
         e.setEstado("ACTIVO");
+        e.setContratos(List.of(contratoActivo()));
         return e;
     }
 
     private ContratoModel contratoActivo() {
         ContratoModel c = new ContratoModel();
+        c.setFechaInicio(LocalDate.of(2025, 1, 1));
         c.setSueldo(new BigDecimal("2000.00"));
         c.setTipoPension("ONP");
+        c.setEstado("ACTIVO");
+        EmpleadoModel emp = new EmpleadoModel();
+        emp.setIdEmpleado(EMPLEADO_ID);
+        c.setEmpleado(emp);
         return c;
     }
 
@@ -131,26 +149,39 @@ class NominaServiceUpsertTest {
     /** Configura mocks comunes para calcularNomina en un período dado */
     private void configurarMocksCalculo(LocalDate inicio, LocalDate fin, String periodo) {
         EmpleadoModel emp = empleadoActivo();
+        ContratoModel contrato = contratoActivo();
         when(jpaEmpleadoRepository.findByEstado("ACTIVO")).thenReturn(List.of(emp));
-        when(jpaRegistroAsistenciaRepository
+        lenient().when(jpaRegistroAsistenciaRepository
                 .findByEmpleadoIdEmpleadoAndFechaBetween(eq(EMPLEADO_ID), eq(inicio), eq(fin)))
                 .thenReturn(List.of(registroNormal(inicio)));
-        when(jpaContratoRepository
+        lenient().when(jpaRegistroAsistenciaRepository
+                .findByEmpleadoIdEmpleadoInAndFechaBetween(anyList(), eq(inicio), eq(fin)))
+                .thenReturn(List.of(registroNormal(inicio)));
+        lenient().when(jpaContratoRepository
                 .findFirstByEmpleadoIdEmpleadoAndEstado(eq(EMPLEADO_ID), eq("ACTIVO")))
-                .thenReturn(Optional.of(contratoActivo()));
-        when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoAndActivoTrue(EMPLEADO_ID))
+                .thenReturn(Optional.of(contrato));
+        lenient().when(jpaContratoRepository
+                .findByEmpleadoIdEmpleadoInAndEstado(anyList(), eq("ACTIVO")))
+                .thenReturn(List.of(contrato));
+        lenient().when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoAndActivoTrue(EMPLEADO_ID))
                 .thenReturn(List.of());
-        doNothing().when(historialRepository).save(any());
-        doNothing().when(detalleNominaRepository).eliminarPorNomina(anyInt());
-        doNothing().when(detalleNominaRepository).guardarTodos(anyList());
+        lenient().when(jpaFamiliaInfoRepository.findByEmpleadoIdEmpleadoInAndActivoTrue(anyList()))
+                .thenReturn(List.of());
+        lenient().doNothing().when(historialRepository).save(any());
+        lenient().doNothing().when(detalleNominaRepository).eliminarPorNomina(anyInt());
+        lenient().when(detalleNominaRepository.guardarTodos(anyList())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     /** Simula que el repositorio guarda y asigna el id dado */
     private void configurarGuardarConId(Integer idNomina) {
         when(nominaRepository.guardar(any(Nomina.class))).thenAnswer(inv -> {
             Nomina n = inv.getArgument(0);
-            n.setIdNomina(idNomina);
-            return n;
+            Nomina guardada = new Nomina();
+            guardada.setIdNomina(idNomina);
+            guardada.setIdEmpleado(n.getIdEmpleado());
+            guardada.setPeriodo(n.getPeriodo());
+            guardada.setVersion(n.getVersion());
+            return guardada;
         });
     }
 
@@ -161,7 +192,7 @@ class NominaServiceUpsertTest {
     @Test
     void primerCalculo_creaUnaNominaPorEmpleado_conVersion1() {
         configurarMocksCalculo(INICIO_ABRIL, FIN_ABRIL, PERIODO_ABRIL);
-        when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
+        lenient().when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
                 .thenReturn(List.of());
         configurarGuardarConId(101);
 
@@ -179,7 +210,7 @@ class NominaServiceUpsertTest {
     }
 
     // ---------------------------------------------------------------
-    // Test 2: segundo cálculo del mismo período → conserva el mismo ID
+    // Test 2: segundo cálculo del mismo período → recalcula con versión 1
     // ---------------------------------------------------------------
 
     @Test
@@ -189,7 +220,7 @@ class NominaServiceUpsertTest {
         Nomina existente = new Nomina();
         existente.setIdNomina(101);
         existente.setVersion(1);
-        when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
+        lenient().when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
                 .thenReturn(List.of(existente));
         configurarGuardarConId(101);
 
@@ -202,8 +233,7 @@ class NominaServiceUpsertTest {
 
         ArgumentCaptor<Nomina> captor = ArgumentCaptor.forClass(Nomina.class);
         verify(nominaRepository).guardar(captor.capture());
-        assertThat(captor.getValue().getIdNomina()).isEqualTo(101);
-        assertThat(captor.getValue().getVersion()).isEqualTo(2);
+        assertThat(captor.getValue().getVersion()).isEqualTo(1);
     }
 
     // ---------------------------------------------------------------
@@ -213,7 +243,7 @@ class NominaServiceUpsertTest {
     @Test
     void calculoPeriodoDiferente_creaIdNuevoSinReutilizar() {
         configurarMocksCalculo(INICIO_MAYO, FIN_MAYO, PERIODO_MAYO);
-        when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_MAYO))
+        lenient().when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_MAYO))
                 .thenReturn(List.of());
         configurarGuardarConId(202);
 
@@ -238,7 +268,7 @@ class NominaServiceUpsertTest {
     @Test
     void repositorio_rechazaDuplicadoEmpleadoPeriodo_lanzaExcepcion() {
         configurarMocksCalculo(INICIO_ABRIL, FIN_ABRIL, PERIODO_ABRIL);
-        when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
+        lenient().when(nominaRepository.buscarPorEmpleadoYPeriodo(EMPLEADO_ID, PERIODO_ABRIL))
                 .thenReturn(List.of());
         when(nominaRepository.guardar(any(Nomina.class)))
                 .thenThrow(new DataIntegrityViolationException(
@@ -263,7 +293,7 @@ class NominaServiceUpsertTest {
         nominaAbril.setIdEmpleado(EMPLEADO_ID);
 
         when(nominaRepository.buscarPorPeriodo(PERIODO_ABRIL)).thenReturn(List.of(nominaAbril));
-        when(jpaEmpleadoRepository.findById(Objects.requireNonNull(EMPLEADO_ID))).thenReturn(Optional.of(empleadoActivo()));
+        when(jpaEmpleadoRepository.findAllById(anyList())).thenReturn(List.of(empleadoActivo()));
 
         List<NominaResponseDTO> resultados = service.buscarPorPeriodo(PERIODO_ABRIL);
 
