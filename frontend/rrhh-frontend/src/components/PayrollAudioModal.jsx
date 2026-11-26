@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import AccessibleDialog from "./AccessibleDialog";
 import {
   Volume2,
   Play,
@@ -97,17 +98,8 @@ export default function PayrollAudioModal({ nomina, periodoLabel, isOpen, onClos
   const nombreEmpleado = nomina.nombreEmpleado || nomina.empleadoNombre || nomina.nombres || "Colaborador";
 
   return (
-    <div
-      className="tts-modal-backdrop"
-      onClick={handleClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tts-modal-title"
-    >
-      <div
-        className="tts-modal-card"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AccessibleDialog className="tts-modal-backdrop" labelledBy="tts-modal-title" onClose={handleClose}>
+      <div className="tts-modal-card">
         {/* Cabecera */}
         <div className="tts-modal-header">
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -364,6 +356,6 @@ export default function PayrollAudioModal({ nomina, periodoLabel, isOpen, onClos
           </button>
         </div>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 }

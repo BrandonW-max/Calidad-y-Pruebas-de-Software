@@ -4,7 +4,7 @@ const THEME = {
   rrhh: {
     badgeBorder: "border-signal-500/30",
     badgeBg: "bg-signal-100",
-    badgeText: "text-signal-600",
+    badgeText: "text-[#006a63]",
     gradient: "from-rrhh-100 via-signal-100/60",
     line: "bg-rrhh-600",
     text: "text-rrhh-600",

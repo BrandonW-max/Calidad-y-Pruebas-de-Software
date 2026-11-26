@@ -1124,6 +1124,7 @@ table tr:hover td { background: #f8fafc; }
   display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
   border: 1px solid var(--border); border-radius: 9px; cursor: pointer;
   transition: box-shadow .15s, border-color .15s; background: #fff;
+  width: 100%; text-align: left; font-family: inherit; color: inherit;
 }
 .tipo-reporte-card:hover  { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 .tipo-reporte-card.active { box-shadow: 0 0 0 2px var(--primary); border-color: var(--primary); background: #eff6ff; }
@@ -2550,4 +2551,102 @@ tr.tr-selected {
   background: #eff6ff !important;
   outline: 2px solid #2563eb;
   outline-offset: -2px;
+}
+
+/* Accesibilidad acotada a Nómina, Solicitudes y Reportes. */
+.dashboard.rrhh-accessible {
+  --text-3: #475569;
+}
+
+.dashboard.rrhh-accessible input:not([type="checkbox"]):not([type="radio"]),
+.dashboard.rrhh-accessible select,
+.dashboard.rrhh-accessible textarea {
+  border-color: #64748b;
+}
+
+.dashboard.rrhh-accessible input:focus-visible,
+.dashboard.rrhh-accessible select:focus-visible,
+.dashboard.rrhh-accessible textarea:focus-visible,
+.dashboard.rrhh-accessible button:focus-visible,
+.dashboard.rrhh-accessible a:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+main.main-content.rrhh-accessible .alert-floating {
+  animation: none;
+  cursor: default;
+}
+
+.alert-dismiss {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.table-row-action {
+  border: 0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.nomina-filter-label,
+.form-label-like {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+dialog.accessible-dialog {
+  box-sizing: border-box;
+  border: 0;
+  color: inherit;
+}
+
+dialog.accessible-dialog::backdrop {
+  background: transparent;
+}
+
+dialog.accessible-dialog.modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 24px;
+  background: rgba(7, 12, 20, 0.6);
+}
+
+dialog.accessible-dialog.tts-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+}
+
+@media (max-width: 480px) {
+  dialog.accessible-dialog.modal-overlay { padding: 12px; }
 }

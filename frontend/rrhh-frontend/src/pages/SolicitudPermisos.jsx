@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import AccessibleDialog from "../components/AccessibleDialog";
 import "../styles/Dashboard.css";
 import {
   registrarSolicitud,
@@ -120,11 +121,11 @@ function DetalleSolicitud({ solicitud, onCerrar }) {
     ["Fecha de decisión", s.fechaDecision ? String(s.fechaDecision).substring(0, 10) : "—"],
   ];
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onCerrar()}>
+    <AccessibleDialog className="modal-overlay" labelledBy="solicitud-detalle-title" onClose={onCerrar}>
       <div className="modal-box" style={{ maxWidth: 560, width: "95%", borderRadius: 16, overflow: "hidden", padding: 0 }}>
         <div className="modal-header" style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>Detalle de la solicitud #{s.idSolicitud ?? s.id}</h3>
-          <button className="modal-close" onClick={onCerrar}>×</button>
+          <h3 id="solicitud-detalle-title" style={{ margin: 0, fontSize: 16 }}>Detalle de la solicitud #{s.idSolicitud ?? s.id}</h3>
+          <button type="button" className="modal-close" aria-label="Cerrar detalle de solicitud" onClick={onCerrar}>×</button>
         </div>
         <div className="modal-body" style={{ padding: "20px 24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
@@ -140,7 +141,7 @@ function DetalleSolicitud({ solicitud, onCerrar }) {
           <button className="btn btn-secondary" onClick={onCerrar}>Cerrar</button>
         </div>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 }
 
@@ -159,6 +160,7 @@ function VistaEmpleado() {
   });
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
   const closeErrorModal = () => setErrorModal({ open: false, message: "" });
+  const errorFecha = "La fecha de inicio no puede ser mayor que la fecha fin.";
 
   useEffect(() => { if (idEmpleado) cargarMisSolicitudes(); }, [idEmpleado]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,7 +178,7 @@ function VistaEmpleado() {
     e.preventDefault();
     if (!idEmpleado) { setError("No se pudo obtener tu ID de empleado. Contacta a RRHH."); return; }
     if (form.fechaInicio && form.fechaFin && form.fechaInicio > form.fechaFin) {
-      setError("La fecha de inicio no puede ser mayor que la fecha fin.");
+      setError(errorFecha);
       return;
     }
     setEnviando(true); setMensaje(""); setError("");
@@ -191,9 +193,9 @@ function VistaEmpleado() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard rrhh-accessible">
       <Sidebar rol="EMPLEADO" />
-      <main className="main-content">
+      <main className="main-content rrhh-accessible" id="main-content" tabIndex="-1">
         <header className="main-header header-empleado">
           <div className="header-left">
             <span className="page-breadcrumb">Dashboard / Mis Solicitudes</span>
@@ -202,8 +204,8 @@ function VistaEmpleado() {
           <span className="role-pill role-pill-empleado">Empleado</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-success" role="status" aria-live="polite">✅ {mensaje}</div>}
+        {error && <div className="alert alert-warning" role="alert" id={error === errorFecha ? "solicitud-fecha-error" : undefined}>⚠️ {error}</div>}
 
         <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
@@ -236,7 +238,7 @@ function VistaEmpleado() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><p>No tienes solicitudes registradas</p></div></td></tr>
-                    ) : solicitudes.map((s, idx) => {
+                    ) : solicitudes.map(s => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       const respuestaVisible =
@@ -247,9 +249,14 @@ function VistaEmpleado() {
                             : null;
                       return (
                         <tr key={id}
-                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
-                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
+                          style={{ background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          <td style={{ textAlign: "center" }}>
+                            <button type="button" className="table-row-action"
+                              aria-label={`Ver detalle de solicitud ${id}`}
+                              onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}>
+                              {TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}
+                            </button>
+                          </td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.motivo ?? "—"}</td>
@@ -275,25 +282,29 @@ function VistaEmpleado() {
               <form onSubmit={handleEnviar}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Tipo de Solicitud *</label>
-                    <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
+                    <label htmlFor="solicitud-tipo">Tipo de Solicitud *</label>
+                    <select id="solicitud-tipo" value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} required>
                       {Object.entries(TIPO_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
                   <div className="form-group" />
                   <div className="form-group">
-                    <label>Fecha de Inicio *</label>
-                    <input type="date" value={form.fechaInicio}
-                      onChange={e => setForm({ ...form, fechaInicio: e.target.value })} required />
+                    <label htmlFor="solicitud-fecha-inicio">Fecha de Inicio *</label>
+                    <input id="solicitud-fecha-inicio" type="date" value={form.fechaInicio}
+                      aria-invalid={error === errorFecha || undefined}
+                      aria-describedby={error === errorFecha ? "solicitud-fecha-error" : undefined}
+                      onChange={e => { setForm({ ...form, fechaInicio: e.target.value }); if (error === errorFecha) setError(""); }} required />
                   </div>
                   <div className="form-group">
-                    <label>Fecha de Fin *</label>
-                    <input type="date" value={form.fechaFin}
-                      onChange={e => setForm({ ...form, fechaFin: e.target.value })} required />
+                    <label htmlFor="solicitud-fecha-fin">Fecha de Fin *</label>
+                    <input id="solicitud-fecha-fin" type="date" value={form.fechaFin}
+                      aria-invalid={error === errorFecha || undefined}
+                      aria-describedby={error === errorFecha ? "solicitud-fecha-error" : undefined}
+                      onChange={e => { setForm({ ...form, fechaFin: e.target.value }); if (error === errorFecha) setError(""); }} required />
                   </div>
                   <div className="form-group form-full">
-                    <label>Motivo / Descripción *</label>
-                    <textarea rows={4} value={form.descripcion}
+                    <label htmlFor="solicitud-descripcion">Motivo / Descripción *</label>
+                    <textarea id="solicitud-descripcion" rows={4} value={form.descripcion}
                       onChange={e => setForm({ ...form, descripcion: e.target.value })}
                       placeholder="Describa el motivo de su solicitud de permiso..." required />
                   </div>
@@ -331,20 +342,20 @@ function VistaEmpleado() {
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="empleado-solicitud-error-title" describedBy="empleado-solicitud-error-message" onClose={closeErrorModal}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="empleado-solicitud-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="empleado-solicitud-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+              <button type="button" className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );
@@ -421,9 +432,9 @@ function VistaRRHH() {
   ];
 
   return (
-    <div className="dashboard">
+    <div className="dashboard rrhh-accessible">
       <Sidebar rol="RRHH" />
-      <main className="main-content">
+      <main className="main-content rrhh-accessible" id="main-content" tabIndex="-1">
         <header className="main-header header-rrhh">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Solicitud de Permisos</span>
@@ -432,8 +443,8 @@ function VistaRRHH() {
           <span className="role-pill role-pill-rrhh">RRHH</span>
         </header>
 
-        {mensaje && <div className="alert alert-success">✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-success" role="status" aria-live="polite">✅ {mensaje}</div>}
+        {error && <div className="alert alert-warning" role="alert">⚠️ {error}</div>}
 
         <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
@@ -485,14 +496,21 @@ function VistaRRHH() {
                 <tbody>
                   {solicitudes.length === 0 ? (
                     <tr><td colSpan={filtroEstado === "PENDIENTE" ? 7 : 6}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes en estado {filtroEstado}</p></div></td></tr>
-                  ) : solicitudes.map((s, idx) => {
+                  ) : solicitudes.map(s => {
                     const id = s.idSolicitud ?? s.id;
                     const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                     return (
-                      <tr key={id}
-                        onClick={() => { if (filtroEstado !== "PENDIENTE") { setSolicitudActiva(s); setDetalleAbierto(true); } }}
-                        style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                        <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                       <tr key={id}
+                         style={{ background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                         <td style={{ textAlign: "center" }}>
+                           {filtroEstado !== "PENDIENTE" ? (
+                             <button type="button" className="table-row-action"
+                               aria-label={`Ver detalle de solicitud ${id} de ${s.nombreEmpleado ?? `empleado ${s.idEmpleado}`}`}
+                               onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}>
+                               {s.nombreEmpleado ?? s.idEmpleado}
+                             </button>
+                           ) : (s.nombreEmpleado ?? s.idEmpleado)}
+                         </td>
                         <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                         <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                         <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
@@ -501,8 +519,8 @@ function VistaRRHH() {
                         {filtroEstado === "PENDIENTE" && (
                           <td style={{ textAlign: "center" }}>
                             {(s.estado === "PENDIENTE" || s.estado === "OBSERVADO") && (
-                              <button className="btn btn-primary btn-sm"
-                                onClick={e => { e.stopPropagation(); setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" }); }}>
+                               <button type="button" className="btn btn-primary btn-sm"
+                                 onClick={() => setModalRevision({ open: true, solicitud: s, decision: "", comentario: "" })}>
                                 Revisar
                               </button>
                             )}
@@ -520,7 +538,7 @@ function VistaRRHH() {
       </main>
 
       {modalRevision.open && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalRevision({ ...modalRevision, open: false })}>
+        <AccessibleDialog className="modal-overlay" labelledBy="rrhh-revision-title" onClose={() => setModalRevision({ ...modalRevision, open: false })}>
           <div className="modal-box" style={{ maxWidth: 480, width: "95%", borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", padding: 0 }}>
 
             {/* Header */}
@@ -530,7 +548,7 @@ function VistaRRHH() {
                   📋
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-1)", lineHeight: 1.3 }}>
+                  <h3 id="rrhh-revision-title" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-1)", lineHeight: 1.3 }}>
                     Revisar Solicitud #{modalRevision.solicitud?.idSolicitud ?? modalRevision.solicitud?.id}
                   </h3>
                   <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>
@@ -540,7 +558,7 @@ function VistaRRHH() {
                   </p>
                 </div>
               </div>
-              <button className="modal-close" onClick={() => setModalRevision({ ...modalRevision, open: false })}
+              <button type="button" className="modal-close" aria-label="Cerrar revisión de solicitud" onClick={() => setModalRevision({ ...modalRevision, open: false })}
                 style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--bg-2)", color: "var(--text-2)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}
                 onMouseOver={e => e.currentTarget.style.background = "var(--border)"}
                 onMouseOut={e => e.currentTarget.style.background = "var(--bg-2)"}>
@@ -553,26 +571,30 @@ function VistaRRHH() {
 
               {/* Motivo — solo lectura */}
               <div className="form-group">
-                <label>Motivo del empleado</label>
-                <div style={{ padding: "10px 13px", background: "var(--bg-2,#f8fafc)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm,8px)", fontSize: 13.5, color: "var(--text)", lineHeight: 1.6, whiteSpace: "pre-wrap", minHeight: 44 }}>
+                  <div role="group" aria-labelledby="rrhh-revision-motivo-label" className="form-group">
+                  <div id="rrhh-revision-motivo-label" className="form-label-like">Motivo del empleado</div>
+                  <div style={{ padding: "10px 13px", background: "var(--bg-2,#f8fafc)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm,8px)", fontSize: 13.5, color: "var(--text)", lineHeight: 1.6, whiteSpace: "pre-wrap", minHeight: 44 }}>
                   {modalRevision.solicitud?.motivo ?? "—"}
                 </div>
+                  </div>
               </div>
 
               {/* Decisión */}
               <div className="form-group">
-                <label>Decisión <span style={{ color: "#ef4444" }}>*</span></label>
-                <select value={modalRevision.decision}
+                  <label htmlFor="rrhh-revision-decision">Decisión <span aria-hidden="true" style={{ color: "#ef4444" }}>*</span></label>
+                  <select id="rrhh-revision-decision" required value={modalRevision.decision}
                   onChange={e => setModalRevision({ ...modalRevision, decision: e.target.value })}>
                   <option value="">Seleccione una opción...</option>
                   <option value="APROBAR">✅ Aprobar y pasar a Gerencia</option>
                   <option value="DEVOLVER">↩ Devolver al empleado</option>
                 </select>
-                {modalRevision.decision === "APROBAR" && (
+                  <div role="status" aria-live="polite">
+                  {modalRevision.decision === "APROBAR" && (
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>
                     ✓ La solicitud pasará a revisión de Gerencia
                   </p>
-                )}
+                  )}
+                  </div>
                 {modalRevision.decision === "DEVOLVER" && (
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: "#d97706" }}>
                     ↩ El empleado podrá corregir y reenviar la solicitud
@@ -582,11 +604,11 @@ function VistaRRHH() {
 
               {/* Comentario */}
               <div className="form-group">
-                <label>Comentario <span style={{ color: "#ef4444" }}>*</span></label>
-                <textarea rows={3} value={modalRevision.comentario}
+                  <label htmlFor="rrhh-revision-comentario">Comentario <span aria-hidden="true" style={{ color: "#ef4444" }}>*</span></label>
+                  <textarea id="rrhh-revision-comentario" required aria-describedby="rrhh-revision-comentario-count" rows={3} value={modalRevision.comentario}
                   onChange={e => setModalRevision({ ...modalRevision, comentario: e.target.value })}
                   placeholder="Ingrese su observación o motivo de decisión..." />
-                <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-2)", textAlign: "right" }}>
+                  <p id="rrhh-revision-comentario-count" style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-2)", textAlign: "right" }}>
                   {modalRevision.comentario.trim().length} caracteres
                 </p>
               </div>
@@ -616,25 +638,25 @@ function VistaRRHH() {
               </button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="rrhh-solicitud-error-title" describedBy="rrhh-solicitud-error-message" onClose={closeErrorModal}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="rrhh-solicitud-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="rrhh-solicitud-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+              <button type="button" className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );
@@ -692,10 +714,10 @@ function VistaGerencia() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard rrhh-accessible">
       <Sidebar rol="GERENCIA" />
 
-      <main className="main-content">
+      <main className="main-content rrhh-accessible" id="main-content" tabIndex="-1">
         <header className="main-header header-gerencia">
           <div className="header-left">
             <span className="page-breadcrumb">Gerencia / Solicitudes de Permisos</span>
@@ -707,8 +729,8 @@ function VistaGerencia() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-success" style={{ marginTop: 16 }}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning" style={{ marginTop: 16 }}>⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-success" role="status" aria-live="polite" style={{ marginTop: 16 }}>✅ {mensaje}</div>}
+        {error && <div className="alert alert-warning" role="alert" style={{ marginTop: 16 }}>⚠️ {error}</div>}
 
         <FlowBar estadoSolicitud={solicitudActiva?.estado} />
 
@@ -728,13 +750,12 @@ function VistaGerencia() {
                   <tbody>
                     {solicitudes.length === 0 ? (
                       <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✅</div><p>No hay solicitudes pendientes de decisión</p></div></td></tr>
-                    ) : solicitudes.map((s, idx) => {
+                    ) : solicitudes.map(s => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          
-                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          style={{ background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
                           <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
@@ -744,12 +765,12 @@ function VistaGerencia() {
                           <td style={{ textAlign: "center" }}><span className={`badge ${estadoBadge(s.estado)}`}>{s.estado}</span></td>
                           <td style={{ textAlign: "center" }}>
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                              <button className="btn btn-success btn-sm"
-                                onClick={e => { e.stopPropagation(); setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" }); }}>
+                               <button type="button" className="btn btn-success btn-sm"
+                                 onClick={() => setModalDecision({ open: true, solicitud: s, decision: "APROBAR", comentario: "" })}>
                                 ✅ Aprobar
                               </button>
-                              <button className="btn btn-danger btn-sm"
-                                onClick={e => { e.stopPropagation(); setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" }); }}>
+                               <button type="button" className="btn btn-danger btn-sm"
+                                 onClick={() => setModalDecision({ open: true, solicitud: s, decision: "RECHAZAR", comentario: "" })}>
                                 ❌ Rechazar
                               </button>
                             </div>
@@ -785,14 +806,19 @@ function VistaGerencia() {
                     <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Respuesta Gerencia</th></tr>
                   </thead>
                   <tbody>
-                    {solAprobadas.map((s, idx) => {
+                    {solAprobadas.map(s => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
-                          style={{ cursor: "pointer", background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
-                          <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          style={{ background: isSelected ? "#eff6ff" : undefined, outline: isSelected ? "2px solid #3b82f6" : undefined }}>
+                          <td style={{ textAlign: "center" }}>
+                            <button type="button" className="table-row-action"
+                              aria-label={`Ver detalle de solicitud ${id} de ${s.nombreEmpleado ?? `empleado ${s.idEmpleado}`}`}
+                              onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}>
+                              {s.nombreEmpleado ?? s.idEmpleado}
+                            </button>
+                          </td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
@@ -829,14 +855,19 @@ function VistaGerencia() {
                     <tr><th style={{ textAlign: "center" }}>Empleado</th><th style={{ textAlign: "center" }}>Tipo</th><th style={{ textAlign: "center" }}>Inicio</th><th style={{ textAlign: "center" }}>Fin</th><th style={{ textAlign: "center" }}>Días</th><th style={{ textAlign: "center" }}>Motivo del Rechazo</th></tr>
                   </thead>
                   <tbody>
-                    {solRechazadas.map((s, idx) => {
+                    {solRechazadas.map(s => {
                       const id = s.idSolicitud ?? s.id;
                       const isSelected = solicitudActiva?.idSolicitud === id || solicitudActiva?.id === id;
                       return (
                         <tr key={id}
-                          onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}
-                          style={{ cursor: "pointer", background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
-                          <td style={{ textAlign: "center" }}>{s.nombreEmpleado ?? s.idEmpleado}</td>
+                          style={{ background: isSelected ? "#fff1f2" : undefined, outline: isSelected ? "2px solid #ef4444" : undefined }}>
+                          <td style={{ textAlign: "center" }}>
+                            <button type="button" className="table-row-action"
+                              aria-label={`Ver detalle de solicitud ${id} de ${s.nombreEmpleado ?? `empleado ${s.idEmpleado}`}`}
+                              onClick={() => { setSolicitudActiva(s); setDetalleAbierto(true); }}>
+                              {s.nombreEmpleado ?? s.idEmpleado}
+                            </button>
+                          </td>
                           <td style={{ textAlign: "center" }}>{TIPO_LABELS[s.tipoSolicitud] ?? s.tipoSolicitud}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaInicio ?? "—"}</td>
                           <td style={{ textAlign: "center" }}>{s.fechaFin ?? "—"}</td>
@@ -855,25 +886,25 @@ function VistaGerencia() {
       </main>
 
       {modalDecision.open && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="gerencia-decision-title" onClose={() => setModalDecision({ ...modalDecision, open: false })}>
           <div className="modal-box">
             <div className="modal-header">
               <div>
-                <h3>{modalDecision.decision === "APROBAR" ? "✅ Aprobar" : "❌ Rechazar"} Solicitud</h3>
+                <h3 id="gerencia-decision-title">{modalDecision.decision === "APROBAR" ? "✅ Aprobar" : "❌ Rechazar"} Solicitud</h3>
                 <p>#{modalDecision.solicitud?.idSolicitud ?? modalDecision.solicitud?.id} — {modalDecision.solicitud?.nombreEmpleado ?? modalDecision.solicitud?.idEmpleado}</p>
               </div>
-              <button className="modal-close" onClick={() => setModalDecision({ ...modalDecision, open: false })}>×</button>
+              <button type="button" className="modal-close" aria-label="Cerrar decisión de solicitud" onClick={() => setModalDecision({ ...modalDecision, open: false })}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Observación / Comentario de Gerencia *</label>
-                <textarea rows={3} value={modalDecision.comentario}
+                <label htmlFor="gerencia-comentario">Observación / Comentario de Gerencia *</label>
+                <textarea id="gerencia-comentario" required rows={3} value={modalDecision.comentario}
                   onChange={e => setModalDecision({ ...modalDecision, comentario: e.target.value })}
                   placeholder="Ingrese su decisión y motivo..." autoFocus />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModalDecision({ ...modalDecision, open: false })}>Cancelar</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalDecision({ ...modalDecision, open: false })}>Cancelar</button>
               <button
                 className={modalDecision.decision === "APROBAR" ? "btn btn-success" : "btn btn-danger"}
                 onClick={handleDecidir}
@@ -882,25 +913,25 @@ function VistaGerencia() {
               </button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="gerencia-solicitud-error-title" describedBy="gerencia-solicitud-error-message" onClose={closeErrorModal}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="gerencia-solicitud-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="gerencia-solicitud-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+              <button type="button" className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );

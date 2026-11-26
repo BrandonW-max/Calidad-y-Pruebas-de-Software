@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Accessibility,
   X,
@@ -11,6 +12,10 @@ import {
 import { useAccessibility } from "../context/AccessibilityContext";
 
 export default function AccessibilityToolbar() {
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const wasOpenRef = useRef(false);
   const {
     preferences,
     isToolbarOpen,
@@ -27,10 +32,59 @@ export default function AccessibilityToolbar() {
     activeFeaturesCount,
   } = useAccessibility();
 
+  useEffect(() => {
+    if (!isToolbarOpen) {
+      if (wasOpenRef.current) {
+        wasOpenRef.current = false;
+        if (triggerRef.current?.isConnected) triggerRef.current.focus();
+        else document.querySelector("#main-content")?.focus();
+      }
+      return undefined;
+    }
+
+    wasOpenRef.current = true;
+    closeButtonRef.current?.focus();
+
+    const handleTab = (event) => {
+      if (event.key !== "Tab") return;
+
+      const focusable = panelRef.current?.querySelectorAll(
+        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      );
+      const visible = Array.from(focusable ?? []).filter(element =>
+        element.getClientRects().length > 0 && !element.closest('[inert], [aria-hidden="true"]')
+      );
+
+      if (!visible.length) {
+        event.preventDefault();
+        panelRef.current?.focus();
+        return;
+      }
+
+      const first = visible[0];
+      const last = visible[visible.length - 1];
+      const active = document.activeElement;
+      if (!panelRef.current?.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleTab);
+    return () => document.removeEventListener("keydown", handleTab);
+  }, [isToolbarOpen]);
+
   return (
     <>
       {/* Botón flotante accesible */}
       <button
+        ref={triggerRef}
         type="button"
         className="a11y-floating-trigger"
         onClick={() => setIsToolbarOpen(prev => !prev)}
@@ -56,8 +110,10 @@ export default function AccessibilityToolbar() {
           aria-labelledby="a11y-title"
         >
           <div
+            ref={panelRef}
             className="a11y-panel-drawer"
             onClick={(e) => e.stopPropagation()}
+            tabIndex={-1}
           >
             {/* Cabecera */}
             <div className="a11y-panel-header">
@@ -73,6 +129,7 @@ export default function AccessibilityToolbar() {
                 </div>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={() => setIsToolbarOpen(false)}
                 style={{

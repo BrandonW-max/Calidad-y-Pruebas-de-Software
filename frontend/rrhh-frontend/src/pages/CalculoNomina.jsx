@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import { Volume2 } from "lucide-react";
 import PayrollAudioModal from "../components/PayrollAudioModal";
+import AccessibleDialog from "../components/AccessibleDialog";
 import { speakText, stopSpeech, buildGeneralPayrollSummaryNarrative } from "../utils/speech";
 import {
   calcularNomina,
@@ -50,19 +51,7 @@ export default function CalculoNomina() {
   const [verificando, setVerificando] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [mensaje,   setMensaje]   = useState("");
-  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
-  useEffect(() => {
-    if (!mensaje) return;
-    const t = setTimeout(() => setMensaje(""), 7000);
-    return () => clearTimeout(t);
-  }, [mensaje]);
   const [error,     setError]     = useState("");
-  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(""), 7000);
-    return () => clearTimeout(t);
-  }, [error]);
   const [enviando,  setEnviando]  = useState({});
   const [departamentos, setDepartamentos] = useState([]);
   const [empleados, setEmpleados] = useState([]);
@@ -387,10 +376,10 @@ export default function CalculoNomina() {
   const totalBruto = resultList.reduce((sum, n) => sum + Number(n.sueldoBruto ?? n.sueldoBase ?? 0), 0);
 
   return (
-    <div className="dashboard">
+    <div className="dashboard rrhh-accessible">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content" id="main-content" tabIndex="-1">
+      <main className="main-content rrhh-accessible" id="main-content" tabIndex="-1">
         <header className="main-header header-rrhh">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Cálculo de Nómina</span>
@@ -407,8 +396,14 @@ export default function CalculoNomina() {
           <div className="nomina-left">
 
 
-            {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
-            {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
+            {mensaje && <div className="alert alert-floating alert-success" role="status" aria-live="polite">
+              <span>✅ {mensaje}</span>
+              <button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de éxito" onClick={() => setMensaje("")}>×</button>
+            </div>}
+            {error && <div className="alert alert-floating alert-warning" role="alert">
+              <span>⚠️ {error}</span>
+              <button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de error" onClick={() => setError("")}>×</button>
+            </div>}
 
             <div className="section-card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)", display: "flex", alignItems: "center", gap: 12 }}>
@@ -424,14 +419,14 @@ export default function CalculoNomina() {
               <div style={{ padding: "16px 20px 0" }}>
                 <div className="form-grid" style={{ gap: 12, marginBottom: 12 }}>
                   <div className="form-group">
-                    <label>Mes</label>
-                    <select value={mes} onChange={e => cambiarPeriodo("mes", e.target.value)}>
+                    <label htmlFor="nomina-periodo-mes">Mes</label>
+                    <select id="nomina-periodo-mes" value={mes} onChange={e => cambiarPeriodo("mes", e.target.value)}>
                       {MESES.map(m => <option key={m.v} value={m.v} disabled={esPeriodoFuturo(m.v, anio)}>{m.l}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Año</label>
-                    <select value={anio} onChange={e => cambiarPeriodo("anio", e.target.value)}>
+                    <label htmlFor="nomina-periodo-anio">Año</label>
+                    <select id="nomina-periodo-anio" value={anio} onChange={e => cambiarPeriodo("anio", e.target.value)}>
                       {ANIOS.map(a => <option key={a} value={a} disabled={esPeriodoFuturo(mes, a)}>{a}</option>)}
                     </select>
                   </div>
@@ -448,15 +443,15 @@ export default function CalculoNomina() {
 
               <div style={{ padding: "0 20px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Departamento</div>
-                  <select value={filtroDepartamento} onChange={e => setFiltroDepartamento(e.target.value)} disabled={calculando || !!filtroEmpleado} style={{ width: "100%" }}>
+                  <label htmlFor="nomina-filtro-departamento" className="nomina-filter-label">Departamento</label>
+                  <select id="nomina-filtro-departamento" value={filtroDepartamento} onChange={e => setFiltroDepartamento(e.target.value)} disabled={calculando || !!filtroEmpleado} style={{ width: "100%" }}>
                     <option value="">Todos</option>
                     {departamentos.map(d => <option key={d.idDpto} value={d.idDpto}>{d.nombre}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Empleado</div>
-                  <select value={filtroEmpleado} onChange={e => setFiltroEmpleado(e.target.value)} disabled={calculando} style={{ width: "100%" }}>
+                  <label htmlFor="nomina-filtro-empleado" className="nomina-filter-label">Empleado</label>
+                  <select id="nomina-filtro-empleado" value={filtroEmpleado} onChange={e => setFiltroEmpleado(e.target.value)} disabled={calculando} style={{ width: "100%" }}>
                     <option value="">Todos</option>
                     {empleados.map(e => <option key={e.idEmpleado} value={e.idEmpleado}>{e.nombres} {e.apellidos}</option>)}
                   </select>
@@ -574,11 +569,13 @@ export default function CalculoNomina() {
                     </thead>
                     <tbody>
                       {resultList.map((n, i) => (
-                        <tr key={n.idNomina ?? i}
-                          onClick={() => abrirEstructura(n)}
-                          style={{ cursor: "pointer" }}>
+                        <tr key={n.idNomina ?? i}>
                           <td style={{ textAlign: "center" }}>
-                            <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
+                            <button type="button" className="table-row-action"
+                              aria-label={`Ver estructura de nómina de ${n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? `empleado ${n.idEmpleado ?? ""}`}`}
+                              onClick={() => abrirEstructura(n)}>
+                              <strong>{n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? (n.idEmpleado ? `Emp. #${n.idEmpleado}` : "—")}</strong>
+                            </button>
                           </td>
                           <td style={{ textAlign: "center" }}>{fmtS(n.sueldoBase ?? n.sueldo)}</td>
                           <td style={{ textAlign: "center", color: "var(--success)" }}>{fmtS(getBonif(n))}</td>
@@ -588,26 +585,29 @@ export default function CalculoNomina() {
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                               <button className="btn btn-secondary btn-sm"
                                 title="Escuchar boleta accesible por voz (ODS 10)"
-                                onClick={e => {
-                                  e.stopPropagation();
+                                aria-label={`Escuchar boleta de nómina de ${n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? `empleado ${n.idEmpleado ?? ""}`}`}
+                                onClick={() => {
                                   const mLabel = MESES.find(m => m.v === mes)?.l ?? mes;
                                   setAudioModal({ open: true, nomina: n, periodoLabel: `${mLabel} ${anio}` });
                                 }}>
-                                <Volume2 size={13} />
+                                <Volume2 size={13} aria-hidden="true" />
                               </button>
                               <button className="btn btn-secondary btn-sm"
                                 title="Vista previa detallada"
-                                onClick={e => { e.stopPropagation(); setPreviewNomina(n); }}>
-                                👁
+                                aria-label={`Ver vista previa detallada de nómina de ${n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? `empleado ${n.idEmpleado ?? ""}`}`}
+                                onClick={() => setPreviewNomina(n)}>
+                                <span aria-hidden="true">👁</span>
                               </button>
                               <button className="btn btn-secondary btn-sm"
-                                onClick={e => { e.stopPropagation(); handleDescargar(n.idNomina); }}>
+                                onClick={() => handleDescargar(n.idNomina)}>
                                 ⬇ PDF
                               </button>
                               <button className="btn btn-primary btn-sm"
-                                onClick={e => { e.stopPropagation(); handleEnviarComprobante(n.idNomina); }}
+                                onClick={() => handleEnviarComprobante(n.idNomina)}
+                                aria-label={`${enviando[n.idNomina] ? "Enviando comprobante de" : "Enviar comprobante por correo de"} ${n.nombreEmpleado ?? n.empleadoNombre ?? n.nombres ?? `empleado ${n.idEmpleado ?? ""}`}`}
+                                aria-busy={Boolean(enviando[n.idNomina])}
                                 disabled={enviando[n.idNomina]}>
-                                {enviando[n.idNomina] ? "..." : "📧 Email"}
+                                {enviando[n.idNomina] ? "Enviando…" : "📧 Email"}
                               </button>
                             </div>
                           </td>
@@ -752,16 +752,16 @@ export default function CalculoNomina() {
         const neto       = Number(n.sueldoNeto ?? 0);
         const mesLabel   = MESES.find(m => m.v === (n.mes ?? mes))?.l ?? n.mes ?? mes;
         return (
-          <div className="modal-overlay">
+          <AccessibleDialog className="modal-overlay" labelledBy="nomina-preview-title" onClose={() => setPreviewNomina(null)}>
             <div className="modal-box" style={{ maxWidth: 500 }}>
               <div className="modal-header">
                 <div>
-                  <h3>📊 Vista Previa — Nómina #{n.idNomina}</h3>
+                  <h3 id="nomina-preview-title">📊 Vista Previa — Nómina #{n.idNomina}</h3>
                   <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13 }}>
                     {n.nombreEmpleado ?? n.empleadoNombre ?? `Empleado #${n.idEmpleado}`} — {mesLabel} {n.anio ?? anio}
                   </p>
                 </div>
-                <button className="modal-close" onClick={() => setPreviewNomina(null)}>×</button>
+                <button type="button" className="modal-close" aria-label="Cerrar vista previa de nómina" onClick={() => setPreviewNomina(null)}>×</button>
               </div>
               <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
@@ -821,7 +821,7 @@ export default function CalculoNomina() {
                 <button className="btn btn-secondary" onClick={() => setPreviewNomina(null)}>Cerrar</button>
               </div>
             </div>
-          </div>
+          </AccessibleDialog>
         );
       })()}
 
@@ -881,17 +881,18 @@ export default function CalculoNomina() {
 
         const InputField = ({ label, field, step = "0.01", parse, disabled, onInfo }) => (
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
+            <label htmlFor={`nomina-${n.idNomina}-${field}`} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
             <div style={{ position: "relative" }}>
               <input
+                id={`nomina-${n.idNomina}-${field}`}
                 type="number" min="0" step={step}
                 value={db[field]}
                 onChange={e => setDatosBase(p => ({ ...p, [field]: parse ? parse(e.target.value) : Number(e.target.value) }))}
                 disabled={disabled}
-                style={{ width: "100%", padding: onInfo ? "7px 34px 7px 10px" : "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, background: disabled ? "#f3f4f6" : "#fff", color: disabled ? "#9ca3af" : "#111827", boxSizing: "border-box", outline: "none" }}
+                style={{ width: "100%", padding: onInfo ? "7px 34px 7px 10px" : "7px 10px", border: "1px solid #64748b", borderRadius: 8, fontSize: 13, background: disabled ? "#f3f4f6" : "#fff", color: disabled ? "#9ca3af" : "#111827", boxSizing: "border-box" }}
               />
               {onInfo && (
-                <button type="button" onClick={onInfo} title="Ver desglose por horario"
+                <button type="button" onClick={onInfo} aria-label={`Ver desglose por horario de ${label}`}
                   style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", fontSize: 15, color: "#2563eb", padding: 2 }}>ⓘ</button>
               )}
             </div>
@@ -900,15 +901,17 @@ export default function CalculoNomina() {
 
         const ToggleGroup = ({ label, field, options }) => (
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</label>
-            <div style={{ display: "flex", gap: 6 }}>
+            <fieldset style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <legend style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>{label}</legend>
+              <div style={{ display: "flex", gap: 6 }}>
               {options.map(({ val, label: lbl }) => (
-                <button key={String(val)} onClick={() => setDatosBase(p => ({ ...p, [field]: val }))}
-                  style={{ flex: 1, padding: "7px 0", border: `1.5px solid ${db[field] === val ? "#2563eb" : "#d1d5db"}`, borderRadius: 8, background: db[field] === val ? "#eff6ff" : "#fff", color: db[field] === val ? "#2563eb" : "#6b7280", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                <button type="button" key={String(val)} aria-pressed={db[field] === val} onClick={() => setDatosBase(p => ({ ...p, [field]: val }))}
+                  style={{ flex: 1, padding: "7px 0", border: `1.5px solid ${db[field] === val ? "#2563eb" : "#64748b"}`, borderRadius: 8, background: db[field] === val ? "#eff6ff" : "#fff", color: db[field] === val ? "#2563eb" : "#6b7280", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                   {lbl}
                 </button>
               ))}
-            </div>
+              </div>
+            </fieldset>
           </div>
         );
 
@@ -940,8 +943,7 @@ export default function CalculoNomina() {
         };
 
         return (
-          <div className="modal-overlay" style={{ zIndex: 1100 }}
-            onClick={e => e.target === e.currentTarget && setModalEstructura(null)}>
+          <AccessibleDialog className="modal-overlay" labelledBy="nomina-estructura-title" onClose={() => setModalEstructura(null)}>
             <div className="modal-box" style={{ maxWidth: 1040, padding: 0, overflow: "hidden", borderRadius: 16 }}>
 
               {/* Header */}
@@ -949,10 +951,10 @@ export default function CalculoNomina() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.6, marginBottom: 4 }}>Estructura Salarial · Simulador</div>
-                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{n.nombreEmpleado ?? `Empleado #${n.idEmpleado}`}</h3>
+                    <h3 id="nomina-estructura-title" style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{n.nombreEmpleado ?? `Empleado #${n.idEmpleado}`}</h3>
                     <div style={{ marginTop: 3, opacity: 0.72, fontSize: 12 }}>Período: {mesLabel} {anio} · Nómina #{n.idNomina}</div>
                   </div>
-                  <button onClick={() => setModalEstructura(null)} style={{ background: "rgba(255,255,255,0.18)", border: "none", color: "#fff", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                  <button type="button" aria-label="Cerrar estructura salarial" onClick={() => setModalEstructura(null)} style={{ background: "rgba(255,255,255,0.18)", border: "none", color: "#fff", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                 </div>
               </div>
 
@@ -986,7 +988,7 @@ export default function CalculoNomina() {
                   />
 
                   <button onClick={resetearValores}
-                    style={{ width: "100%", marginTop: 6, padding: "7px 0", border: "1px solid #d1d5db", borderRadius: 8, background: "#f9fafb", color: "#6b7280", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>
+                    style={{ width: "100%", marginTop: 6, padding: "7px 0", border: "1px solid #64748b", borderRadius: 8, background: "#f9fafb", color: "#6b7280", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>
                     ↺ Restablecer valores originales
                   </button>
                 </div>
@@ -1097,16 +1099,15 @@ export default function CalculoNomina() {
                 <button className="btn btn-secondary" onClick={() => setModalEstructura(null)}>Cerrar</button>
               </div>
             </div>
-          </div>
+          </AccessibleDialog>
         );
       })()}
 
       {/* ══ MODAL: DESGLOSE DE HORAS EXTRA ══ */}
       {mostrarDetalleHorasExtra && (
-        <div className="modal-overlay" style={{ zIndex: 10500 }}
-          onClick={e => e.target === e.currentTarget && setMostrarDetalleHorasExtra(false)}>
+        <AccessibleDialog className="modal-overlay" labelledBy="nomina-horas-extra-title" onClose={() => setMostrarDetalleHorasExtra(false)}>
           <div className="modal-box" style={{ maxWidth: 680 }}>
-            <h3 style={{ marginTop: 0 }}>Horas extra por horario</h3>
+            <h3 id="nomina-horas-extra-title" style={{ marginTop: 0 }}>Horas extra por horario</h3>
             {detalleHorasExtra === null ? (
               <p>Cargando…</p>
             ) : detalleHorasExtra.length === 0 ? (
@@ -1144,28 +1145,28 @@ export default function CalculoNomina() {
               </div>
             )}
             <div style={{ marginTop: 14, textAlign: "right" }}>
-              <button className="btn btn-secondary" onClick={() => setMostrarDetalleHorasExtra(false)}>Cerrar</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setMostrarDetalleHorasExtra(false)}>Cerrar</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="nomina-error-title" describedBy="nomina-error-message" onClose={closeErrorModal}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="nomina-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="nomina-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+              <button type="button" className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* Modal de Lectura Fácil y Asistente por Voz ODS 10 */}

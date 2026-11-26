@@ -82,7 +82,8 @@ export default function DashboardRRHH() {
         ))}
       </section>
 
-      <section aria-label="Accesos rápidos de Recursos Humanos" className="mb-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <section aria-labelledby="rrhh-quick-access-heading" className="mb-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h2 id="rrhh-quick-access-heading" className="sr-only">Accesos rápidos de Recursos Humanos</h2>
         {accesos.map(item => (
           <QuickAccessCard key={item.to} to={item.to} icon={item.icon} title={item.title} desc={item.desc} tone={item.tone} large={item.large} />
         ))}

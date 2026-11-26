@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Sidebar from "../components/Sidebar";
+import AccessibleDialog from "../components/AccessibleDialog";
 import logo from "../assets/logo.png";
 import "../styles/Dashboard.css";
 import { generarReporte, getDepartamentos, getCargos, listarEmpleados } from "../services/api";
@@ -62,12 +63,6 @@ export default function GenerarReportes() {
   const [cargos,        setCargos]        = useState([]);
   const [generando, setGenerando] = useState(false);
   const [mensaje,   setMensaje]   = useState("");
-  // El aviso desaparece a los 7 s (el CSS lo desvanece en ese tiempo)
-  useEffect(() => {
-    if (!mensaje) return;
-    const t = setTimeout(() => setMensaje(""), 7000);
-    return () => clearTimeout(t);
-  }, [mensaje]);
   useEffect(() => {
     getDepartamentos().then(setDepartamentos).catch(() => {});
     listarEmpleados(0, 200)
@@ -86,6 +81,10 @@ export default function GenerarReportes() {
 
   const nombreArchivo = (ext) =>
     `reporte_${tipoSeleccionado}_${new Date().toISOString().split("T")[0]}.${ext}`;
+
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[char]);
 
   const exportar = () => {
     if (!resultado?.length) return;
@@ -114,36 +113,36 @@ export default function GenerarReportes() {
     // PDF — genera HTML completo y lo abre en nueva pestaña vía blob URL
     const logoUrl = window.location.origin + logo;
     const headers = Object.keys(resultado[0]);
-    const ths = headers.map(h => `<th>${h}</th>`).join("");
+    const ths = headers.map(h => `<th scope="col">${escapeHtml(h)}</th>`).join("");
     const trs = resultado.map(r =>
-      `<tr>${headers.map(h => `<td>${r[h] ?? ""}</td>`).join("")}</tr>`
+      `<tr>${headers.map(h => `<td>${escapeHtml(r[h])}</td>`).join("")}</tr>`
     ).join("");
 
     const html = `<!DOCTYPE html><html lang="es"><head>
-<meta charset="utf-8"><title>Reporte ${tipoSeleccionado}</title>
+<meta charset="utf-8"><title>Reporte ${escapeHtml(tipoSeleccionado)}</title>
 <style>
   body{font-family:Arial,sans-serif;font-size:11px;padding:24px;color:#1e293b}
   .hdr{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #3b82f6}
   .hdr img{height:54px}
   .hdr h1{margin:0 0 2px;font-size:16px;color:#1e293b}
   .hdr p{margin:0;font-size:11px;color:#64748b}
-  h2{margin:0 0 4px;font-size:13px;color:#3b82f6}
+  h2{margin:0 0 4px;font-size:13px;color:#1d4ed8}
   .meta{color:#64748b;font-size:11px;margin:0 0 14px}
   table{border-collapse:collapse;width:100%}
-  th{background:#3b82f6;color:#fff;padding:6px 8px;text-align:left;border:1px solid #2563eb}
+  th{background:#1d4ed8;color:#fff;padding:6px 8px;text-align:left;border:1px solid #1e40af}
   td{padding:4px 8px;border:1px solid #e2e8f0}
   tr:nth-child(even){background:#f8fafc}
-  .footer{margin-top:16px;font-size:10px;color:#94a3b8}
-  .print-btn{margin-top:14px;padding:8px 18px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+  .footer{margin-top:16px;font-size:10px;color:#64748b}
+  .print-btn{margin-top:14px;padding:8px 18px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
   @media print{.print-btn{display:none}}
 </style></head><body>
 <div class="hdr">
-  <img src="${logoUrl}" alt="Hospital San Gabriel" onerror="this.style.display='none'" />
+  <img src="${escapeHtml(logoUrl)}" alt="Hospital San Gabriel" onerror="this.style.display='none'" />
   <div><h1>Hospital San Gabriel</h1><p>Sistema de Recursos Humanos</p></div>
 </div>
-<h2>${tipoActual?.icon ?? ""} ${tipoActual?.label ?? tipoSeleccionado}</h2>
+<h2>${escapeHtml(tipoActual?.icon ?? "")} ${escapeHtml(tipoActual?.label ?? tipoSeleccionado)}</h2>
 <p class="meta">Generado: ${new Date().toLocaleString("es-PE")} — ${resultado.length} registros</p>
-<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
+<table><caption>Reporte ${escapeHtml(tipoActual?.label ?? tipoSeleccionado)} — ${resultado.length} registros</caption><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
 <p class="footer">Documento generado automáticamente — Hospital San Gabriel</p>
 <button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
 </body></html>`;
@@ -238,10 +237,10 @@ export default function GenerarReportes() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard rrhh-accessible">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content">
+      <main className="main-content rrhh-accessible" id="main-content" tabIndex="-1">
         <header className="main-header header-rrhh">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Generación de Reportes</span>
@@ -252,8 +251,11 @@ export default function GenerarReportes() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-warning">⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" role="status" aria-live="polite">
+          <span>✅ {mensaje}</span>
+          <button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de estado" onClick={() => setMensaje("")}>×</button>
+        </div>}
+        {error && <div className="alert alert-warning" role="alert">⚠️ {error}</div>}
 
         <div className="reportes-layout">
 
@@ -261,11 +263,12 @@ export default function GenerarReportes() {
           <div className="reportes-left">
 
             <div className="section-card">
-              <h2>Tipo de Reporte</h2>
-              <div className="tipo-reporte-grid">
+              <h2 id="tipo-reporte-heading">Tipo de Reporte</h2>
+              <div className="tipo-reporte-grid" role="group" aria-labelledby="tipo-reporte-heading">
                 {TIPOS_REPORTE.map(t => (
-                  <div key={t.id}
+                  <button type="button" key={t.id}
                     className={`tipo-reporte-card ${tipoSeleccionado === t.id ? "active" : ""}`}
+                    aria-pressed={tipoSeleccionado === t.id}
                     style={{ borderLeft: `4px solid ${t.color}` }}
                     onClick={() => setTipoSeleccionado(t.id)}>
                     <div className="tipo-reporte-icon" style={{ color: t.color }}>{t.icon}</div>
@@ -273,7 +276,7 @@ export default function GenerarReportes() {
                       <div className="tipo-reporte-label">{t.label}</div>
                       <div className="tipo-reporte-desc">{t.desc}</div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -283,22 +286,22 @@ export default function GenerarReportes() {
               <form onSubmit={handleGenerar}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Formato de Exportación</label>
-                    <select value={formato} onChange={e => setFormato(e.target.value)}>
+                    <label htmlFor="reporte-formato">Formato de Exportación</label>
+                    <select id="reporte-formato" value={formato} onChange={e => setFormato(e.target.value)}>
                       {FORMATOS.map(f => <option key={f.v} value={f.v}>{f.l}</option>)}
                     </select>
                   </div>
 
                   {(tipoSeleccionado === "nomina" || tipoSeleccionado === "asistencia") && (<>
                     <div className="form-group">
-                      <label>Mes</label>
-                      <select value={mes} onChange={e => setMes(e.target.value)}>
+                      <label htmlFor="reporte-mes">Mes</label>
+                      <select id="reporte-mes" value={mes} onChange={e => setMes(e.target.value)}>
                         {MESES.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Año</label>
-                      <select value={anio} onChange={e => setAnio(e.target.value)}>
+                      <label htmlFor="reporte-anio">Año</label>
+                      <select id="reporte-anio" value={anio} onChange={e => setAnio(e.target.value)}>
                         {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
@@ -306,8 +309,8 @@ export default function GenerarReportes() {
 
                   {(tipoSeleccionado === "nomina" || tipoSeleccionado === "solicitudes") && (
                     <div className="form-group">
-                      <label>Departamento</label>
-                      <select value={departamento} onChange={e => { setDepartamento(e.target.value); setCargo(""); }}>
+                      <label htmlFor="reporte-departamento">Departamento</label>
+                      <select id="reporte-departamento" value={departamento} onChange={e => { setDepartamento(e.target.value); setCargo(""); }}>
                         <option value="">Todos</option>
                         {departamentos.map(d => <option key={d.idDpto} value={d.nombre}>{d.nombre}</option>)}
                       </select>
@@ -316,8 +319,8 @@ export default function GenerarReportes() {
 
                   {tipoSeleccionado === "solicitudes" && (
                     <div className="form-group">
-                      <label>Cargo</label>
-                      <select value={cargo} onChange={e => setCargo(e.target.value)}>
+                      <label htmlFor="reporte-cargo">Cargo</label>
+                      <select id="reporte-cargo" value={cargo} onChange={e => setCargo(e.target.value)}>
                         <option value="">Todos</option>
                         {cargos.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -326,8 +329,8 @@ export default function GenerarReportes() {
 
                   {tipoSeleccionado === "historial-laboral" && (
                     <div className="form-group">
-                      <label>Empleado</label>
-                      <select value={empleadoId} onChange={e => setEmpleadoId(e.target.value)}>
+                      <label htmlFor="reporte-empleado">Empleado</label>
+                      <select id="reporte-empleado" value={empleadoId} onChange={e => setEmpleadoId(e.target.value)}>
                         <option value="">Todos los empleados</option>
                         {empleados.map(e => <option key={e.idEmpleado} value={e.idEmpleado}>{e.nombres} {e.apellidos}</option>)}
                       </select>
@@ -336,19 +339,19 @@ export default function GenerarReportes() {
 
                   {(tipoSeleccionado === "empleados" || tipoSeleccionado === "solicitudes") && (<>
                     <div className="form-group">
-                      <label>Fecha Desde</label>
-                      <input type="date" value={fechaIni} onChange={e => setFechaIni(e.target.value)} />
+                      <label htmlFor="reporte-fecha-inicio">Fecha Desde</label>
+                      <input id="reporte-fecha-inicio" type="date" value={fechaIni} onChange={e => setFechaIni(e.target.value)} />
                     </div>
                     <div className="form-group">
-                      <label>Fecha Hasta</label>
-                      <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+                      <label htmlFor="reporte-fecha-fin">Fecha Hasta</label>
+                      <input id="reporte-fecha-fin" type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
                     </div>
                   </>)}
 
                   {(tipoSeleccionado === "solicitudes" || tipoSeleccionado === "empleados") && (
                     <div className="form-group">
-                      <label>Estado</label>
-                      <select value={estado} onChange={e => setEstado(e.target.value)}>
+                      <label htmlFor="reporte-estado">Estado</label>
+                      <select id="reporte-estado" value={estado} onChange={e => setEstado(e.target.value)}>
                         <option value="">Todos</option>
                         {tipoSeleccionado === "solicitudes"
                           ? <><option value="PENDIENTE">Pendiente</option><option value="APROBADA">Aprobado</option><option value="RECHAZADA">Rechazado</option></>
@@ -427,11 +430,11 @@ export default function GenerarReportes() {
       </main>
 
       {modalPreview && resultado && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="reporte-preview-title" onClose={() => setModalPreview(false)}>
           <div className="modal-box modal-box-wide">
             <div className="modal-header">
-              <div><h3>👁 Vista Previa — {tipoActual?.label}</h3></div>
-              <button className="modal-close" onClick={() => setModalPreview(false)}>×</button>
+              <div><h3 id="reporte-preview-title">👁 Vista Previa — {tipoActual?.label}</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar vista previa del reporte" onClick={() => setModalPreview(false)}>×</button>
             </div>
             <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
               <div className="table-wrapper">{renderTabla()}</div>
@@ -441,25 +444,25 @@ export default function GenerarReportes() {
               <button className="btn btn-secondary" onClick={exportar}>💾 Exportar</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="reporte-error-title" describedBy="reporte-error-message" onClose={closeErrorModal}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="reporte-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="reporte-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
+              <button type="button" className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );

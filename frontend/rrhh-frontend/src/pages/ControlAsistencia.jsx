@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import AccessibleDialog from "../components/AccessibleDialog";
 import "../styles/Dashboard.css";
 import {
   listarJustificacionesPendientes,
@@ -19,7 +20,7 @@ import {
 } from "../services/api";
 
 /* Selector de archivo con botón propio (en lugar del input nativo del navegador) */
-function CampoArchivo({ name, accept, onChange }) {
+function CampoArchivo({ name, accept, onChange, label = "Seleccionar archivo" }) {
   const ref = useRef(null);
   const [nombre, setNombre] = useState("");
 
@@ -35,9 +36,10 @@ function CampoArchivo({ name, accept, onChange }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", position: "relative" }}>
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()}>
-        📎 Seleccionar archivo
+        📎 {label}
       </button>
       <input ref={ref} type="file" name={name} accept={accept}
+        aria-hidden="true" tabIndex={-1}
         style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
         onChange={e => {
           const f = e.target.files[0] ?? null;
@@ -78,18 +80,6 @@ function VistaEmpleado() {
   const [loading, setLoading]   = useState(false);
   const [mensaje, setMensaje]   = useState("");
   const [error,   setError]     = useState("");
-  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
-  useEffect(() => {
-    if (!mensaje) return;
-    const t = setTimeout(() => setMensaje(""), 7000);
-    return () => clearTimeout(t);
-  }, [mensaje]);
-  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(""), 7000);
-    return () => clearTimeout(t);
-  }, [error]);
   const [tabActiva, setTabActiva] = useState("info");
 
   // Registro manual modal
@@ -257,10 +247,10 @@ function VistaEmpleado() {
   );
 
   return (
-    <div className="dashboard">
+      <div className="dashboard asistencia-accessible">
       <Sidebar rol="EMPLEADO" />
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex="-1">
         <header className="main-header header-empleado">
           <div className="header-left">
             <span className="page-breadcrumb">Dashboard / Asistencia / Control de Asistencia</span>
@@ -271,8 +261,8 @@ function VistaEmpleado() {
           </div>
         </header>
 
-        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" role="status" aria-live="polite">✅ {mensaje}<button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de éxito" onClick={() => setMensaje("")}>×</button></div>}
+        {error   && <div className="alert alert-floating alert-warning" role="alert">⚠️ {error}<button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de error" onClick={() => setError("")}>×</button></div>}
 
         {/* ── FILA SUPERIOR: Registro manual | Asistencia Hoy ── */}
         <div className="asist-grid">
@@ -316,7 +306,7 @@ function VistaEmpleado() {
 
             <div className="asist-today-grid">
               <div className="asist-today-item">
-                <label>Entrada</label>
+                <span className="asist-today-label">Entrada</span>
                 <div className="asist-today-val">
                   {asistenciaHoy?.horaEntrada
                     ? asistenciaHoy.horaEntrada.substring(0, 5)
@@ -328,7 +318,7 @@ function VistaEmpleado() {
                 </span>
               </div>
               <div className="asist-today-item">
-                <label>Salida</label>
+                <span className="asist-today-label">Salida</span>
                 <div className="asist-today-val" style={{ color: asistenciaHoy?.horaSalida ? "var(--text)" : "var(--text-3)" }}>
                   {asistenciaHoy?.horaSalida
                     ? asistenciaHoy.horaSalida.substring(0, 5)
@@ -340,7 +330,7 @@ function VistaEmpleado() {
                 </span>
               </div>
               <div className="asist-today-item">
-                <label>Horas trabajadas</label>
+                <span className="asist-today-label">Horas trabajadas</span>
                 <span className="badge badge-info" style={{ fontSize: "11px" }}>
                   {asistenciaHoy?.horasTrabajadas != null
                     ? `${asistenciaHoy.horasTrabajadas} h`
@@ -348,7 +338,7 @@ function VistaEmpleado() {
                 </span>
               </div>
               <div className="asist-today-item">
-                <label>Estado del día</label>
+                <span className="asist-today-label">Estado del día</span>
                 <span className={`badge ${
                   asistenciaHoy?.estado === "PUNTUAL"      ? "badge-success" :
                   asistenciaHoy?.estado === "JUSTIFICADA"  ? "badge-justificada" :
@@ -520,8 +510,8 @@ function VistaEmpleado() {
             onReset={() => { setEvidenciaPreview(""); setFechaJustif(hoyISO()); }}>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Fecha de la incidencia *</label>
-                  <input type="date" name="fechaIncidencia"
+                  <label htmlFor="empleado-fecha-incidencia">Fecha de la incidencia *</label>
+                  <input id="empleado-fecha-incidencia" type="date" name="fechaIncidencia"
                     max={hoyISO()} value={fechaJustif}
                     onChange={e => setFechaJustif(e.target.value)} required />
                 </div>
@@ -546,14 +536,14 @@ function VistaEmpleado() {
                   </div>
                 )}
                 <div className="form-group form-full">
-                  <label>Motivo de la justificación *</label>
-                  <textarea name="motivo" rows={4}
+                  <label htmlFor="empleado-motivo-justificacion">Motivo de la justificación *</label>
+                  <textarea id="empleado-motivo-justificacion" name="motivo" rows={4}
                     placeholder="Describa detalladamente el motivo de su tardanza o inasistencia..."
                     required />
                 </div>
                 <div className="form-group form-full">
-                  <label>Evidencia (opcional)</label>
-                  <CampoArchivo name="evidencia" accept="image/*,application/pdf" onChange={f => setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "")} />
+                  <span className="form-label-like">Evidencia (opcional)</span>
+                  <CampoArchivo name="evidencia" label="Adjuntar evidencia" accept="image/*,application/pdf" onChange={f => setEvidenciaPreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : "")} />
                   {evidenciaPreview && (
                     <img src={evidenciaPreview} alt="Vista previa de la evidencia"
                       style={{ display: "block", marginTop: 8, maxWidth: 200, maxHeight: 200, borderRadius: 8, border: "1px solid #e2e8f0" }} />
@@ -651,22 +641,22 @@ function VistaEmpleado() {
 
       {/* ── MODAL: JUSTIFICACIÓN DE TARDANZA (ECU-03 A4) ── */}
       {modalJustificar.open && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="empleado-justificar-title">
           <div className="modal-box">
             <div className="modal-header">
               <div>
-                <h3>✍️ Registrar Justificación de Tardanza</h3>
+                <h3 id="empleado-justificar-title">✍️ Registrar Justificación de Tardanza</h3>
                 <p>Fecha: {modalJustificar.justificacion?.fechaJustificacion?.substring(0, 10) ?? "—"}</p>
               </div>
-              <button className="modal-close" onClick={cerrarModalJustif}>×</button>
+              <button type="button" className="modal-close" aria-label="Cerrar justificación" onClick={cerrarModalJustif}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning" style={{ marginBottom: 14 }}>
                 ⏱ Tienes <strong>1 día</strong> desde la incidencia para justificarla. Una vez enviada, RRHH la revisará.
               </div>
               <div className="form-group">
-                <label>Motivo de la tardanza *</label>
-                <textarea
+                <label htmlFor="empleado-modal-motivo-tardanza">Motivo de la tardanza *</label>
+                <textarea id="empleado-modal-motivo-tardanza"
                   rows={4}
                   value={justifMotivo}
                   onChange={e => setJustifMotivo(e.target.value)}
@@ -675,8 +665,8 @@ function VistaEmpleado() {
                 />
               </div>
               <div className="form-group">
-                <label>Evidencia (opcional)</label>
-                <CampoArchivo accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
+                <span className="form-label-like">Evidencia (opcional)</span>
+                <CampoArchivo label="Adjuntar evidencia" accept="image/*,application/pdf" onChange={f => setJustifFile(f)} />
                 {justifFile && (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>
                     📎 {justifFile.name}
@@ -692,31 +682,31 @@ function VistaEmpleado() {
               </button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ── MODAL REGISTRO MANUAL ── */}
       {modalManual.open && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="empleado-registro-manual-title">
           <div className="modal-box">
             <div className="modal-header">
               <div>
-                <h3>
+                <h3 id="empleado-registro-manual-title">
                   {modalManual.tipo === "ENTRADA"
                     ? "→ Registrar Entrada (Asistencia Manual)"
                     : "← Registrar Salida (Asistencia Manual)"}
                 </h3>
                 <p>Inicio de jornada — {new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</p>
               </div>
-              <button className="modal-close" onClick={() => setModalManual({ open: false, tipo: "ENTRADA" })}>×</button>
+              <button type="button" className="modal-close" aria-label="Cerrar registro manual" onClick={() => setModalManual({ open: false, tipo: "ENTRADA" })}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning" style={{ marginBottom: 14 }}>
                 Esta opción se usa solo cuando el dispositivo biométrico no esté disponible.
               </div>
               <div className="form-group">
-                <label>Motivo del registro manual *</label>
-                <textarea
+                <label htmlFor="empleado-modal-motivo-manual">Motivo del registro manual *</label>
+                <textarea id="empleado-modal-motivo-manual"
                   rows={3}
                   value={manualMotivo}
                   onChange={e => setManualMotivo(e.target.value)}
@@ -736,25 +726,25 @@ function VistaEmpleado() {
               </button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="empleado-error-title" describedBy="empleado-error-message" style={{ zIndex: 10000 }}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="empleado-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="empleado-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );
@@ -877,18 +867,6 @@ function VistaRRHH() {
   const [loading,  setLoading]  = useState(false);
   const [mensaje,  setMensaje]  = useState("");
   const [error,    setError]    = useState("");
-  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
-  useEffect(() => {
-    if (!mensaje) return;
-    const t = setTimeout(() => setMensaje(""), 7000);
-    return () => clearTimeout(t);
-  }, [mensaje]);
-  // Los avisos flotantes desaparecen a los 7 s (el CSS los desvanece en ese tiempo)
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(""), 7000);
-    return () => clearTimeout(t);
-  }, [error]);
   const [modalRechazar,  setModalRechazar]  = useState({ open: false, id: null, comentario: "" });
   const [modalDecision,  setModalDecision]  = useState({ open: false, justificacion: null });
   const [errorModal, setErrorModal] = useState({ open: false, message: "" });
@@ -1098,10 +1076,10 @@ function VistaRRHH() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard asistencia-accessible">
       <Sidebar rol="RRHH" />
 
-      <main className="main-content asistencia-rrhh">
+      <main className="main-content asistencia-rrhh" id="main-content" tabIndex="-1">
         <header className="main-header header-rrhh asistencia-header">
           <div className="header-left">
             <span className="page-breadcrumb">RRHH / Control de Asistencia</span>
@@ -1111,13 +1089,13 @@ function VistaRRHH() {
           <span className="role-pill role-pill-rrhh">ECU-03</span>
         </header>
 
-        {mensaje && <div className="alert alert-floating alert-success" onClick={() => setMensaje("")}>✅ {mensaje}</div>}
-        {error   && <div className="alert alert-floating alert-warning" onClick={() => setError("")}>⚠️ {error}</div>}
+        {mensaje && <div className="alert alert-floating alert-success" role="status" aria-live="polite">✅ {mensaje}<button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de éxito" onClick={() => setMensaje("")}>×</button></div>}
+        {error   && <div className="alert alert-floating alert-warning" role="alert">⚠️ {error}<button type="button" className="alert-dismiss" aria-label="Cerrar mensaje de error" onClick={() => setError("")}>×</button></div>}
 
         <div className="biometric-banner asistencia-biometric">
           <div className="biometric-banner-icon">🖐️</div>
           <div className="biometric-banner-text">
-            <h3>Sistema Biométrico Activo</h3>
+            <h2 className="asistencia-biometric-title">Sistema Biométrico Activo</h2>
             <p>El registro de entrada/salida de empleados se realiza desde el dispositivo biométrico. Aquí gestionas correcciones y justificaciones.</p>
           </div>
         </div>
@@ -1168,7 +1146,6 @@ function VistaRRHH() {
                     ) : justificaciones.map(j => (
                       <tr
                         key={j.id ?? j.idJustificacion}
-                        onClick={() => setModalDecision({ open: true, justificacion: j })}
                         style={{
                           cursor: "pointer",
                           background: justificacionSeleccionada === (j.id ?? j.idJustificacion)
@@ -1176,7 +1153,13 @@ function VistaRRHH() {
                             : undefined,
                         }}
                       >
-                        <td style={{ textAlign: "center" }}>{getNombreEmpleado(j.idEmpleado)}</td>
+                        <td style={{ textAlign: "center" }}>
+                          <button type="button" className="table-row-action"
+                            aria-label={`Revisar justificación de ${getNombreEmpleado(j.idEmpleado)}`}
+                            onClick={() => setModalDecision({ open: true, justificacion: j })}>
+                            {getNombreEmpleado(j.idEmpleado)}
+                          </button>
+                        </td>
                         <td style={{ textAlign: "center" }}>{j.fechaAsistencia ?? j.fechaRegistro ?? "—"}</td>
                         <td style={{ textAlign: "center", fontWeight: 600, color: "var(--text-2)" }}>
                           {j.horaEntradaEsperada ?? "—"}
@@ -1234,8 +1217,9 @@ function VistaRRHH() {
               )}
               <div className="form-grid">
                 <div className="form-group" style={{ position: "relative" }}>
-                  <label>Empleado</label>
+                  <label htmlFor="rrhh-empleado-seleccionado">Empleado</label>
                   <input
+                    id="rrhh-empleado-seleccionado"
                     type="text"
                     value={busquedaNombre}
                     readOnly
@@ -1251,14 +1235,15 @@ function VistaRRHH() {
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Fecha de Corrección</label>
-                  <input type="date" value={correccionInfo.fechaCorreccion}
+                  <label htmlFor="rrhh-fecha-correccion">Fecha de Corrección</label>
+                  <input id="rrhh-fecha-correccion" type="date" value={correccionInfo.fechaCorreccion}
                     readOnly
                     style={{ background: "var(--bg-2, #f8fafc)", cursor: "not-allowed" }} />
                 </div>
                 <div className="form-group">
-                  <label>Vieja Entrada</label>
+                  <label htmlFor="rrhh-vieja-entrada">Vieja Entrada</label>
                   <input
+                    id="rrhh-vieja-entrada"
                     type="time"
                     value={correccionInfo.horaEntradaDisplay || ""}
                     readOnly
@@ -1267,8 +1252,9 @@ function VistaRRHH() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Nueva Salida</label>
+                  <label htmlFor="rrhh-nueva-salida">Nueva Salida</label>
                   <input
+                    id="rrhh-nueva-salida"
                     type="time"
                     value={correccionInfo.salidaPropuesta || ""}
                     readOnly
@@ -1306,11 +1292,11 @@ function VistaRRHH() {
 
       {/* ── MODAL: DECISIÓN ── */}
       {modalDecision.open && modalDecision.justificacion && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="rrhh-decision-title">
           <div className="modal-box">
             <div className="modal-header">
               <div>
-                <h3>📋 Decisión de Justificación</h3>
+                <h3 id="rrhh-decision-title">📋 Decisión de Justificación</h3>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--text-2)" }}>
                   {getNombreEmpleado(modalDecision.justificacion.idEmpleado)}
                   {modalDecision.justificacion.fechaAsistencia
@@ -1318,7 +1304,7 @@ function VistaRRHH() {
                     : ""}
                 </p>
               </div>
-              <button className="modal-close" onClick={() => setModalDecision({ open: false, justificacion: null })}>×</button>
+              <button type="button" className="modal-close" aria-label="Cerrar decisión de justificación" onClick={() => setModalDecision({ open: false, justificacion: null })}>×</button>
             </div>
             <div className="modal-body">
               <p style={{ fontWeight: 600, marginBottom: 12 }}>¿Desea aprobar o rechazar esta justificación?</p>
@@ -1500,22 +1486,22 @@ function VistaRRHH() {
               <button className="btn btn-success" onClick={handleDecidirAprobar}>✅ Aprobar</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ── MODAL: RECHAZAR JUSTIFICACIÓN ── */}
       {modalRechazar.open && (
-        <div className="modal-overlay">
+        <AccessibleDialog className="modal-overlay" labelledBy="rrhh-rechazo-title">
           <div className="modal-box">
             <div className="modal-header">
-              <div><h3>❌ Rechazar Justificación</h3><p>Justificación #{modalRechazar.id}</p></div>
-              <button className="modal-close" onClick={() => setModalRechazar({ open: false, id: null, comentario: "" })}>×</button>
+              <div><h3 id="rrhh-rechazo-title">❌ Rechazar Justificación</h3><p>Justificación #{modalRechazar.id}</p></div>
+              <button type="button" className="modal-close" aria-label="Cerrar rechazo de justificación" onClick={() => setModalRechazar({ open: false, id: null, comentario: "" })}>×</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-warning" style={{ marginBottom: 12 }}>El motivo será registrado en el sistema.</div>
               <div className="form-group">
-                <label>Motivo del rechazo *</label>
-                <textarea
+                <label htmlFor="gerencia-motivo-rechazo">Motivo del rechazo *</label>
+                <textarea id="gerencia-motivo-rechazo"
                   rows={3}
                   value={modalRechazar.comentario}
                   onChange={e => setModalRechazar({ ...modalRechazar, comentario: e.target.value })}
@@ -1531,25 +1517,25 @@ function VistaRRHH() {
               </button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* ══ MODAL: ERROR ══ */}
       {errorModal.open && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <AccessibleDialog className="modal-overlay" labelledBy="rrhh-error-title" describedBy="rrhh-error-message" style={{ zIndex: 10000 }}>
           <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <div><h3>⚠️ Error de validación</h3></div>
-              <button className="modal-close" onClick={closeErrorModal}>×</button>
+              <div><h3 id="rrhh-error-title">⚠️ Error de validación</h3></div>
+              <button type="button" className="modal-close" aria-label="Cerrar error" onClick={closeErrorModal}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
+              <p id="rrhh-error-message" style={{ fontSize: 14, color: "var(--text-1)", margin: 0 }}>{errorModal.message}</p>
             </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={closeErrorModal}>Entendido</button>
             </div>
           </div>
-        </div>
+        </AccessibleDialog>
       )}
     </div>
   );

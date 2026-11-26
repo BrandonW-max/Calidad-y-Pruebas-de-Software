@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Users, UserRound, Clock, ClipboardList, Wallet,
@@ -99,10 +99,44 @@ export default function Sidebar({ rol }) {
   };
   const [openGroup, setOpenGroup] = useState(initialOpen);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" && !window.matchMedia("(min-width: 64rem)").matches
+  );
+  const mobileTriggerRef = useRef(null);
+  const mobileCloseRef = useRef(null);
+  const sidebarId = useId();
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 64rem)");
+    const updateViewport = event => {
+      setIsMobileView(!event.matches);
+      if (event.matches) setMobileOpen(false);
+    };
+    setIsMobileView(!mediaQuery.matches);
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen || !isMobileView) return undefined;
+    mobileCloseRef.current?.focus();
+    const handleEscape = event => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [mobileOpen, isMobileView]);
 
   const isActive = (to) => location.pathname === to;
   const toggleGroup = (label) => setOpenGroup(g => (g === label ? null : label));
-  const closeMobile = () => setMobileOpen(false);
+  const closeMobile = () => {
+    setMobileOpen(false);
+    requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+  };
+  const closeMobileForNavigation = () => setMobileOpen(false);
 
   const handleLogout = async () => {
     try { await logout(); } catch { /* sesión ya inválida en servidor */ }
@@ -118,9 +152,12 @@ export default function Sidebar({ rol }) {
   return (
     <>
       <button
+        ref={mobileTriggerRef}
         type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Abrir menú de navegación"
+        aria-expanded={mobileOpen}
+        aria-controls={`${sidebarId}-navigation`}
         className="fixed left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-xl border border-ink-200 bg-white/90 text-ink-700 shadow-glass-md backdrop-blur-md lg:hidden"
       >
         <Menu size={20} strokeWidth={2.2} />
@@ -135,6 +172,7 @@ export default function Sidebar({ rol }) {
       )}
 
     <aside
+      inert={isMobileView && !mobileOpen}
       className={
         "fixed inset-y-0 left-0 z-50 flex h-screen w-[300px] flex-col overflow-hidden " +
         "bg-gradient-to-b " + tone.rail + " shadow-[4px_0_28px_rgba(0,0,0,0.28)] " +
@@ -143,6 +181,7 @@ export default function Sidebar({ rol }) {
       }
     >
       <button
+        ref={mobileCloseRef}
         type="button"
         onClick={closeMobile}
         aria-label="Cerrar menú"
@@ -164,10 +203,11 @@ export default function Sidebar({ rol }) {
         </div>
       </div>
 
-      <nav className="relative z-10 flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 pt-8 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {config.links.map((link) => {
+      <nav id={`${sidebarId}-navigation`} aria-label="Navegación principal" className="relative z-10 flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 pt-8 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {config.links.map((link, linkIndex) => {
           if (link.group) {
             const isExpanded = openGroup === link.label;
+            const groupPanelId = `${sidebarId}-group-${linkIndex}`;
             const isGroupActive = link.basePaths?.some(p => location.pathname.startsWith(p));
             const GroupIcon = link.icon;
             return (
@@ -175,6 +215,8 @@ export default function Sidebar({ rol }) {
                 <button
                   type="button"
                   onClick={() => toggleGroup(link.label)}
+                  aria-expanded={isExpanded}
+                  aria-controls={groupPanelId}
                   className={
                     linkBase + " cursor-pointer border border-transparent " +
                     (isGroupActive ? tone.activeBg + " " + tone.activeBorder + " " + tone.activeText + " font-semibold" : "")
@@ -185,8 +227,7 @@ export default function Sidebar({ rol }) {
                   <span className="flex-1 text-left">{link.label}</span>
                   <ChevronRight size={20} className={"shrink-0 text-white/40 transition-transform duration-200 " + (isExpanded ? "rotate-90" : "")} />
                 </button>
-                {isExpanded && (
-                  <div className="mt-2 ml-4 flex flex-col gap-1.5 border-l border-white/12 pl-3">
+                <div id={groupPanelId} style={isExpanded ? undefined : { display: "none" }} className={isExpanded ? "mt-2 ml-4 flex flex-col gap-1.5 border-l border-white/12 pl-3" : undefined}>
                     {link.children.map((child) => {
                       const ChildIcon = child.icon;
                       const active = isActive(child.to);
@@ -194,7 +235,7 @@ export default function Sidebar({ rol }) {
                         <Link
                           key={child.to}
                           to={child.to}
-                          onClick={closeMobile}
+                          onClick={closeMobileForNavigation}
                           className={
                             "flex items-center gap-3 rounded-xl px-4 py-3 text-[16px] font-medium transition-all duration-150 " +
                             (active
@@ -207,8 +248,7 @@ export default function Sidebar({ rol }) {
                         </Link>
                       );
                     })}
-                  </div>
-                )}
+                </div>
               </div>
             );
           }
@@ -219,7 +259,7 @@ export default function Sidebar({ rol }) {
             <Link
               key={link.to}
               to={link.to}
-              onClick={closeMobile}
+              onClick={closeMobileForNavigation}
               aria-current={active ? "page" : undefined}
               className={
                 linkBase + " border " +
